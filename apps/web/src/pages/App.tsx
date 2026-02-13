@@ -1,10 +1,11 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { api, ProjectListItem, ProjectTimelineRow } from '../api/client';
+import { api, ProjectDetail, ProjectListItem, ProjectTimelineRow } from '../api/client';
 
 type Role = {
   id: string;
   name: string;
   description?: string;
+  level?: number;
   _count?: { employees: number };
 };
 
@@ -16,7 +17,7 @@ type Employee = {
   role: { name: string };
 };
 
-type ActiveTab = 'directory' | 'timeline';
+type ActiveTab = 'personnel' | 'roles' | 'timeline';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -45,6 +46,10 @@ function timelineStyle(row: ProjectTimelineRow) {
   };
 }
 
+function isoToInputDate(value: string) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
 export function App() {
   const [email, setEmail] = useState('admin@projo.local');
   const [password, setPassword] = useState('admin12345');
@@ -53,9 +58,20 @@ export function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedProjectDetail, setSelectedProjectDetail] = useState<ProjectDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('personnel');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const [roleName, setRoleName] = useState('Analyst');
+  const [roleDescription, setRoleDescription] = useState('Business analyst role');
+  const [roleLevel, setRoleLevel] = useState(3);
+
+  const [employeeFullName, setEmployeeFullName] = useState('Jane Smith');
+  const [employeeEmail, setEmployeeEmail] = useState('jane.smith@projo.local');
+  const [employeeRoleId, setEmployeeRoleId] = useState('');
+  const [employeeStatus, setEmployeeStatus] = useState('active');
 
   const [projectCode, setProjectCode] = useState('PRJ-001');
   const [projectName, setProjectName] = useState('Pilot CRM Rollout');
@@ -68,12 +84,50 @@ export function App() {
   const [assignmentEndDate, setAssignmentEndDate] = useState(`${new Date().getFullYear()}-04-30`);
   const [assignmentPercent, setAssignmentPercent] = useState(50);
 
+  const [editAssignmentId, setEditAssignmentId] = useState('');
+  const [editAssignmentStartDate, setEditAssignmentStartDate] = useState('');
+  const [editAssignmentEndDate, setEditAssignmentEndDate] = useState('');
+  const [editAssignmentPercent, setEditAssignmentPercent] = useState(0);
+
   const sortedTimeline = useMemo(
     () => [...timeline].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
     [timeline],
   );
 
-  async function refreshData(authToken: string, year: number) {
+  const selectedAssignment = useMemo(
+    () => selectedProjectDetail?.assignments.find((assignment) => assignment.id === editAssignmentId) ?? null,
+    [selectedProjectDetail, editAssignmentId],
+  );
+
+  function setAssignmentEditorFromDetail(detail: ProjectDetail, assignmentId?: string) {
+    if (detail.assignments.length === 0) {
+      setEditAssignmentId('');
+      setEditAssignmentStartDate('');
+      setEditAssignmentEndDate('');
+      setEditAssignmentPercent(0);
+      return;
+    }
+
+    const picked = detail.assignments.find((assignment) => assignment.id === assignmentId) ?? detail.assignments[0];
+    setEditAssignmentId(picked.id);
+    setEditAssignmentStartDate(isoToInputDate(picked.assignmentStartDate));
+    setEditAssignmentEndDate(isoToInputDate(picked.assignmentEndDate));
+    setEditAssignmentPercent(Number(picked.allocationPercent));
+  }
+
+  async function loadProjectDetail(authToken: string, projectId: string, preserveEditor = true) {
+    const detail = await api.getProject(projectId, authToken);
+    setSelectedProjectId(projectId);
+    setSelectedProjectDetail(detail);
+
+    if (preserveEditor) {
+      setAssignmentEditorFromDetail(detail, editAssignmentId);
+    } else {
+      setAssignmentEditorFromDetail(detail);
+    }
+  }
+
+  async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
     const [rolesData, employeesData, projectsData, timelineData] = await Promise.all([
       api.getRoles(authToken),
       api.getEmployees(authToken),
@@ -81,13 +135,18 @@ export function App() {
       api.getTimelineYear(year, authToken),
     ]);
 
+    const nextRoles = rolesData as Role[];
     const nextEmployees = employeesData as Employee[];
     const nextProjects = projectsData as ProjectListItem[];
 
-    setRoles(rolesData as Role[]);
+    setRoles(nextRoles);
     setEmployees(nextEmployees);
     setProjects(nextProjects);
     setTimeline(timelineData);
+
+    if (!employeeRoleId && nextRoles[0]) {
+      setEmployeeRoleId(nextRoles[0].id);
+    }
 
     if (!assignmentProjectId && nextProjects[0]) {
       setAssignmentProjectId(nextProjects[0].id);
@@ -95,6 +154,15 @@ export function App() {
 
     if (!assignmentEmployeeId && nextEmployees[0]) {
       setAssignmentEmployeeId(nextEmployees[0].id);
+    }
+
+    const activeProjectId = preferredProjectId ?? selectedProjectId ?? nextProjects[0]?.id;
+    if (activeProjectId) {
+      await loadProjectDetail(authToken, activeProjectId, Boolean(selectedProjectId));
+    } else {
+      setSelectedProjectId('');
+      setSelectedProjectDetail(null);
+      setEditAssignmentId('');
     }
   }
 
@@ -108,6 +176,53 @@ export function App() {
       await refreshData(result.accessToken, selectedYear);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
+    }
+  }
+
+  async function handleCreateRole(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+
+    setError(null);
+    try {
+      await api.createRole(
+        {
+          name: roleName,
+          description: roleDescription,
+          level: roleLevel,
+        },
+        token,
+      );
+      await refreshData(token, selectedYear);
+      setRoleName((prev) => `${prev}-2`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create role');
+    }
+  }
+
+  async function handleCreateEmployee(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !employeeRoleId) return;
+
+    setError(null);
+    try {
+      await api.createEmployee(
+        {
+          fullName: employeeFullName,
+          email: employeeEmail,
+          roleId: employeeRoleId,
+          status: employeeStatus,
+          defaultCapacityHoursPerDay: 8,
+        },
+        token,
+      );
+      await refreshData(token, selectedYear);
+      setEmployeeEmail((prev) => {
+        const [name, domain] = prev.split('@');
+        return `${name}.2@${domain ?? 'projo.local'}`;
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create employee');
     }
   }
 
@@ -159,9 +274,54 @@ export function App() {
         token,
       );
 
-      await refreshData(token, selectedYear);
+      await refreshData(token, selectedYear, assignmentProjectId);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create assignment');
+    }
+  }
+
+  async function handleSelectProject(projectId: string) {
+    if (!token) return;
+
+    setError(null);
+    try {
+      await loadProjectDetail(token, projectId, false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load project details');
+    }
+  }
+
+  function handleEditorAssignmentChange(assignmentId: string) {
+    setEditAssignmentId(assignmentId);
+    if (!selectedProjectDetail) return;
+
+    const next = selectedProjectDetail.assignments.find((assignment) => assignment.id === assignmentId);
+    if (!next) return;
+
+    setEditAssignmentStartDate(isoToInputDate(next.assignmentStartDate));
+    setEditAssignmentEndDate(isoToInputDate(next.assignmentEndDate));
+    setEditAssignmentPercent(Number(next.allocationPercent));
+  }
+
+  async function handleUpdateAssignment(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !editAssignmentId || !selectedProjectId) return;
+
+    setError(null);
+    try {
+      await api.updateAssignment(
+        editAssignmentId,
+        {
+          assignmentStartDate: new Date(editAssignmentStartDate).toISOString(),
+          assignmentEndDate: new Date(editAssignmentEndDate).toISOString(),
+          allocationPercent: editAssignmentPercent,
+        },
+        token,
+      );
+
+      await refreshData(token, selectedYear, selectedProjectId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update assignment');
     }
   }
 
@@ -201,10 +361,17 @@ export function App() {
           <div className="tabs">
             <button
               type="button"
-              className={activeTab === 'directory' ? 'tab active' : 'tab'}
-              onClick={() => setActiveTab('directory')}
+              className={activeTab === 'personnel' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('personnel')}
             >
-              Directory
+              Personnel
+            </button>
+            <button
+              type="button"
+              className={activeTab === 'roles' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('roles')}
+            >
+              Roles
             </button>
             <button
               type="button"
@@ -215,22 +382,43 @@ export function App() {
             </button>
           </div>
 
-          {activeTab === 'directory' ? (
+          {activeTab === 'personnel' ? (
             <section className="grid">
               <article className="card">
-                <h2>Roles</h2>
-                <ul>
-                  {roles.map((role) => (
-                    <li key={role.id}>
-                      <strong>{role.name}</strong>
-                      <span>{role._count?.employees ?? 0} employees</span>
-                    </li>
-                  ))}
-                </ul>
+                <h2>Personnel</h2>
+                <form className="timeline-form" onSubmit={handleCreateEmployee}>
+                  <label>
+                    Full name
+                    <input value={employeeFullName} onChange={(e) => setEmployeeFullName(e.target.value)} />
+                  </label>
+                  <label>
+                    Email
+                    <input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
+                  </label>
+                  <label>
+                    Role
+                    <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
+                      <option value="">Select role</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Status
+                    <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
+                      <option value="active">active</option>
+                      <option value="inactive">inactive</option>
+                    </select>
+                  </label>
+                  <button type="submit">Create Employee</button>
+                </form>
               </article>
 
               <article className="card">
-                <h2>Employees</h2>
+                <h2>Employees List</h2>
                 <ul>
                   {employees.map((employee) => (
                     <li key={employee.id}>
@@ -243,7 +431,51 @@ export function App() {
                 </ul>
               </article>
             </section>
-          ) : (
+          ) : null}
+
+          {activeTab === 'roles' ? (
+            <section className="grid">
+              <article className="card">
+                <h2>Role Management</h2>
+                <form className="timeline-form" onSubmit={handleCreateRole}>
+                  <label>
+                    Name
+                    <input value={roleName} onChange={(e) => setRoleName(e.target.value)} />
+                  </label>
+                  <label>
+                    Description
+                    <input value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
+                  </label>
+                  <label>
+                    Level
+                    <input
+                      type="number"
+                      min={1}
+                      value={roleLevel}
+                      onChange={(e) => setRoleLevel(Number(e.target.value))}
+                    />
+                  </label>
+                  <button type="submit">Create Role</button>
+                </form>
+              </article>
+
+              <article className="card">
+                <h2>Roles List</h2>
+                <ul>
+                  {roles.map((role) => (
+                    <li key={role.id}>
+                      <strong>{role.name}</strong>
+                      <span>
+                        level {role.level ?? '-'} • {role._count?.employees ?? 0} employees
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </section>
+          ) : null}
+
+          {activeTab === 'timeline' ? (
             <section className="timeline-layout">
               <article className="card">
                 <h2>Quick Create Project</h2>
@@ -344,7 +576,12 @@ export function App() {
                     sortedTimeline.map((row) => {
                       const style = timelineStyle(row);
                       return (
-                        <div className="timeline-row" key={row.id}>
+                        <button
+                          type="button"
+                          className={row.id === selectedProjectId ? 'timeline-row selected' : 'timeline-row'}
+                          key={row.id}
+                          onClick={() => handleSelectProject(row.id)}
+                        >
                           <div className="timeline-meta">
                             <strong>
                               {row.code} · {row.name}
@@ -358,14 +595,98 @@ export function App() {
                               {row.status}
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })
                   )}
                 </div>
+
+                <section className="project-card">
+                  <h3>Project Card</h3>
+                  {!selectedProjectDetail ? (
+                    <p className="muted">Select a project row to view details.</p>
+                  ) : (
+                    <>
+                      <div className="project-card-header">
+                        <strong>
+                          {selectedProjectDetail.code} · {selectedProjectDetail.name}
+                        </strong>
+                        <span>
+                          {selectedProjectDetail.status} · priority {selectedProjectDetail.priority}
+                        </span>
+                      </div>
+                      <p className="muted">
+                        {isoToInputDate(selectedProjectDetail.startDate)} to {isoToInputDate(selectedProjectDetail.endDate)}
+                      </p>
+
+                      <div className="assignment-list">
+                        {selectedProjectDetail.assignments.length === 0 ? (
+                          <p className="muted">No assignments yet.</p>
+                        ) : (
+                          selectedProjectDetail.assignments.map((assignment) => (
+                            <button
+                              type="button"
+                              key={assignment.id}
+                              className={assignment.id === editAssignmentId ? 'assignment-item active' : 'assignment-item'}
+                              onClick={() => handleEditorAssignmentChange(assignment.id)}
+                            >
+                              <strong>{assignment.employee.fullName}</strong>
+                              <span>
+                                {isoToInputDate(assignment.assignmentStartDate)} to{' '}
+                                {isoToInputDate(assignment.assignmentEndDate)} · {Number(assignment.allocationPercent)}%
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      {selectedAssignment ? (
+                        <form className="timeline-form" onSubmit={handleUpdateAssignment}>
+                          <label>
+                            Edit assignment
+                            <select value={editAssignmentId} onChange={(e) => handleEditorAssignmentChange(e.target.value)}>
+                              {selectedProjectDetail.assignments.map((assignment) => (
+                                <option value={assignment.id} key={assignment.id}>
+                                  {assignment.employee.fullName}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Start
+                            <input
+                              type="date"
+                              value={editAssignmentStartDate}
+                              onChange={(e) => setEditAssignmentStartDate(e.target.value)}
+                            />
+                          </label>
+                          <label>
+                            End
+                            <input
+                              type="date"
+                              value={editAssignmentEndDate}
+                              onChange={(e) => setEditAssignmentEndDate(e.target.value)}
+                            />
+                          </label>
+                          <label>
+                            Allocation %
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={editAssignmentPercent}
+                              onChange={(e) => setEditAssignmentPercent(Number(e.target.value))}
+                            />
+                          </label>
+                          <button type="submit">Save Assignment</button>
+                        </form>
+                      ) : null}
+                    </>
+                  )}
+                </section>
               </article>
             </section>
-          )}
+          ) : null}
 
           {error ? <p className="error global-error">{error}</p> : null}
         </>

@@ -40,8 +40,10 @@ Created automatically on API startup if not found.
 
 ## UI features in this build
 - Login screen with bootstrap admin.
-- Directory tab: roles and employees.
+- Personnel tab: employee creation and employees list.
+- Roles tab: role creation and roles list.
 - Timeline tab: project quick-create form, assignment quick-create form, and yearly gantt-like bars.
+- Project Card: click timeline row to inspect project assignments and edit assignment dates/allocation.
 
 ## Business rules already enforced
 - Assignment dates must be inside project date range.

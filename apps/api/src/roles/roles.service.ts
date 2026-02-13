@@ -13,6 +13,12 @@ export class RolesService {
       { name: 'PM', description: 'Project manager', level: 2 },
       { name: 'VIEWER', description: 'Read-only user', level: 3 },
       { name: 'FINANCE', description: 'Finance visibility role', level: 3 },
+      { name: 'UNITY_DEVELOPER', description: 'Unity developer', level: 3 },
+      { name: 'UI_DESIGNER', description: 'UI designer', level: 3 },
+      { name: 'UX_DESIGNER', description: 'UX designer', level: 3 },
+      { name: 'BACKEND_DEVELOPER', description: 'Backend developer', level: 3 },
+      { name: 'ANALYST', description: 'Business/system analyst', level: 3 },
+      { name: 'QA_ENGINEER', description: 'QA test engineer', level: 3 },
     ];
 
     await Promise.all(

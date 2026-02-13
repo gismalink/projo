@@ -150,6 +150,17 @@ li span {
 .timeline-row {
   display: grid;
   gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  padding: 0.35rem;
+  cursor: pointer;
+}
+
+.timeline-row.selected {
+  border-color: #3a7fba;
+  background: rgba(58, 127, 186, 0.12);
 }
 
 .timeline-meta {
@@ -161,6 +172,57 @@ li span {
 
 .timeline-meta span {
   color: #516b84;
+}
+
+.project-card {
+  margin-top: 0.8rem;
+  border-top: 1px solid #d5e1ec;
+  padding-top: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.project-card h3 {
+  margin: 0;
+}
+
+.project-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.project-card-header span {
+  color: #4b6a87;
+  font-size: 0.9rem;
+}
+
+.assignment-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.assignment-item {
+  width: 100%;
+  border: 1px solid #bed1e2;
+  background: #f6fbff;
+  color: #163651;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.assignment-item span {
+  color: #4d6780;
+  font-size: 0.85rem;
+}
+
+.assignment-item.active {
+  border-color: #1d6fb3;
+  background: #e8f4ff;
 }
 
 .track {

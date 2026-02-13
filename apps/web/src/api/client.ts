@@ -44,6 +44,21 @@ export type CreateProjectPayload = {
   links?: string[];
 };
 
+export type CreateRolePayload = {
+  name: string;
+  description?: string;
+  level?: number;
+};
+
+export type CreateEmployeePayload = {
+  fullName: string;
+  email: string;
+  roleId: string;
+  grade?: string;
+  status?: string;
+  defaultCapacityHoursPerDay?: number;
+};
+
 export type CreateAssignmentPayload = {
   projectId: string;
   employeeId: string;
@@ -52,6 +67,35 @@ export type CreateAssignmentPayload = {
   allocationPercent?: number;
   plannedHoursPerDay?: number;
   roleOnProject?: string;
+};
+
+export type UpdateAssignmentPayload = Partial<CreateAssignmentPayload>;
+
+export type ProjectDetail = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  status: string;
+  priority: number;
+  startDate: string;
+  endDate: string;
+  assignments: Array<{
+    id: string;
+    projectId: string;
+    employeeId: string;
+    assignmentStartDate: string;
+    assignmentEndDate: string;
+    allocationPercent: string | number;
+    plannedHoursPerDay: string | number | null;
+    roleOnProject: string | null;
+    employee: {
+      id: string;
+      fullName: string;
+      email: string;
+      role: { name: string };
+    };
+  }>;
 };
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
@@ -80,11 +124,18 @@ export const api = {
     }),
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
+  createRole: (payload: CreateRolePayload, token: string) =>
+    request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createEmployee: (payload: CreateEmployeePayload, token: string) =>
+    request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
   getProjects: (token: string) => request('/projects', {}, token),
+  getProject: (projectId: string, token: string) => request<ProjectDetail>(`/projects/${projectId}`, {}, token),
   getTimelineYear: (year: number, token: string) =>
     request<ProjectTimelineRow[]>(`/timeline/year?year=${year}`, {}, token),
   createProject: (payload: CreateProjectPayload, token: string) =>
     request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
   createAssignment: (payload: CreateAssignmentPayload, token: string) =>
     request('/assignments', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateAssignment: (assignmentId: string, payload: UpdateAssignmentPayload, token: string) =>
+    request(`/assignments/${assignmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
 };
