@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: projo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: projo
+      POSTGRES_USER: projo
+      POSTGRES_PASSWORD: projo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -1,0 +1,17 @@
+{
+  "name": "projo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @projo/api",
+    "dev:api": "npm run dev -w @projo/api",
+    "dev:web": "npm run dev -w @projo/web",
+    "build": "npm run build -ws",
+    "lint": "npm run lint -ws",
+    "test": "npm run test -ws"
+  }
+}
