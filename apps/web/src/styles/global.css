@@ -93,6 +93,19 @@ button {
   font-weight: 600;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ghost-btn {
+  background: #eef5fc;
+  color: #174160;
+  border: 1px solid #9eb8cf;
+}
+
 ul {
   list-style: none;
   margin: 0;
@@ -113,6 +126,12 @@ li {
 li span {
   color: #516b84;
   font-size: 0.9rem;
+}
+
+li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .timeline-form {
@@ -268,6 +287,26 @@ li span {
 
 .global-error {
   margin-top: 1rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 26, 41, 0.48);
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border: 1px solid #c6d8e8;
+  border-radius: 14px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
 }
 
 @media (max-width: 900px) {

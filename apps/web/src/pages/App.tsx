@@ -63,6 +63,9 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('personnel');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isVacationModalOpen, setIsVacationModalOpen] = useState(false);
+  const [vacationEmployeeName, setVacationEmployeeName] = useState('');
 
   const [roleName, setRoleName] = useState('Analyst');
   const [roleDescription, setRoleDescription] = useState('Business analyst role');
@@ -72,6 +75,11 @@ export function App() {
   const [employeeEmail, setEmployeeEmail] = useState('jane.smith@projo.local');
   const [employeeRoleId, setEmployeeRoleId] = useState('');
   const [employeeStatus, setEmployeeStatus] = useState('active');
+
+  const [vacationEmployeeId, setVacationEmployeeId] = useState('');
+  const [vacationStartDate, setVacationStartDate] = useState(`${new Date().getFullYear()}-07-01`);
+  const [vacationEndDate, setVacationEndDate] = useState(`${new Date().getFullYear()}-07-14`);
+  const [vacationType, setVacationType] = useState('vacation');
 
   const [projectCode, setProjectCode] = useState('PRJ-001');
   const [projectName, setProjectName] = useState('Pilot CRM Rollout');
@@ -148,6 +156,10 @@ export function App() {
       setEmployeeRoleId(nextRoles[0].id);
     }
 
+    if (!vacationEmployeeId && nextEmployees[0]) {
+      setVacationEmployeeId(nextEmployees[0].id);
+    }
+
     if (!assignmentProjectId && nextProjects[0]) {
       setAssignmentProjectId(nextProjects[0].id);
     }
@@ -217,6 +229,7 @@ export function App() {
         token,
       );
       await refreshData(token, selectedYear);
+      setIsEmployeeModalOpen(false);
       setEmployeeEmail((prev) => {
         const [name, domain] = prev.split('@');
         return `${name}.2@${domain ?? 'projo.local'}`;
@@ -224,6 +237,34 @@ export function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create employee');
     }
+  }
+
+  async function handleCreateVacation(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !vacationEmployeeId) return;
+
+    setError(null);
+    try {
+      await api.createVacation(
+        {
+          employeeId: vacationEmployeeId,
+          startDate: new Date(vacationStartDate).toISOString(),
+          endDate: new Date(vacationEndDate).toISOString(),
+          type: vacationType,
+        },
+        token,
+      );
+      await refreshData(token, selectedYear);
+      setIsVacationModalOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create vacation');
+    }
+  }
+
+  function openVacationModal(employee: Employee) {
+    setVacationEmployeeId(employee.id);
+    setVacationEmployeeName(employee.fullName);
+    setIsVacationModalOpen(true);
   }
 
   async function handleCreateProject(event: FormEvent) {
@@ -385,47 +426,24 @@ export function App() {
           {activeTab === 'personnel' ? (
             <section className="grid">
               <article className="card">
-                <h2>Personnel</h2>
-                <form className="timeline-form" onSubmit={handleCreateEmployee}>
-                  <label>
-                    Full name
-                    <input value={employeeFullName} onChange={(e) => setEmployeeFullName(e.target.value)} />
-                  </label>
-                  <label>
-                    Email
-                    <input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
-                  </label>
-                  <label>
-                    Role
-                    <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
-                      <option value="">Select role</option>
-                      {roles.map((role) => (
-                        <option key={role.id} value={role.id}>
-                          {role.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Status
-                    <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                    </select>
-                  </label>
-                  <button type="submit">Create Employee</button>
-                </form>
-              </article>
-
-              <article className="card">
-                <h2>Employees List</h2>
+                <div className="section-header">
+                  <h2>Employees List</h2>
+                  <button type="button" onClick={() => setIsEmployeeModalOpen(true)}>
+                    Создать работника
+                  </button>
+                </div>
                 <ul>
                   {employees.map((employee) => (
                     <li key={employee.id}>
-                      <strong>{employee.fullName}</strong>
-                      <span>
-                        {employee.role?.name ?? 'No role'} • {employee.status}
-                      </span>
+                      <div>
+                        <strong>{employee.fullName}</strong>
+                        <span>
+                          {employee.role?.name ?? 'No role'} • {employee.status}
+                        </span>
+                      </div>
+                      <button type="button" className="ghost-btn" onClick={() => openVacationModal(employee)}>
+                        Добавить отпуск
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -689,6 +707,81 @@ export function App() {
           ) : null}
 
           {error ? <p className="error global-error">{error}</p> : null}
+
+          {isEmployeeModalOpen ? (
+            <div className="modal-backdrop">
+              <div className="modal-card">
+                <div className="section-header">
+                  <h3>Добавить работника</h3>
+                  <button type="button" className="ghost-btn" onClick={() => setIsEmployeeModalOpen(false)}>
+                    Закрыть
+                  </button>
+                </div>
+                <form className="timeline-form" onSubmit={handleCreateEmployee}>
+                  <label>
+                    Full name
+                    <input value={employeeFullName} onChange={(e) => setEmployeeFullName(e.target.value)} />
+                  </label>
+                  <label>
+                    Email
+                    <input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
+                  </label>
+                  <label>
+                    Role
+                    <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
+                      <option value="">Select role</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Status
+                    <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
+                      <option value="active">active</option>
+                      <option value="inactive">inactive</option>
+                    </select>
+                  </label>
+                  <button type="submit">Создать работника</button>
+                </form>
+              </div>
+            </div>
+          ) : null}
+
+          {isVacationModalOpen ? (
+            <div className="modal-backdrop">
+              <div className="modal-card">
+                <div className="section-header">
+                  <h3>Добавить отпуск</h3>
+                  <button type="button" className="ghost-btn" onClick={() => setIsVacationModalOpen(false)}>
+                    Закрыть
+                  </button>
+                </div>
+                <p className="muted">{vacationEmployeeName}</p>
+                <form className="timeline-form" onSubmit={handleCreateVacation}>
+                  <label>
+                    Start
+                    <input type="date" value={vacationStartDate} onChange={(e) => setVacationStartDate(e.target.value)} />
+                  </label>
+                  <label>
+                    End
+                    <input type="date" value={vacationEndDate} onChange={(e) => setVacationEndDate(e.target.value)} />
+                  </label>
+                  <label>
+                    Type
+                    <select value={vacationType} onChange={(e) => setVacationType(e.target.value)}>
+                      <option value="vacation">vacation</option>
+                      <option value="sick">sick</option>
+                      <option value="day_off">day_off</option>
+                    </select>
+                  </label>
+                  <button type="submit">Сохранить отпуск</button>
+                </form>
+              </div>
+            </div>
+          ) : null}
         </>
       )}
     </main>

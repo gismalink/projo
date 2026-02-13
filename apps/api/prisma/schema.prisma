@@ -44,6 +44,7 @@ model Employee {
   roleId                     String
   role                       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   assignments                ProjectAssignment[]
+  vacations                  Vacation[]
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
 }
@@ -80,4 +81,19 @@ model ProjectAssignment {
 
   @@index([projectId, assignmentStartDate, assignmentEndDate])
   @@index([employeeId, assignmentStartDate, assignmentEndDate])
+}
+
+model Vacation {
+  id        String   @id @default(cuid())
+  employeeId String
+  startDate DateTime
+  endDate   DateTime
+  type      String   @default("vacation")
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, startDate, endDate])
 }

@@ -69,6 +69,28 @@ export class AssignmentsService {
     }
   }
 
+  private async ensureNoVacationOverlap(params: { employeeId: string; startDate: Date; endDate: Date }) {
+    const overlap = await this.prisma.vacation.findFirst({
+      where: {
+        employeeId: params.employeeId,
+        startDate: { lte: params.endDate },
+        endDate: { gte: params.startDate },
+      },
+      select: {
+        id: true,
+        startDate: true,
+        endDate: true,
+        type: true,
+      },
+    });
+
+    if (overlap) {
+      throw new BadRequestException(
+        `Assignment overlaps with ${overlap.type} (${overlap.startDate.toISOString()} - ${overlap.endDate.toISOString()})`,
+      );
+    }
+  }
+
   async create(dto: CreateAssignmentDto) {
     const startDate = new Date(dto.assignmentStartDate);
     const endDate = new Date(dto.assignmentEndDate);
@@ -97,6 +119,11 @@ export class AssignmentsService {
       startDate,
       endDate,
       allocationPercent,
+    });
+    await this.ensureNoVacationOverlap({
+      employeeId: dto.employeeId,
+      startDate,
+      endDate,
     });
 
     return this.prisma.projectAssignment.create({
@@ -172,6 +199,11 @@ export class AssignmentsService {
       endDate: nextEnd,
       allocationPercent: nextAllocationPercent,
       excludeAssignmentId: id,
+    });
+    await this.ensureNoVacationOverlap({
+      employeeId: dto.employeeId ?? existing.employeeId,
+      startDate: nextStart,
+      endDate: nextEnd,
     });
 
     return this.prisma.projectAssignment.update({

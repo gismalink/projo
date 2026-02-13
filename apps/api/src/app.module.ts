@@ -9,6 +9,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { RolesModule } from './roles/roles.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { UsersModule } from './users/users.module';
+import { VacationsModule } from './vacations/vacations.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     AssignmentsModule,
     TimelineModule,
+    VacationsModule,
     HealthModule,
   ],
 })

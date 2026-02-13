@@ -59,6 +59,28 @@ export type CreateEmployeePayload = {
   defaultCapacityHoursPerDay?: number;
 };
 
+export type VacationItem = {
+  id: string;
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  type: string;
+  note?: string | null;
+  employee: {
+    id: string;
+    fullName: string;
+    role: { name: string };
+  };
+};
+
+export type CreateVacationPayload = {
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  type?: string;
+  note?: string;
+};
+
 export type CreateAssignmentPayload = {
   projectId: string;
   employeeId: string;
@@ -128,6 +150,9 @@ export const api = {
     request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
   createEmployee: (payload: CreateEmployeePayload, token: string) =>
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
+  getVacations: (token: string) => request<VacationItem[]>('/vacations', {}, token),
+  createVacation: (payload: CreateVacationPayload, token: string) =>
+    request('/vacations', { method: 'POST', body: JSON.stringify(payload) }, token),
   getProjects: (token: string) => request('/projects', {}, token),
   getProject: (projectId: string, token: string) => request<ProjectDetail>(`/projects/${projectId}`, {}, token),
   getTimelineYear: (year: number, token: string) =>

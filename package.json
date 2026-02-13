@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @projo/api",
+    "dev:all": "npm run dev --workspaces --if-present --parallel",
     "dev:api": "npm run dev -w @projo/api",
     "dev:web": "npm run dev -w @projo/web",
     "build": "npm run build -ws",
