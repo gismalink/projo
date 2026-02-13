@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { api, ProjectTimelineRow } from '../api/client';
+import { api, ProjectListItem, ProjectTimelineRow } from '../api/client';
 
 type Role = {
   id: string;
@@ -51,6 +51,7 @@ export function App() {
   const [token, setToken] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
@@ -61,21 +62,40 @@ export function App() {
   const [projectStartDate, setProjectStartDate] = useState(`${new Date().getFullYear()}-02-01`);
   const [projectEndDate, setProjectEndDate] = useState(`${new Date().getFullYear()}-06-30`);
 
+  const [assignmentProjectId, setAssignmentProjectId] = useState('');
+  const [assignmentEmployeeId, setAssignmentEmployeeId] = useState('');
+  const [assignmentStartDate, setAssignmentStartDate] = useState(`${new Date().getFullYear()}-03-01`);
+  const [assignmentEndDate, setAssignmentEndDate] = useState(`${new Date().getFullYear()}-04-30`);
+  const [assignmentPercent, setAssignmentPercent] = useState(50);
+
   const sortedTimeline = useMemo(
     () => [...timeline].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
     [timeline],
   );
 
   async function refreshData(authToken: string, year: number) {
-    const [rolesData, employeesData, timelineData] = await Promise.all([
+    const [rolesData, employeesData, projectsData, timelineData] = await Promise.all([
       api.getRoles(authToken),
       api.getEmployees(authToken),
+      api.getProjects(authToken),
       api.getTimelineYear(year, authToken),
     ]);
 
+    const nextEmployees = employeesData as Employee[];
+    const nextProjects = projectsData as ProjectListItem[];
+
     setRoles(rolesData as Role[]);
-    setEmployees(employeesData as Employee[]);
+    setEmployees(nextEmployees);
+    setProjects(nextProjects);
     setTimeline(timelineData);
+
+    if (!assignmentProjectId && nextProjects[0]) {
+      setAssignmentProjectId(nextProjects[0].id);
+    }
+
+    if (!assignmentEmployeeId && nextEmployees[0]) {
+      setAssignmentEmployeeId(nextEmployees[0].id);
+    }
   }
 
   async function handleLogin(event: FormEvent) {
@@ -119,6 +139,29 @@ export function App() {
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create project');
+    }
+  }
+
+  async function handleCreateAssignment(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !assignmentProjectId || !assignmentEmployeeId) return;
+
+    setError(null);
+    try {
+      await api.createAssignment(
+        {
+          projectId: assignmentProjectId,
+          employeeId: assignmentEmployeeId,
+          assignmentStartDate: new Date(assignmentStartDate).toISOString(),
+          assignmentEndDate: new Date(assignmentEndDate).toISOString(),
+          allocationPercent: assignmentPercent,
+        },
+        token,
+      );
+
+      await refreshData(token, selectedYear);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create assignment');
     }
   }
 
@@ -222,6 +265,55 @@ export function App() {
                     <input type="date" value={projectEndDate} onChange={(e) => setProjectEndDate(e.target.value)} />
                   </label>
                   <button type="submit">Create</button>
+                </form>
+
+                <h2>Quick Assign Employee</h2>
+                <form className="timeline-form" onSubmit={handleCreateAssignment}>
+                  <label>
+                    Project
+                    <select value={assignmentProjectId} onChange={(e) => setAssignmentProjectId(e.target.value)}>
+                      <option value="">Select project</option>
+                      {projects.map((project) => (
+                        <option value={project.id} key={project.id}>
+                          {project.code} · {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Employee
+                    <select value={assignmentEmployeeId} onChange={(e) => setAssignmentEmployeeId(e.target.value)}>
+                      <option value="">Select employee</option>
+                      {employees.map((employee) => (
+                        <option value={employee.id} key={employee.id}>
+                          {employee.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Start
+                    <input
+                      type="date"
+                      value={assignmentStartDate}
+                      onChange={(e) => setAssignmentStartDate(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    End
+                    <input type="date" value={assignmentEndDate} onChange={(e) => setAssignmentEndDate(e.target.value)} />
+                  </label>
+                  <label>
+                    Allocation %
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={assignmentPercent}
+                      onChange={(e) => setAssignmentPercent(Number(e.target.value))}
+                    />
+                  </label>
+                  <button type="submit">Assign</button>
                 </form>
               </article>
 

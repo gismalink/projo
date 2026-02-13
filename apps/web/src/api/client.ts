@@ -23,6 +23,16 @@ export type ProjectTimelineRow = {
   totalPlannedHoursPerDay: number;
 };
 
+export type ProjectListItem = {
+  id: string;
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  priority: number;
+};
+
 export type CreateProjectPayload = {
   code: string;
   name: string;
@@ -32,6 +42,16 @@ export type CreateProjectPayload = {
   startDate: string;
   endDate: string;
   links?: string[];
+};
+
+export type CreateAssignmentPayload = {
+  projectId: string;
+  employeeId: string;
+  assignmentStartDate: string;
+  assignmentEndDate: string;
+  allocationPercent?: number;
+  plannedHoursPerDay?: number;
+  roleOnProject?: string;
 };
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
@@ -65,4 +85,6 @@ export const api = {
     request<ProjectTimelineRow[]>(`/timeline/year?year=${year}`, {}, token),
   createProject: (payload: CreateProjectPayload, token: string) =>
     request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createAssignment: (payload: CreateAssignmentPayload, token: string) =>
+    request('/assignments', { method: 'POST', body: JSON.stringify(payload) }, token),
 };

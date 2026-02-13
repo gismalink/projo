@@ -41,7 +41,11 @@ Created automatically on API startup if not found.
 ## UI features in this build
 - Login screen with bootstrap admin.
 - Directory tab: roles and employees.
-- Timeline tab: project quick-create form and yearly gantt-like bars.
+- Timeline tab: project quick-create form, assignment quick-create form, and yearly gantt-like bars.
+
+## Business rules already enforced
+- Assignment dates must be inside project date range.
+- Employee allocation cannot exceed 100% on any day across overlapping assignments.
 
 ## Next steps
 - Add assignments creation UI and project details drawer.
