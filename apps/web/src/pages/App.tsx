@@ -1,5 +1,5 @@
-import { FormEvent, useState } from 'react';
-import { api } from '../api/client';
+import { FormEvent, useMemo, useState } from 'react';
+import { api, ProjectTimelineRow } from '../api/client';
 
 type Role = {
   id: string;
@@ -16,13 +16,67 @@ type Employee = {
   role: { name: string };
 };
 
+type ActiveTab = 'directory' | 'timeline';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function dayOfYear(date: Date) {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 0));
+  const diff = date.getTime() - start.getTime();
+  return Math.floor(diff / 86400000);
+}
+
+function timelineStyle(row: ProjectTimelineRow) {
+  const start = new Date(row.startDate);
+  const end = new Date(row.endDate);
+  const yearStart = new Date(Date.UTC(start.getUTCFullYear(), 0, 1));
+  const yearEnd = new Date(Date.UTC(start.getUTCFullYear(), 11, 31));
+
+  const effectiveStart = start < yearStart ? yearStart : start;
+  const effectiveEnd = end > yearEnd ? yearEnd : end;
+
+  const totalDays = dayOfYear(yearEnd);
+  const startOffset = dayOfYear(effectiveStart) / totalDays;
+  const endOffset = dayOfYear(effectiveEnd) / totalDays;
+
+  return {
+    left: `${(startOffset * 100).toFixed(2)}%`,
+    width: `${Math.max((endOffset - startOffset) * 100, 1.2).toFixed(2)}%`,
+  };
+}
+
 export function App() {
   const [email, setEmail] = useState('admin@projo.local');
   const [password, setPassword] = useState('admin12345');
   const [token, setToken] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('directory');
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const [projectCode, setProjectCode] = useState('PRJ-001');
+  const [projectName, setProjectName] = useState('Pilot CRM Rollout');
+  const [projectStartDate, setProjectStartDate] = useState(`${new Date().getFullYear()}-02-01`);
+  const [projectEndDate, setProjectEndDate] = useState(`${new Date().getFullYear()}-06-30`);
+
+  const sortedTimeline = useMemo(
+    () => [...timeline].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
+    [timeline],
+  );
+
+  async function refreshData(authToken: string, year: number) {
+    const [rolesData, employeesData, timelineData] = await Promise.all([
+      api.getRoles(authToken),
+      api.getEmployees(authToken),
+      api.getTimelineYear(year, authToken),
+    ]);
+
+    setRoles(rolesData as Role[]);
+    setEmployees(employeesData as Employee[]);
+    setTimeline(timelineData);
+  }
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
@@ -31,14 +85,52 @@ export function App() {
     try {
       const result = await api.login(email, password);
       setToken(result.accessToken);
-      const [rolesData, employeesData] = await Promise.all([
-        api.getRoles(result.accessToken),
-        api.getEmployees(result.accessToken),
-      ]);
-      setRoles(rolesData as Role[]);
-      setEmployees(employeesData as Employee[]);
+      await refreshData(result.accessToken, selectedYear);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
+    }
+  }
+
+  async function handleCreateProject(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+
+    setError(null);
+    try {
+      await api.createProject(
+        {
+          code: projectCode,
+          name: projectName,
+          startDate: new Date(projectStartDate).toISOString(),
+          endDate: new Date(projectEndDate).toISOString(),
+          status: 'planned',
+          priority: 2,
+          links: [],
+        },
+        token,
+      );
+
+      await refreshData(token, selectedYear);
+      setProjectCode((prev) => {
+        const match = prev.match(/(\d+)$/);
+        if (!match) return `${prev}-1`;
+        const next = String(Number(match[1]) + 1).padStart(match[1].length, '0');
+        return prev.replace(/\d+$/, next);
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create project');
+    }
+  }
+
+  async function handleYearChange(nextYear: number) {
+    setSelectedYear(nextYear);
+    if (!token) return;
+
+    try {
+      const timelineData = await api.getTimelineYear(nextYear, token);
+      setTimeline(timelineData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load timeline');
     }
   }
 
@@ -62,33 +154,129 @@ export function App() {
           {error ? <p className="error">{error}</p> : null}
         </form>
       ) : (
-        <section className="grid">
-          <article className="card">
-            <h2>Roles</h2>
-            <ul>
-              {roles.map((role) => (
-                <li key={role.id}>
-                  <strong>{role.name}</strong>
-                  <span>{role._count?.employees ?? 0} employees</span>
-                </li>
-              ))}
-            </ul>
-          </article>
+        <>
+          <div className="tabs">
+            <button
+              type="button"
+              className={activeTab === 'directory' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('directory')}
+            >
+              Directory
+            </button>
+            <button
+              type="button"
+              className={activeTab === 'timeline' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('timeline')}
+            >
+              Timeline
+            </button>
+          </div>
 
-          <article className="card">
-            <h2>Employees</h2>
-            <ul>
-              {employees.map((employee) => (
-                <li key={employee.id}>
-                  <strong>{employee.fullName}</strong>
-                  <span>
-                    {employee.role?.name ?? 'No role'} • {employee.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </article>
-        </section>
+          {activeTab === 'directory' ? (
+            <section className="grid">
+              <article className="card">
+                <h2>Roles</h2>
+                <ul>
+                  {roles.map((role) => (
+                    <li key={role.id}>
+                      <strong>{role.name}</strong>
+                      <span>{role._count?.employees ?? 0} employees</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+
+              <article className="card">
+                <h2>Employees</h2>
+                <ul>
+                  {employees.map((employee) => (
+                    <li key={employee.id}>
+                      <strong>{employee.fullName}</strong>
+                      <span>
+                        {employee.role?.name ?? 'No role'} • {employee.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </section>
+          ) : (
+            <section className="timeline-layout">
+              <article className="card">
+                <h2>Quick Create Project</h2>
+                <form className="timeline-form" onSubmit={handleCreateProject}>
+                  <label>
+                    Code
+                    <input value={projectCode} onChange={(e) => setProjectCode(e.target.value)} />
+                  </label>
+                  <label>
+                    Name
+                    <input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+                  </label>
+                  <label>
+                    Start
+                    <input type="date" value={projectStartDate} onChange={(e) => setProjectStartDate(e.target.value)} />
+                  </label>
+                  <label>
+                    End
+                    <input type="date" value={projectEndDate} onChange={(e) => setProjectEndDate(e.target.value)} />
+                  </label>
+                  <button type="submit">Create</button>
+                </form>
+              </article>
+
+              <article className="card timeline-card">
+                <div className="timeline-toolbar">
+                  <h2>Year Timeline</h2>
+                  <div className="year-switcher">
+                    <button type="button" onClick={() => handleYearChange(selectedYear - 1)}>
+                      Prev
+                    </button>
+                    <strong>{selectedYear}</strong>
+                    <button type="button" onClick={() => handleYearChange(selectedYear + 1)}>
+                      Next
+                    </button>
+                  </div>
+                </div>
+
+                <div className="month-grid">
+                  {MONTHS.map((month) => (
+                    <span key={month}>{month}</span>
+                  ))}
+                </div>
+
+                <div className="timeline-rows">
+                  {sortedTimeline.length === 0 ? (
+                    <p className="muted">No projects for selected year.</p>
+                  ) : (
+                    sortedTimeline.map((row) => {
+                      const style = timelineStyle(row);
+                      return (
+                        <div className="timeline-row" key={row.id}>
+                          <div className="timeline-meta">
+                            <strong>
+                              {row.code} · {row.name}
+                            </strong>
+                            <span>
+                              {row.assignmentsCount} assignments · {row.totalPlannedHoursPerDay} h/day
+                            </span>
+                          </div>
+                          <div className="track">
+                            <div className="bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
+                              {row.status}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </article>
+            </section>
+          )}
+
+          {error ? <p className="error global-error">{error}</p> : null}
+        </>
       )}
     </main>
   );

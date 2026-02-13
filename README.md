@@ -28,6 +28,9 @@ MVP foundation for project planning app (API + Web + Postgres).
 - `GET /api/health`
 - `GET/POST/PATCH/DELETE /api/roles`
 - `GET/POST/PATCH/DELETE /api/employees`
+- `GET/POST/PATCH/DELETE /api/projects`
+- `GET/POST/PATCH/DELETE /api/assignments`
+- `GET /api/timeline/year?year=YYYY`
 
 ## Default bootstrap admin
 - email: `admin@projo.local`
@@ -35,7 +38,12 @@ MVP foundation for project planning app (API + Web + Postgres).
 
 Created automatically on API startup if not found.
 
+## UI features in this build
+- Login screen with bootstrap admin.
+- Directory tab: roles and employees.
+- Timeline tab: project quick-create form and yearly gantt-like bars.
+
 ## Next steps
-- Add projects and assignments modules.
-- Implement timeline API and conflict detection.
+- Add assignments creation UI and project details drawer.
+- Implement conflict detection (overload + vacation overlap).
 - Add tests (unit + integration + e2e).

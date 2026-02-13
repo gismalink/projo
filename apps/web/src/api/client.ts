@@ -10,6 +10,30 @@ export type LoginResponse = {
   };
 };
 
+export type ProjectTimelineRow = {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  priority: number;
+  startDate: string;
+  endDate: string;
+  assignmentsCount: number;
+  totalAllocationPercent: number;
+  totalPlannedHoursPerDay: number;
+};
+
+export type CreateProjectPayload = {
+  code: string;
+  name: string;
+  description?: string;
+  status?: string;
+  priority?: number;
+  startDate: string;
+  endDate: string;
+  links?: string[];
+};
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -36,4 +60,9 @@ export const api = {
     }),
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
+  getProjects: (token: string) => request('/projects', {}, token),
+  getTimelineYear: (year: number, token: string) =>
+    request<ProjectTimelineRow[]>(`/timeline/year?year=${year}`, {}, token),
+  createProject: (payload: CreateProjectPayload, token: string) =>
+    request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
 };
