@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
@@ -53,7 +54,7 @@ export class RolesService {
   async findOne(id: string) {
     const role = await this.prisma.role.findUnique({ where: { id } });
     if (!role) {
-      throw new NotFoundException('Role not found');
+      throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
     return role;
   }

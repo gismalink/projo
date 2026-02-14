@@ -1,5 +1,16 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
+export class ApiError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status: number,
+    message?: string,
+  ) {
+    super(message ?? code);
+    this.name = 'ApiError';
+  }
+}
+
 export type LoginResponse = {
   accessToken: string;
   user: {
@@ -153,8 +164,29 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with status ${response.status}`);
+    let code = `HTTP_${response.status}`;
+    let message = '';
+
+    try {
+      const payload = (await response.json()) as
+        | { message?: string | string[]; error?: string; statusCode?: number }
+        | undefined;
+      if (payload) {
+        if (Array.isArray(payload.message)) {
+          message = payload.message.join(', ');
+        } else if (typeof payload.message === 'string') {
+          message = payload.message;
+        }
+        if (typeof payload.error === 'string' && !message) {
+          message = payload.error;
+        }
+      }
+    } catch {
+      message = await response.text();
+    }
+
+    if (message) code = message;
+    throw new ApiError(code, response.status, message || code);
   }
 
   return (await response.json()) as T;

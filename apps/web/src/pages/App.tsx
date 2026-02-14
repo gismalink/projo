@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import {
   api,
+  ApiError,
   AssignmentItem,
   DepartmentItem,
   ProjectDetail,
@@ -37,6 +38,10 @@ type Toast = {
 };
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_BY_LANG: Record<Lang, string[]> = {
+  ru: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  en: MONTHS,
+};
 const GRADE_OPTIONS = ['джу', 'джун+', 'мидл', 'мидл+', 'синьйор', 'синьйор+', 'лид', 'рук-отдела'];
 
 const TEXT: Record<Lang, Record<string, string>> = {
@@ -83,6 +88,40 @@ const TEXT: Record<Lang, Record<string, string>> = {
     saveVacation: 'Сохранить отпуск',
     selectProjectPrompt: 'Выберите проект для деталей.',
     clearFilter: 'Сбросить фильтры',
+    unknownError: 'Неизвестная ошибка',
+    uiLoginFailed: 'Ошибка входа',
+    uiCreateRoleFailed: 'Не удалось создать роль',
+    uiUpdateRoleColorFailed: 'Не удалось обновить цвет роли',
+    uiCreateEmployeeFailed: 'Не удалось создать сотрудника',
+    uiCreateVacationFailed: 'Не удалось создать отпуск',
+    uiCreateProjectFailed: 'Не удалось создать проект',
+    uiCreateAssignmentFailed: 'Не удалось создать назначение',
+    uiLoadProjectDetailsFailed: 'Не удалось загрузить проект',
+    uiUpdateAssignmentFailed: 'Не удалось обновить назначение',
+    uiLoadTimelineFailed: 'Не удалось загрузить таймлайн',
+    noRole: 'Без роли',
+    unassignedDepartment: 'Без отдела',
+    name: 'Название',
+    description: 'Описание',
+    level: 'Уровень',
+    levelEmployees: 'уровень',
+    employeesShort: 'сотр.',
+    code: 'Код',
+    selectProject: 'Выберите проект',
+    selectEmployee: 'Выберите сотрудника',
+    allocationPercent: 'Загрузка %',
+    assignmentsWord: 'назнач.',
+    priorityWord: 'приоритет',
+    fromTo: 'по',
+    editAssignment: 'Редактировать назначение',
+    department: 'Отдел',
+    selectRole: 'Выберите роль',
+    selectDepartment: 'Выберите отдел',
+    statusActive: 'активен',
+    statusInactive: 'неактивен',
+    vacationTypeVacation: 'отпуск',
+    vacationTypeSick: 'больничный',
+    vacationTypeDayOff: 'отгул',
   },
   en: {
     appTitle: 'Projo MVP',
@@ -127,6 +166,73 @@ const TEXT: Record<Lang, Record<string, string>> = {
     saveVacation: 'Save vacation',
     selectProjectPrompt: 'Select project row for details.',
     clearFilter: 'Clear filters',
+    unknownError: 'Unknown error',
+    uiLoginFailed: 'Login failed',
+    uiCreateRoleFailed: 'Failed to create role',
+    uiUpdateRoleColorFailed: 'Failed to update role color',
+    uiCreateEmployeeFailed: 'Failed to create employee',
+    uiCreateVacationFailed: 'Failed to create vacation',
+    uiCreateProjectFailed: 'Failed to create project',
+    uiCreateAssignmentFailed: 'Failed to create assignment',
+    uiLoadProjectDetailsFailed: 'Failed to load project details',
+    uiUpdateAssignmentFailed: 'Failed to update assignment',
+    uiLoadTimelineFailed: 'Failed to load timeline',
+    noRole: 'No role',
+    unassignedDepartment: 'Unassigned',
+    name: 'Name',
+    description: 'Description',
+    level: 'Level',
+    levelEmployees: 'level',
+    employeesShort: 'employees',
+    code: 'Code',
+    selectProject: 'Select project',
+    selectEmployee: 'Select employee',
+    allocationPercent: 'Allocation %',
+    assignmentsWord: 'assignments',
+    priorityWord: 'priority',
+    fromTo: 'to',
+    editAssignment: 'Edit assignment',
+    department: 'Department',
+    selectRole: 'Select role',
+    selectDepartment: 'Select department',
+    statusActive: 'active',
+    statusInactive: 'inactive',
+    vacationTypeVacation: 'vacation',
+    vacationTypeSick: 'sick',
+    vacationTypeDayOff: 'day off',
+  },
+};
+
+const ERROR_TEXT: Record<Lang, Record<string, string>> = {
+  ru: {
+    ERR_AUTH_INVALID_CREDENTIALS: 'Неверный email или пароль',
+    ERR_ROLE_NOT_FOUND: 'Роль не найдена',
+    ERR_EMPLOYEE_NOT_FOUND: 'Сотрудник не найден',
+    ERR_DEPARTMENT_NOT_FOUND: 'Отдел не найден',
+    ERR_VACATION_NOT_FOUND: 'Отпуск не найден',
+    ERR_PROJECT_NOT_FOUND: 'Проект не найден',
+    ERR_ASSIGNMENT_NOT_FOUND: 'Назначение не найдено',
+    ERR_PROJECT_DATE_RANGE_INVALID: 'Дата окончания проекта раньше даты начала',
+    ERR_VACATION_DATE_RANGE_INVALID: 'Дата окончания отпуска раньше даты начала',
+    ERR_ASSIGNMENT_DATE_RANGE_INVALID: 'Дата окончания назначения раньше даты начала',
+    ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE: 'Даты назначения должны быть внутри периода проекта',
+    ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED: 'Перегруз сотрудника: более 100% в выбранный период',
+    ERR_ASSIGNMENT_OVERLAPS_VACATION: 'Назначение пересекается с отпуском сотрудника',
+  },
+  en: {
+    ERR_AUTH_INVALID_CREDENTIALS: 'Invalid email or password',
+    ERR_ROLE_NOT_FOUND: 'Role not found',
+    ERR_EMPLOYEE_NOT_FOUND: 'Employee not found',
+    ERR_DEPARTMENT_NOT_FOUND: 'Department not found',
+    ERR_VACATION_NOT_FOUND: 'Vacation not found',
+    ERR_PROJECT_NOT_FOUND: 'Project not found',
+    ERR_ASSIGNMENT_NOT_FOUND: 'Assignment not found',
+    ERR_PROJECT_DATE_RANGE_INVALID: 'Project end date is earlier than start date',
+    ERR_VACATION_DATE_RANGE_INVALID: 'Vacation end date is earlier than start date',
+    ERR_ASSIGNMENT_DATE_RANGE_INVALID: 'Assignment end date is earlier than start date',
+    ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE: 'Assignment dates must be inside project range',
+    ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED: 'Employee allocation exceeds 100% in selected period',
+    ERR_ASSIGNMENT_OVERLAPS_VACATION: 'Assignment overlaps with employee vacation',
   },
 };
 
@@ -175,6 +281,16 @@ function isoToInputDate(value: string) {
 
 function roleColorOrDefault(colorHex?: string | null) {
   return colorHex && /^#[0-9A-Fa-f]{6}$/.test(colorHex) ? colorHex : '#6E7B8A';
+}
+
+function resolveErrorMessage(error: unknown, lang: Lang, fallback: string) {
+  if (error instanceof ApiError) {
+    return ERROR_TEXT[lang][error.code] ?? error.message ?? fallback;
+  }
+  if (error instanceof Error) {
+    return ERROR_TEXT[lang][error.message] ?? error.message ?? fallback;
+  }
+  return fallback;
 }
 
 export function App() {
@@ -266,7 +382,7 @@ export function App() {
   const roleStats = useMemo(() => {
     const counts = new Map<string, number>();
     for (const employee of employees) {
-      const roleNameValue = employee.role?.name ?? 'UNASSIGNED';
+      const roleNameValue = employee.role?.name ?? t.noRole;
       counts.set(roleNameValue, (counts.get(roleNameValue) ?? 0) + 1);
     }
     return Array.from(counts.entries())
@@ -276,23 +392,23 @@ export function App() {
         colorHex: roleColorOrDefault(roleByName.get(roleNameValue)?.colorHex),
       }))
       .sort((a, b) => b.count - a.count);
-  }, [employees, roleByName]);
+  }, [employees, roleByName, t.noRole]);
 
   const filteredEmployees = useMemo(() => {
     if (selectedRoleFilters.length === 0) return employees;
     const selected = new Set(selectedRoleFilters);
-    return employees.filter((employee) => selected.has(employee.role?.name ?? 'UNASSIGNED'));
-  }, [employees, selectedRoleFilters]);
+    return employees.filter((employee) => selected.has(employee.role?.name ?? t.noRole));
+  }, [employees, selectedRoleFilters, t.noRole]);
 
   const departmentGroups = useMemo(() => {
     const map: Record<string, Employee[]> = {};
     for (const employee of filteredEmployees) {
-      const dep = employee.department?.name ?? 'Unassigned';
+      const dep = employee.department?.name ?? t.unassignedDepartment;
       if (!map[dep]) map[dep] = [];
       map[dep].push(employee);
     }
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredEmployees]);
+  }, [filteredEmployees, t.unassignedDepartment]);
 
   const utilizationByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
@@ -420,7 +536,7 @@ export function App() {
       setToken(result.accessToken);
       await refreshData(result.accessToken, selectedYear);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Login failed');
+      pushToast(resolveErrorMessage(e, lang, t.uiLoginFailed));
     }
   }
 
@@ -441,7 +557,7 @@ export function App() {
       await refreshData(token, selectedYear);
       setRoleName((prev) => `${prev}-2`);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to create role');
+      pushToast(resolveErrorMessage(e, lang, t.uiCreateRoleFailed));
     }
   }
 
@@ -453,7 +569,7 @@ export function App() {
       await api.updateRole(role.id, { colorHex }, token);
       await refreshData(token, selectedYear);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to update role color');
+      pushToast(resolveErrorMessage(e, lang, t.uiUpdateRoleColorFailed));
     }
   }
 
@@ -481,7 +597,7 @@ export function App() {
         return `${name}.2@${domain ?? 'projo.local'}`;
       });
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to create employee');
+      pushToast(resolveErrorMessage(e, lang, t.uiCreateEmployeeFailed));
     }
   }
 
@@ -502,7 +618,7 @@ export function App() {
       await refreshData(token, selectedYear);
       setIsVacationModalOpen(false);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to create vacation');
+      pushToast(resolveErrorMessage(e, lang, t.uiCreateVacationFailed));
     }
   }
 
@@ -538,7 +654,7 @@ export function App() {
         return prev.replace(/\d+$/, next);
       });
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to create project');
+      pushToast(resolveErrorMessage(e, lang, t.uiCreateProjectFailed));
     }
   }
 
@@ -560,7 +676,7 @@ export function App() {
 
       await refreshData(token, selectedYear, assignmentProjectId);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to create assignment');
+      pushToast(resolveErrorMessage(e, lang, t.uiCreateAssignmentFailed));
     }
   }
 
@@ -570,7 +686,7 @@ export function App() {
     try {
       await loadProjectDetail(token, projectId, false);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to load project details');
+      pushToast(resolveErrorMessage(e, lang, t.uiLoadProjectDetailsFailed));
     }
   }
 
@@ -603,7 +719,7 @@ export function App() {
 
       await refreshData(token, selectedYear, selectedProjectId);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to update assignment');
+      pushToast(resolveErrorMessage(e, lang, t.uiUpdateAssignmentFailed));
     }
   }
 
@@ -615,7 +731,7 @@ export function App() {
       const timelineData = await api.getTimelineYear(nextYear, token);
       setTimeline(timelineData);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Failed to load timeline');
+      pushToast(resolveErrorMessage(e, lang, t.uiLoadTimelineFailed));
     }
   }
 
@@ -726,7 +842,7 @@ export function App() {
                             </div>
                             <span>
                               <span className="role-badge" style={{ background: `${roleColor}22`, color: roleColor }}>
-                                {employee.role?.name ?? 'No role'}
+                                {employee.role?.name ?? t.noRole}
                               </span>
                               {' • '}
                               {employee.grade ?? '-'}
@@ -773,15 +889,15 @@ export function App() {
                 <h2>{t.roleMgmt}</h2>
                 <form className="timeline-form" onSubmit={handleCreateRole}>
                   <label>
-                    Name
+                    {t.name}
                     <input value={roleName} onChange={(e) => setRoleName(e.target.value)} />
                   </label>
                   <label>
-                    Description
+                    {t.description}
                     <input value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
                   </label>
                   <label>
-                    Level
+                    {t.level}
                     <input type="number" min={1} value={roleLevel} onChange={(e) => setRoleLevel(Number(e.target.value))} />
                   </label>
                   <button type="submit">{t.createRole}</button>
@@ -796,7 +912,7 @@ export function App() {
                       <div>
                         <strong>{role.name}</strong>
                         <span>
-                          level {role.level ?? '-'} • {role._count?.employees ?? 0} employees
+                          {t.levelEmployees} {role.level ?? '-'} • {role._count?.employees ?? 0} {t.employeesShort}
                         </span>
                       </div>
                       <div className="role-color-editor">
@@ -827,11 +943,11 @@ export function App() {
                 <h2>{t.createProject}</h2>
                 <form className="timeline-form" onSubmit={handleCreateProject}>
                   <label>
-                    Code
+                    {t.code}
                     <input value={projectCode} onChange={(e) => setProjectCode(e.target.value)} />
                   </label>
                   <label>
-                    Name
+                    {t.name}
                     <input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
                   </label>
                   <label>
@@ -850,7 +966,7 @@ export function App() {
                   <label>
                     {t.role}
                     <select value={assignmentProjectId} onChange={(e) => setAssignmentProjectId(e.target.value)}>
-                      <option value="">Select project</option>
+                      <option value="">{t.selectProject}</option>
                       {projects.map((project) => (
                         <option value={project.id} key={project.id}>
                           {project.code} · {project.name}
@@ -861,7 +977,7 @@ export function App() {
                   <label>
                     {t.tabPersonnel}
                     <select value={assignmentEmployeeId} onChange={(e) => setAssignmentEmployeeId(e.target.value)}>
-                      <option value="">Select employee</option>
+                      <option value="">{t.selectEmployee}</option>
                       {employees.map((employee) => (
                         <option value={employee.id} key={employee.id}>
                           {employee.fullName}
@@ -878,7 +994,7 @@ export function App() {
                     <input type="date" value={assignmentEndDate} onChange={(e) => setAssignmentEndDate(e.target.value)} />
                   </label>
                   <label>
-                    Allocation %
+                    {t.allocationPercent}
                     <input
                       type="number"
                       min={0}
@@ -906,7 +1022,7 @@ export function App() {
                 </div>
 
                 <div className="month-grid">
-                  {MONTHS.map((month) => (
+                  {MONTHS_BY_LANG[lang].map((month) => (
                     <span key={month}>{month}</span>
                   ))}
                 </div>
@@ -929,7 +1045,7 @@ export function App() {
                               {row.code} · {row.name}
                             </strong>
                             <span>
-                              {row.assignmentsCount} assignments · {row.totalPlannedHoursPerDay} h/day
+                              {row.assignmentsCount} {t.assignmentsWord} · {row.totalPlannedHoursPerDay} h/day
                             </span>
                           </div>
                           <div className="track">
@@ -954,11 +1070,11 @@ export function App() {
                           {selectedProjectDetail.code} · {selectedProjectDetail.name}
                         </strong>
                         <span>
-                          {selectedProjectDetail.status} · priority {selectedProjectDetail.priority}
+                          {selectedProjectDetail.status} · {t.priorityWord} {selectedProjectDetail.priority}
                         </span>
                       </div>
                       <p className="muted">
-                        {isoToInputDate(selectedProjectDetail.startDate)} to {isoToInputDate(selectedProjectDetail.endDate)}
+                        {isoToInputDate(selectedProjectDetail.startDate)} {t.fromTo} {isoToInputDate(selectedProjectDetail.endDate)}
                       </p>
 
                       <div className="assignment-list">
@@ -974,7 +1090,7 @@ export function App() {
                             >
                               <strong>{assignment.employee.fullName}</strong>
                               <span>
-                                {isoToInputDate(assignment.assignmentStartDate)} to{' '}
+                                {isoToInputDate(assignment.assignmentStartDate)} {t.fromTo}{' '}
                                 {isoToInputDate(assignment.assignmentEndDate)} · {Number(assignment.allocationPercent)}%
                               </span>
                             </button>
@@ -985,7 +1101,7 @@ export function App() {
                       {selectedAssignment ? (
                         <form className="timeline-form" onSubmit={handleUpdateAssignment}>
                           <label>
-                            Edit assignment
+                            {t.editAssignment}
                             <select value={editAssignmentId} onChange={(e) => handleEditorAssignmentChange(e.target.value)}>
                               {selectedProjectDetail.assignments.map((assignment) => (
                                 <option value={assignment.id} key={assignment.id}>
@@ -1011,7 +1127,7 @@ export function App() {
                             />
                           </label>
                           <label>
-                            Allocation %
+                            {t.allocationPercent}
                             <input
                               type="number"
                               min={0}
@@ -1051,7 +1167,7 @@ export function App() {
                   <label>
                     {t.role}
                     <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
-                      <option value="">Select role</option>
+                      <option value="">{t.selectRole}</option>
                       {roles.map((role) => (
                         <option key={role.id} value={role.id}>
                           {role.name}
@@ -1060,9 +1176,9 @@ export function App() {
                     </select>
                   </label>
                   <label>
-                    Department
+                    {t.department}
                     <select value={employeeDepartmentId} onChange={(e) => setEmployeeDepartmentId(e.target.value)}>
-                      <option value="">Select department</option>
+                      <option value="">{t.selectDepartment}</option>
                       {departments.map((department) => (
                         <option key={department.id} value={department.id}>
                           {department.name}
@@ -1083,8 +1199,8 @@ export function App() {
                   <label>
                     {t.status}
                     <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
+                      <option value="active">{t.statusActive}</option>
+                      <option value="inactive">{t.statusInactive}</option>
                     </select>
                   </label>
                   <button type="submit">{t.createWorker}</button>
@@ -1115,9 +1231,9 @@ export function App() {
                   <label>
                     {t.type}
                     <select value={vacationType} onChange={(e) => setVacationType(e.target.value)}>
-                      <option value="vacation">vacation</option>
-                      <option value="sick">sick</option>
-                      <option value="day_off">day_off</option>
+                      <option value="vacation">{t.vacationTypeVacation}</option>
+                      <option value="sick">{t.vacationTypeSick}</option>
+                      <option value="day_off">{t.vacationTypeDayOff}</option>
                     </select>
                   </label>
                   <button type="submit">{t.saveVacation}</button>

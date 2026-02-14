@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
@@ -45,7 +46,7 @@ export class DepartmentsService {
   async findOne(id: string) {
     const department = await this.prisma.department.findUnique({ where: { id } });
     if (!department) {
-      throw new NotFoundException('Department not found');
+      throw new NotFoundException(ErrorCode.DEPARTMENT_NOT_FOUND);
     }
     return department;
   }

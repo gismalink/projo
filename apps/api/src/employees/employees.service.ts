@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -31,7 +32,7 @@ export class EmployeesService {
     });
 
     if (!employee) {
-      throw new NotFoundException('Employee not found');
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
     return employee;

@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { ErrorCode } from '../common/error-codes';
 import { AppRoleValue } from '../common/decorators/roles.decorator';
 import { UsersService } from '../users/users.service';
 
@@ -24,12 +25,12 @@ export class AuthService {
   async login(email: string, password: string): Promise<LoginResponse> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
     const role = user.appRole as unknown as AppRoleValue;

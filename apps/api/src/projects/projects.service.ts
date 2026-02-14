@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -9,7 +10,7 @@ export class ProjectsService {
 
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
-      throw new BadRequestException('endDate cannot be earlier than startDate');
+      throw new BadRequestException(ErrorCode.PROJECT_DATE_RANGE_INVALID);
     }
   }
 
@@ -64,7 +65,7 @@ export class ProjectsService {
     });
 
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
     return project;

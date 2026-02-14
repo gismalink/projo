@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateVacationDto } from './dto/create-vacation.dto';
 import { UpdateVacationDto } from './dto/update-vacation.dto';
@@ -9,7 +10,7 @@ export class VacationsService {
 
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
-      throw new BadRequestException('Vacation endDate cannot be earlier than startDate');
+      throw new BadRequestException(ErrorCode.VACATION_DATE_RANGE_INVALID);
     }
   }
 
@@ -20,7 +21,7 @@ export class VacationsService {
 
     const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId } });
     if (!employee) {
-      throw new NotFoundException('Employee not found');
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
     return this.prisma.vacation.create({
@@ -61,7 +62,7 @@ export class VacationsService {
     });
 
     if (!vacation) {
-      throw new NotFoundException('Vacation not found');
+      throw new NotFoundException(ErrorCode.VACATION_NOT_FOUND);
     }
 
     return vacation;

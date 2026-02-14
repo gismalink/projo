@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
@@ -19,7 +20,7 @@ export class AssignmentsService {
 
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
-      throw new BadRequestException('assignmentEndDate cannot be earlier than assignmentStartDate');
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_DATE_RANGE_INVALID);
     }
   }
 
@@ -60,9 +61,7 @@ export class AssignmentsService {
       }, 0);
 
       if (overlaps + params.allocationPercent > 100) {
-        throw new BadRequestException(
-          'Employee allocation exceeds 100% for one or more days in selected period',
-        );
+        throw new BadRequestException(ErrorCode.ASSIGNMENT_EMPLOYEE_OVERLOADED);
       }
 
       cursor = nextDay;
@@ -85,9 +84,7 @@ export class AssignmentsService {
     });
 
     if (overlap) {
-      throw new BadRequestException(
-        `Assignment overlaps with ${overlap.type} (${overlap.startDate.toISOString()} - ${overlap.endDate.toISOString()})`,
-      );
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_OVERLAPS_VACATION);
     }
   }
 
@@ -103,15 +100,15 @@ export class AssignmentsService {
     ]);
 
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
     if (!employee) {
-      throw new NotFoundException('Employee not found');
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
     if (startDate < project.startDate || endDate > project.endDate) {
-      throw new BadRequestException('Assignment dates must be inside project date range');
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_OUTSIDE_PROJECT_RANGE);
     }
 
     await this.ensureNoOverload({
@@ -169,7 +166,7 @@ export class AssignmentsService {
     });
 
     if (!assignment) {
-      throw new NotFoundException('Assignment not found');
+      throw new NotFoundException(ErrorCode.ASSIGNMENT_NOT_FOUND);
     }
 
     return assignment;
@@ -186,11 +183,11 @@ export class AssignmentsService {
     const projectId = dto.projectId ?? existing.projectId;
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
     if (nextStart < project.startDate || nextEnd > project.endDate) {
-      throw new BadRequestException('Assignment dates must be inside project date range');
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_OUTSIDE_PROJECT_RANGE);
     }
 
     await this.ensureNoOverload({
