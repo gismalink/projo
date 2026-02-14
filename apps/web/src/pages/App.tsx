@@ -127,11 +127,6 @@ export function App() {
               sortedTimeline={app.sortedTimeline}
               expandedProjectIds={app.expandedProjectIds}
               projectDetails={app.projectDetails}
-              selectedProjectId={app.selectedProjectId}
-              selectedAssignmentId={app.editAssignmentId}
-              editAssignmentStartDate={app.editAssignmentStartDate}
-              editAssignmentEndDate={app.editAssignmentEndDate}
-              editAssignmentPercent={app.editAssignmentPercent}
               onOpenProjectModal={app.openProjectModal}
               onOpenProjectDatesModal={app.openProjectDatesModal}
               onOpenAssignmentModal={(projectId) => {
@@ -139,14 +134,9 @@ export function App() {
                 app.setIsAssignmentModalOpen(true);
               }}
               onSelectProject={app.handleSelectProject}
-              onUpdateAssignment={app.handleUpdateAssignment}
               onYearChange={app.handleYearChange}
-              onEditorAssignmentChange={app.handleEditorAssignmentChange}
               onDeleteAssignment={app.handleDeleteAssignment}
               onAdjustAssignmentPlan={app.handleAdjustAssignmentPlan}
-              setEditAssignmentStartDate={app.setEditAssignmentStartDate}
-              setEditAssignmentEndDate={app.setEditAssignmentEndDate}
-              setEditAssignmentPercent={app.setEditAssignmentPercent}
               onMoveProject={app.handleMoveProject}
               onAdjustProjectPlan={app.handleAdjustProjectPlan}
               timelineStyle={timelineStyle}

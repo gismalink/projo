@@ -86,7 +86,7 @@ export class ProjectsService {
               },
             },
           },
-          orderBy: { assignmentStartDate: 'asc' },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });

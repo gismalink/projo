@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 
 type TimelineTabProps = {
@@ -12,18 +12,11 @@ type TimelineTabProps = {
   sortedTimeline: ProjectTimelineRow[];
   expandedProjectIds: string[];
   projectDetails: Record<string, ProjectDetail>;
-  selectedProjectId: string;
-  selectedAssignmentId: string;
-  editAssignmentStartDate: string;
-  editAssignmentEndDate: string;
-  editAssignmentPercent: number;
   onOpenProjectModal: () => void;
   onOpenProjectDatesModal: (projectId: string) => void;
   onOpenAssignmentModal: (projectId: string) => void;
   onSelectProject: (projectId: string) => Promise<void>;
-  onUpdateAssignment: (event: FormEvent) => Promise<void>;
   onYearChange: (nextYear: number) => Promise<void>;
-  onEditorAssignmentChange: (projectId: string, assignmentId: string) => void;
   onDeleteAssignment: (projectId: string, assignmentId: string) => Promise<void>;
   onAdjustAssignmentPlan: (
     projectId: string,
@@ -31,9 +24,6 @@ type TimelineTabProps = {
     nextStartIso: string,
     nextEndIso: string,
   ) => Promise<void>;
-  setEditAssignmentStartDate: (value: string) => void;
-  setEditAssignmentEndDate: (value: string) => void;
-  setEditAssignmentPercent: (value: number) => void;
   onMoveProject: (projectId: string, direction: 'up' | 'down') => void;
   onAdjustProjectPlan: (
     projectId: string,
@@ -58,23 +48,13 @@ export function TimelineTab(props: TimelineTabProps) {
     sortedTimeline,
     expandedProjectIds,
     projectDetails,
-    selectedProjectId,
-    selectedAssignmentId,
-    editAssignmentStartDate,
-    editAssignmentEndDate,
-    editAssignmentPercent,
     onOpenProjectModal,
     onOpenProjectDatesModal,
     onOpenAssignmentModal,
     onSelectProject,
-    onUpdateAssignment,
     onYearChange,
-    onEditorAssignmentChange,
     onDeleteAssignment,
     onAdjustAssignmentPlan,
-    setEditAssignmentStartDate,
-    setEditAssignmentEndDate,
-    setEditAssignmentPercent,
     onMoveProject,
     onAdjustProjectPlan,
     timelineStyle,
@@ -111,6 +91,11 @@ export function TimelineTab(props: TimelineTabProps) {
     trackWidth: number;
     shiftDays: number;
   } | null>(null);
+  const [hoverAssignmentDragMode, setHoverAssignmentDragMode] = useState<{
+    projectId: string;
+    assignmentId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+  } | null>(null);
   const [pendingAssignmentPreview, setPendingAssignmentPreview] = useState<{
     projectId: string;
     assignmentId: string;
@@ -122,6 +107,10 @@ export function TimelineTab(props: TimelineTabProps) {
   const dragMovedRef = useRef(false);
   const suppressAssignmentClickRef = useRef(false);
   const assignmentDragMovedRef = useRef(false);
+  const projectTooltipCacheRef = useRef(new Map<string, { mode: 'move' | 'resize-start' | 'resize-end'; text: string }>());
+  const assignmentTooltipCacheRef = useRef(
+    new Map<string, { mode: 'move' | 'resize-start' | 'resize-end'; text: string }>(),
+  );
 
   useEffect(() => {
     if (!dragState && !assignmentDragState) return;
@@ -346,7 +335,9 @@ export function TimelineTab(props: TimelineTabProps) {
     } else if (x >= rect.width - edgeWidth) {
       mode = 'resize-end';
     }
-    setHoverDragMode({ projectId: row.id, mode });
+    if (!hoverDragMode || hoverDragMode.projectId !== row.id || hoverDragMode.mode !== mode) {
+      setHoverDragMode({ projectId: row.id, mode });
+    }
   };
 
   const clearPlanBarHover = (row: ProjectTimelineRow) => {
@@ -439,6 +430,38 @@ export function TimelineTab(props: TimelineTabProps) {
         prev && prev.assignmentId === current.assignmentId && prev.projectId === current.projectId ? null : prev,
       );
     }
+  };
+
+  const handleAssignmentBarHover = (
+    event: ReactMouseEvent<HTMLElement>,
+    projectId: string,
+    assignmentId: string,
+  ) => {
+    if (assignmentDragState) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const edgeWidth = 8;
+    let mode: 'move' | 'resize-start' | 'resize-end' = 'move';
+    if (x <= edgeWidth) {
+      mode = 'resize-start';
+    } else if (x >= rect.width - edgeWidth) {
+      mode = 'resize-end';
+    }
+    if (
+      !hoverAssignmentDragMode ||
+      hoverAssignmentDragMode.projectId !== projectId ||
+      hoverAssignmentDragMode.assignmentId !== assignmentId ||
+      hoverAssignmentDragMode.mode !== mode
+    ) {
+      setHoverAssignmentDragMode({ projectId, assignmentId, mode });
+    }
+  };
+
+  const clearAssignmentBarHover = (projectId: string, assignmentId: string) => {
+    if (assignmentDragState) return;
+    setHoverAssignmentDragMode((prev) =>
+      prev && prev.projectId === projectId && prev.assignmentId === assignmentId ? null : prev,
+    );
   };
 
   const handleToggleClick = (event: ReactMouseEvent, projectId: string) => {
@@ -634,6 +657,12 @@ export function TimelineTab(props: TimelineTabProps) {
                     : tooltipMode === 'move'
                       ? `${formatTooltipDate(tooltipStart)} - ${formatTooltipDate(tooltipEnd)}`
                       : '';
+              if (tooltipMode) {
+                projectTooltipCacheRef.current.set(row.id, { mode: tooltipMode, text: tooltipText });
+              }
+              const cachedProjectTooltip = projectTooltipCacheRef.current.get(row.id);
+              const displayTooltipMode = tooltipMode ?? cachedProjectTooltip?.mode ?? 'move';
+              const displayTooltipText = tooltipMode ? tooltipText : (cachedProjectTooltip?.text ?? '');
               return (
                 <div key={row.id} className="timeline-project-item">
                   <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
@@ -681,6 +710,9 @@ export function TimelineTab(props: TimelineTabProps) {
                               ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)
                               : '—'}
                           </span>
+                          <span>
+                            {isoToInputDate(row.startDate)} {t.fromTo} {isoToInputDate(row.endDate)}
+                          </span>
                         </div>
                       </div>
                       <div className="timeline-meta-actions">
@@ -713,19 +745,20 @@ export function TimelineTab(props: TimelineTabProps) {
                         onMouseMove={(event) => handlePlanBarHover(event, row)}
                         onMouseLeave={() => clearPlanBarHover(row)}
                       >
-                        {tooltipMode ? (
-                          <span
-                            className={
-                              tooltipMode === 'resize-start'
-                                ? 'project-plan-tooltip edge-left'
-                                : tooltipMode === 'resize-end'
-                                  ? 'project-plan-tooltip edge-right'
+                        <span
+                          className={
+                            displayTooltipMode === 'resize-start'
+                              ? `project-plan-tooltip edge-left${tooltipMode ? ' visible' : ''}`
+                              : displayTooltipMode === 'resize-end'
+                                ? `project-plan-tooltip edge-right${tooltipMode ? ' visible' : ''}`
+                                : displayTooltipMode === 'move'
+                                  ? `project-plan-tooltip center${tooltipMode ? ' visible' : ''}`
                                   : 'project-plan-tooltip center'
-                            }
-                          >
-                            {tooltipText}
-                          </span>
-                        ) : null}
+                          }
+                          aria-hidden={tooltipMode ? undefined : true}
+                        >
+                          {displayTooltipText}
+                        </span>
                         <span
                           className="project-plan-handle left"
                           onMouseDown={(event) => beginPlanDrag(event, row, 'resize-start')}
@@ -772,30 +805,13 @@ export function TimelineTab(props: TimelineTabProps) {
                           <p className="muted">{t.noAssignments}</p>
                         ) : (
                           detail.assignments.map((assignment) => (
-                            <button
-                              type="button"
+                            <div
                               key={assignment.id}
-                              className={
-                                assignment.id === selectedAssignmentId && selectedProjectId === detail.id
-                                  ? 'assignment-item active'
-                                  : 'assignment-item'
-                              }
-                              onClick={(event) => {
-                                if (suppressAssignmentClickRef.current) {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  suppressAssignmentClickRef.current = false;
-                                  return;
-                                }
-                                onEditorAssignmentChange(detail.id, assignment.id);
-                              }}
+                              className="assignment-item"
                             >
                               <div className="assignment-item-header">
                                 <strong>{assignment.employee.fullName}</strong>
-                                <span>
-                                  {isoToInputDate(assignment.assignmentStartDate)} {t.fromTo}{' '}
-                                  {isoToInputDate(assignment.assignmentEndDate)} · {Number(assignment.allocationPercent)}%
-                                </span>
+                                <span>{Number(assignment.allocationPercent)}%</span>
                                 <span
                                   role="button"
                                   tabIndex={0}
@@ -842,6 +858,37 @@ export function TimelineTab(props: TimelineTabProps) {
                                     : pendingPreview
                                       ? pendingPreview.nextEnd.toISOString()
                                       : assignment.assignmentEndDate;
+                                  const assignmentTooltipMode =
+                                    assignmentDragState && assignmentDragState.assignmentId === assignment.id
+                                      ? assignmentDragState.mode
+                                      : hoverAssignmentDragMode &&
+                                          hoverAssignmentDragMode.projectId === detail.id &&
+                                          hoverAssignmentDragMode.assignmentId === assignment.id
+                                        ? hoverAssignmentDragMode.mode
+                                        : null;
+                                  const assignmentTooltipStart = dragPreview?.nextStart ?? toUtcDay(new Date(assignment.assignmentStartDate));
+                                  const assignmentTooltipEnd = dragPreview?.nextEnd ?? toUtcDay(new Date(assignment.assignmentEndDate));
+                                  const assignmentTooltipText =
+                                    assignmentTooltipMode === 'resize-start'
+                                      ? formatTooltipDate(assignmentTooltipStart)
+                                      : assignmentTooltipMode === 'resize-end'
+                                        ? formatTooltipDate(assignmentTooltipEnd)
+                                        : assignmentTooltipMode === 'move'
+                                          ? `${formatTooltipDate(assignmentTooltipStart)} - ${formatTooltipDate(assignmentTooltipEnd)}`
+                                          : '';
+                                  const assignmentTooltipKey = `${detail.id}:${assignment.id}`;
+                                  if (assignmentTooltipMode) {
+                                    assignmentTooltipCacheRef.current.set(assignmentTooltipKey, {
+                                      mode: assignmentTooltipMode,
+                                      text: assignmentTooltipText,
+                                    });
+                                  }
+                                  const cachedAssignmentTooltip = assignmentTooltipCacheRef.current.get(assignmentTooltipKey);
+                                  const displayAssignmentTooltipMode =
+                                    assignmentTooltipMode ?? cachedAssignmentTooltip?.mode ?? 'move';
+                                  const displayAssignmentTooltipText = assignmentTooltipMode
+                                    ? assignmentTooltipText
+                                    : (cachedAssignmentTooltip?.text ?? '');
 
                                   return (
                                     <span
@@ -850,7 +897,23 @@ export function TimelineTab(props: TimelineTabProps) {
                                         ...assignmentStyle(startIso, endIso),
                                         background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
                                       }}
+                                      onMouseMove={(event) => handleAssignmentBarHover(event, detail.id, assignment.id)}
+                                      onMouseLeave={() => clearAssignmentBarHover(detail.id, assignment.id)}
                                     >
+                                      <span
+                                        className={
+                                          displayAssignmentTooltipMode === 'resize-start'
+                                            ? `project-plan-tooltip edge-left${assignmentTooltipMode ? ' visible' : ''}`
+                                            : displayAssignmentTooltipMode === 'resize-end'
+                                              ? `project-plan-tooltip edge-right${assignmentTooltipMode ? ' visible' : ''}`
+                                              : displayAssignmentTooltipMode === 'move'
+                                                ? `project-plan-tooltip center${assignmentTooltipMode ? ' visible' : ''}`
+                                                : 'project-plan-tooltip center'
+                                        }
+                                        aria-hidden={assignmentTooltipMode ? undefined : true}
+                                      >
+                                        {displayAssignmentTooltipText}
+                                      </span>
                                       <span
                                         className="assignment-plan-handle left"
                                         onMouseDown={(event) =>
@@ -902,59 +965,10 @@ export function TimelineTab(props: TimelineTabProps) {
                                   />
                                 ))}
                               </div>
-                            </button>
+                            </div>
                           ))
                         )}
                       </div>
-
-                      {selectedProjectId === detail.id && selectedAssignmentId ? (
-                        (() => {
-                          const selectedAssignment = detail.assignments.find((assignment) => assignment.id === selectedAssignmentId);
-                          if (!selectedAssignment) return null;
-
-                          return (
-                            <form className="timeline-form" onSubmit={onUpdateAssignment}>
-                              <label>{t.editAssignment}: {selectedAssignment.employee.fullName}</label>
-                              <div className="assignment-edit-row">
-                                <label>
-                                  {t.start}
-                                  <input
-                                    type="date"
-                                    value={editAssignmentStartDate}
-                                    onChange={(e) => setEditAssignmentStartDate(e.target.value)}
-                                  />
-                                </label>
-                                <label>
-                                  {t.end}
-                                  <input
-                                    type="date"
-                                    value={editAssignmentEndDate}
-                                    onChange={(e) => setEditAssignmentEndDate(e.target.value)}
-                                  />
-                                </label>
-                                <label>
-                                  {t.allocationPercent}
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    value={editAssignmentPercent}
-                                    onChange={(e) => setEditAssignmentPercent(Number(e.target.value))}
-                                  />
-                                </label>
-                                <button
-                                  type="submit"
-                                  className="icon-save-btn"
-                                  title={t.saveAssignment}
-                                  aria-label={t.saveAssignment}
-                                >
-                                  ✓
-                                </button>
-                              </div>
-                            </form>
-                          );
-                        })()
-                      ) : null}
                     </section>
                   ) : null}
                 </div>
