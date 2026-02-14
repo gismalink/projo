@@ -3,6 +3,9 @@ import { AppRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
 
+const LEGACY_BOOTSTRAP_PASSWORD = 'admin12345';
+const BOOTSTRAP_PASSWORD = 'ProjoAdmin!2026';
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -13,10 +16,18 @@ export class UsersService {
     });
 
     if (existing) {
+      const isLegacyPassword = await bcrypt.compare(LEGACY_BOOTSTRAP_PASSWORD, existing.passwordHash);
+      if (isLegacyPassword) {
+        const passwordHash = await bcrypt.hash(BOOTSTRAP_PASSWORD, 10);
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: { passwordHash },
+        });
+      }
       return existing;
     }
 
-    const passwordHash = await bcrypt.hash('admin12345', 10);
+    const passwordHash = await bcrypt.hash(BOOTSTRAP_PASSWORD, 10);
     return this.prisma.user.create({
       data: {
         email: 'admin@projo.local',

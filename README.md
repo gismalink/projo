@@ -42,7 +42,7 @@ MVP foundation for project planning app (API + Web + Postgres).
 
 ## Default bootstrap admin
 - email: `admin@projo.local`
-- password: `admin12345`
+- password: `ProjoAdmin!2026`
 
 Created automatically on API startup if not found.
 

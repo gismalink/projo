@@ -12,7 +12,7 @@ import { ActiveTab, Employee, Role, Toast } from '../pages/app-types';
 
 export function useAppState() {
   const [email, setEmail] = useState('admin@projo.local');
-  const [password, setPassword] = useState('admin12345');
+  const [password, setPassword] = useState('ProjoAdmin!2026');
   const [token, setToken] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
@@ -55,6 +55,7 @@ export function useAppState() {
   );
   const [editEmployeeId, setEditEmployeeId] = useState('');
   const [editEmployeeName, setEditEmployeeName] = useState('');
+  const [editEmployeeRoleName, setEditEmployeeRoleName] = useState('');
   const [editEmployeeDepartmentId, setEditEmployeeDepartmentId] = useState('');
 
   const [vacationEmployeeId, setVacationEmployeeId] = useState('');
@@ -128,6 +129,7 @@ export function useAppState() {
     employeeCsv,
     editEmployeeId,
     editEmployeeName,
+    editEmployeeRoleName,
     editEmployeeDepartmentId,
     vacationEmployeeId,
     vacationStartDate,
@@ -194,6 +196,7 @@ export function useAppState() {
     setEmployeeCsv,
     setEditEmployeeId,
     setEditEmployeeName,
+    setEditEmployeeRoleName,
     setEditEmployeeDepartmentId,
     setVacationEmployeeId,
     setVacationStartDate,
