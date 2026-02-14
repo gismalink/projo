@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Employee, Role } from '../../pages/app-types';
 import { VacationItem } from '../../api/client';
 
@@ -49,6 +50,20 @@ export function PersonnelTab(props: PersonnelTabProps) {
     year: 'numeric',
   });
   const formatVacationDate = (value: string) => vacationDateFormatter.format(new Date(value));
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const departmentOptions = departmentGroups.map(([department]) => department);
+
+  useEffect(() => {
+    if (selectedDepartment === 'all') return;
+    if (!departmentOptions.includes(selectedDepartment)) {
+      setSelectedDepartment('all');
+    }
+  }, [departmentOptions, selectedDepartment]);
+
+  const visibleDepartmentGroups =
+    selectedDepartment === 'all'
+      ? departmentGroups
+      : departmentGroups.filter(([department]) => department === selectedDepartment);
 
   return (
     <section className="grid">
@@ -66,6 +81,20 @@ export function PersonnelTab(props: PersonnelTabProps) {
         </div>
 
         <div className="role-filter-panel">
+          <label className="department-filter-dropdown" title={t.selectDepartment} aria-label={t.selectDepartment}>
+            <span className="department-filter-icon" aria-hidden>
+              🏢
+            </span>
+            <select value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)}>
+              <option value="all">{t.department}: {t.clearFilter}</option>
+              {departmentOptions.map((department) => (
+                <option key={department} value={department}>
+                  {department}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {roleStats.map((tag) => {
             const active = selectedRoleFilters.includes(tag.roleName);
             return (
@@ -88,7 +117,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
           ) : null}
         </div>
 
-        {departmentGroups.map(([department, departmentEmployees]) => (
+        {visibleDepartmentGroups.map(([department, departmentEmployees]) => (
           <section key={department}>
             <h3>{department}</h3>
             <div className="employee-cards">
