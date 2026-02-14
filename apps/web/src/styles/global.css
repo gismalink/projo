@@ -220,6 +220,13 @@ li > div {
   align-items: flex-start;
 }
 
+.department-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+
 .department-filter-dropdown {
   display: inline-flex;
   align-items: center;
@@ -243,6 +250,17 @@ li > div {
   font-size: 0.78rem;
   outline: none;
   max-width: 170px;
+}
+
+.role-filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.role-tag {
+  max-width: 180px;
 }
 
 .filter-clear-icon-btn {

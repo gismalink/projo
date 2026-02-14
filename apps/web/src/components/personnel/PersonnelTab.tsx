@@ -65,6 +65,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
       ? departmentGroups
       : departmentGroups.filter(([department]) => department === selectedDepartment);
   const hasActiveFilters = selectedRoleFilters.length > 0 || selectedDepartment !== 'all';
+  const compactRoleLabel = (value: string) => (value.length > 14 ? `${value.slice(0, 12)}…` : value);
 
   const clearAllFilters = () => {
     clearRoleFilters();
@@ -86,7 +87,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
           </div>
         </div>
 
-        <div className="role-filter-panel">
+        <div className="department-filter-row">
           <label className="department-filter-dropdown" title={t.selectDepartment} aria-label={t.selectDepartment}>
             <span className="department-filter-icon" aria-hidden>
               🏢
@@ -100,7 +101,9 @@ export function PersonnelTab(props: PersonnelTabProps) {
               ))}
             </select>
           </label>
+        </div>
 
+        <div className="role-filter-panel">
           {roleStats.map((tag) => {
             const active = selectedRoleFilters.includes(tag.roleName);
             return (
@@ -110,9 +113,11 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 className={active ? 'role-tag active' : 'role-tag'}
                 style={{ borderColor: tag.colorHex, background: active ? `${tag.colorHex}22` : '#fff' }}
                 onClick={() => toggleRoleFilter(tag.roleName)}
+                title={`${tag.roleName} (${tag.count})`}
+                aria-label={`${tag.roleName} (${tag.count})`}
               >
                 <span className="dot" style={{ background: tag.colorHex }} />
-                {tag.roleName} ({tag.count})
+                {compactRoleLabel(tag.roleName)} ({tag.count})
               </button>
             );
           })}
