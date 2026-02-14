@@ -34,6 +34,7 @@ export function useAppState() {
   const [selectedRoleFilters, setSelectedRoleFilters] = useState<string[]>([]);
 
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isEmployeeImportModalOpen, setIsEmployeeImportModalOpen] = useState(false);
   const [isVacationModalOpen, setIsVacationModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
@@ -46,6 +47,9 @@ export function useAppState() {
   const [employeeDepartmentId, setEmployeeDepartmentId] = useState('');
   const [employeeStatus, setEmployeeStatus] = useState('active');
   const [employeeGrade, setEmployeeGrade] = useState('мидл');
+  const [employeeCsv, setEmployeeCsv] = useState(
+    'fullName,email,role,department,grade,status,defaultCapacityHoursPerDay\nJohn Doe,john.doe@projo.local,Backend Developer,Engineering,мидл,active,8',
+  );
 
   const [vacationEmployeeId, setVacationEmployeeId] = useState('');
   const [vacationStartDate, setVacationStartDate] = useState(`${new Date().getFullYear()}-07-01`);
@@ -99,6 +103,7 @@ export function useAppState() {
     vacations,
     selectedRoleFilters,
     isEmployeeModalOpen,
+    isEmployeeImportModalOpen,
     isVacationModalOpen,
     isProjectModalOpen,
     isAssignmentModalOpen,
@@ -110,6 +115,7 @@ export function useAppState() {
     employeeDepartmentId,
     employeeStatus,
     employeeGrade,
+    employeeCsv,
     vacationEmployeeId,
     vacationStartDate,
     vacationEndDate,
@@ -156,6 +162,7 @@ export function useAppState() {
     setVacations,
     setSelectedRoleFilters,
     setIsEmployeeModalOpen,
+    setIsEmployeeImportModalOpen,
     setIsVacationModalOpen,
     setIsProjectModalOpen,
     setIsAssignmentModalOpen,
@@ -167,6 +174,7 @@ export function useAppState() {
     setEmployeeDepartmentId,
     setEmployeeStatus,
     setEmployeeGrade,
+    setEmployeeCsv,
     setVacationEmployeeId,
     setVacationStartDate,
     setVacationEndDate,

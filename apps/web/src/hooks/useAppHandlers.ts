@@ -247,6 +247,22 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  async function handleImportEmployeesCsv(event: FormEvent) {
+    event.preventDefault();
+    if (!state.token || !state.employeeCsv.trim()) return;
+    try {
+      const result = await api.importEmployeesCsv({ csv: state.employeeCsv }, state.token);
+      await refreshData(state.token, state.selectedYear);
+      state.setIsEmployeeImportModalOpen(false);
+      pushToast(`CSV: +${result.created} / ~${result.updated} / !${result.errors.length}`);
+      if (result.errors.length > 0) {
+        pushToast(result.errors.slice(0, 2).join(' | '));
+      }
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiImportEmployeesFailed, errorText));
+    }
+  }
+
   async function handleCreateVacation(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.vacationEmployeeId) return;
@@ -434,6 +450,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleCreateSkill,
     handleUpdateRoleColor,
     handleCreateEmployee,
+    handleImportEmployeesCsv,
     handleCreateVacation,
     handleCreateProject,
     handleCreateAssignment,

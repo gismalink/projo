@@ -80,11 +80,17 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   border: 1px solid #93a9bf;
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
   background: #fff;
+}
+
+textarea {
+  resize: vertical;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
 }
 
 button {

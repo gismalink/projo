@@ -73,6 +73,17 @@ export type CreateEmployeePayload = {
   defaultCapacityHoursPerDay?: number;
 };
 
+export type ImportEmployeesCsvPayload = {
+  csv: string;
+};
+
+export type ImportEmployeesCsvResult = {
+  total: number;
+  created: number;
+  updated: number;
+  errors: string[];
+};
+
 export type DepartmentItem = {
   id: string;
   name: string;
@@ -225,6 +236,8 @@ export const api = {
     request(`/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createEmployee: (payload: CreateEmployeePayload, token: string) =>
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
+  importEmployeesCsv: (payload: ImportEmployeesCsvPayload, token: string) =>
+    request<ImportEmployeesCsvResult>('/employees/import-csv', { method: 'POST', body: JSON.stringify(payload) }, token),
   getVacations: (token: string) => request<VacationItem[]>('/vacations', {}, token),
   createVacation: (payload: CreateVacationPayload, token: string) =>
     request('/vacations', { method: 'POST', body: JSON.stringify(payload) }, token),

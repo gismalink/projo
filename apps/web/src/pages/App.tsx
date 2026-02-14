@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
+import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
@@ -78,6 +79,7 @@ export function App() {
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
               openVacationModal={app.openVacationModal}
               openEmployeeModal={() => app.setIsEmployeeModalOpen(true)}
+              openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
               roleColorOrDefault={roleColorOrDefault}
               utilizationColor={utilizationColor}
               isoToInputDate={isoToInputDate}
@@ -210,6 +212,15 @@ export function App() {
             setEmployeeDepartmentId={app.setEmployeeDepartmentId}
             setEmployeeGrade={app.setEmployeeGrade}
             setEmployeeStatus={app.setEmployeeStatus}
+          />
+
+          <EmployeeImportModal
+            t={t}
+            isOpen={app.isEmployeeImportModalOpen}
+            csv={app.employeeCsv}
+            onClose={() => app.setIsEmployeeImportModalOpen(false)}
+            onSubmit={app.handleImportEmployeesCsv}
+            setCsv={app.setEmployeeCsv}
           />
 
           <VacationModal

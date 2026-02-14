@@ -19,6 +19,7 @@ type PersonnelTabProps = {
   clearRoleFilters: () => void;
   openVacationModal: (employee: Employee) => void;
   openEmployeeModal: () => void;
+  openEmployeeImportModal: () => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
   utilizationColor: (value: number) => string;
   isoToInputDate: (value: string) => string;
@@ -37,6 +38,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
     clearRoleFilters,
     openVacationModal,
     openEmployeeModal,
+    openEmployeeImportModal,
     roleColorOrDefault,
     utilizationColor,
     isoToInputDate,
@@ -47,9 +49,14 @@ export function PersonnelTab(props: PersonnelTabProps) {
       <article className="card">
         <div className="section-header">
           <h2>{t.employeesList}</h2>
-          <button type="button" title={t.createEmployeeTooltip} aria-label={t.createEmployeeTooltip} onClick={openEmployeeModal}>
-            +
-          </button>
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button type="button" title={t.importEmployeesTooltip} aria-label={t.importEmployeesTooltip} onClick={openEmployeeImportModal}>
+              ⬆
+            </button>
+            <button type="button" title={t.createEmployeeTooltip} aria-label={t.createEmployeeTooltip} onClick={openEmployeeModal}>
+              +
+            </button>
+          </div>
         </div>
 
         <div className="role-filter-panel">
