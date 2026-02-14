@@ -206,23 +206,6 @@ export function TimelineTab(props: TimelineTabProps) {
     };
   };
 
-  const projectTrackStyle = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const startInYear = new Date(Date.UTC(selectedYear, 0, 1));
-    const endInYear = new Date(Date.UTC(selectedYear, 11, 31));
-    const effectiveStart = start < startInYear ? startInYear : start;
-    const effectiveEnd = end > endInYear ? endInYear : end;
-    const totalDays = Math.max(1, Math.floor((endInYear.getTime() - startInYear.getTime()) / 86400000));
-    const startOffset = Math.floor((effectiveStart.getTime() - startInYear.getTime()) / 86400000) / totalDays;
-    const endOffset = Math.floor((effectiveEnd.getTime() - startInYear.getTime()) / 86400000) / totalDays;
-
-    return {
-      left: `${Math.max(0, startOffset * 100).toFixed(2)}%`,
-      width: `${Math.max((endOffset - startOffset) * 100, 1.2).toFixed(2)}%`,
-    };
-  };
-
   const beginPlanDrag = (
     event: ReactMouseEvent,
     row: ProjectTimelineRow,
@@ -249,19 +232,11 @@ export function TimelineTab(props: TimelineTabProps) {
     let nextStart = toUtcDay(state.startDate);
     let nextEnd = toUtcDay(state.endDate);
     if (state.mode === 'move') {
-      nextStart = shiftDateByDays(state.startDate, state.shiftDays);
-      nextEnd = shiftDateByDays(state.endDate, state.shiftDays);
-
-      if (nextStart < yearStartDay) {
-        const moveRight = diffDays(nextStart, yearStartDay);
-        nextStart = shiftDateByDays(nextStart, moveRight);
-        nextEnd = shiftDateByDays(nextEnd, moveRight);
-      }
-      if (nextEnd > yearEndDay) {
-        const moveLeft = diffDays(yearEndDay, nextEnd);
-        nextStart = shiftDateByDays(nextStart, moveLeft);
-        nextEnd = shiftDateByDays(nextEnd, moveLeft);
-      }
+      const minShift = diffDays(state.startDate, yearStartDay);
+      const maxShift = diffDays(state.endDate, yearEndDay);
+      const boundedShift = Math.min(maxShift, Math.max(minShift, state.shiftDays));
+      nextStart = shiftDateByDays(state.startDate, boundedShift);
+      nextEnd = shiftDateByDays(state.endDate, boundedShift);
     } else if (state.mode === 'resize-start') {
       const candidateStart = shiftDateByDays(state.startDate, state.shiftDays);
       const clampedStart = candidateStart < yearStartDay ? yearStartDay : candidateStart;
@@ -609,7 +584,7 @@ export function TimelineTab(props: TimelineTabProps) {
                             key={assignment.id}
                             className="project-assignee-bar"
                             style={{
-                              ...projectTrackStyle(
+                              ...assignmentStyle(
                                 shiftDateByDays(new Date(assignment.assignmentStartDate), assignmentShiftDays).toISOString(),
                                 shiftDateByDays(new Date(assignment.assignmentEndDate), assignmentShiftDays).toISOString(),
                               ),

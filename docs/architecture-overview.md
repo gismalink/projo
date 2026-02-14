@@ -51,7 +51,9 @@
 - Timeline interaction notes:
   - manual project-row ordering is stored in client state (`timelineOrder`),
   - planned bar supports drag move/resize with window-level mouse tracking,
+  - move-drag is bounded by year edges (no secondary drift after hitting left/right boundary),
   - post-drop optimistic preview prevents one-frame rollback before API refresh,
+  - custom tooltip for planned bar works on hover and drag (edge: single boundary date, center: range),
   - project card expand/collapse is controlled only by dedicated toggle button.
 
 ## 6. Automation and quality gates

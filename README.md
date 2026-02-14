@@ -54,6 +54,7 @@ Created automatically on API startup if not found.
 - Roles tab: editable role colors that are reflected in employee role badges.
 - Timeline tab: yearly gantt-like planning with draggable `planned` project bar (move/resize), employee strips, and company-load overview.
 - Timeline tab: project-row controls in header (`↑/↓/▾`) with manual ordering (no auto-sort jump).
+- Timeline tab: drag is clamped by year boundaries; custom tooltip appears on hover/drag (edge date or full range).
 - Project Card: expands only by dedicated toggle button and supports assignment dates/allocation editing.
 - UI localization switch: `RU/EN`.
 - Errors are shown as toast notifications at the bottom of the screen.
