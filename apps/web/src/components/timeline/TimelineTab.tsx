@@ -15,6 +15,7 @@ type TimelineTabProps = {
   editAssignmentEndDate: string;
   editAssignmentPercent: number;
   onOpenProjectModal: () => void;
+  onOpenProjectDatesModal: (projectId: string) => void;
   onOpenAssignmentModal: (projectId: string) => void;
   onSelectProject: (projectId: string) => Promise<void>;
   onUpdateAssignment: (event: FormEvent) => Promise<void>;
@@ -42,6 +43,7 @@ export function TimelineTab(props: TimelineTabProps) {
     editAssignmentEndDate,
     editAssignmentPercent,
     onOpenProjectModal,
+    onOpenProjectDatesModal,
     onOpenAssignmentModal,
     onSelectProject,
     onUpdateAssignment,
@@ -217,6 +219,9 @@ export function TimelineTab(props: TimelineTabProps) {
                   {isExpanded && detail ? (
                     <section className="project-card">
                       <div className="project-card-tools">
+                        <button type="button" className="ghost-btn" onClick={() => onOpenProjectDatesModal(detail.id)}>
+                          {t.editProjectDates}
+                        </button>
                         <button type="button" onClick={() => onOpenAssignmentModal(detail.id)}>
                           {t.assignEmployee}
                         </button>

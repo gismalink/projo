@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ToastStack } from '../components/ToastStack';
+import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
+import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { VacationModal } from '../components/modals/VacationModal';
-import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
 import { TimelineTab } from '../components/timeline/TimelineTab';
@@ -127,6 +128,7 @@ export function App() {
               editAssignmentEndDate={app.editAssignmentEndDate}
               editAssignmentPercent={app.editAssignmentPercent}
               onOpenProjectModal={app.openProjectModal}
+              onOpenProjectDatesModal={app.openProjectDatesModal}
               onOpenAssignmentModal={(projectId) => {
                 app.setAssignmentProjectId(projectId);
                 app.setIsAssignmentModalOpen(true);
@@ -156,6 +158,17 @@ export function App() {
             setProjectName={app.setProjectName}
             setProjectStartDate={app.setProjectStartDate}
             setProjectEndDate={app.setProjectEndDate}
+          />
+
+          <ProjectDatesModal
+            t={t}
+            isOpen={app.isProjectDatesModalOpen}
+            startDate={app.editProjectStartDate}
+            endDate={app.editProjectEndDate}
+            onClose={() => app.setIsProjectDatesModalOpen(false)}
+            onSubmit={app.handleUpdateProjectDates}
+            setStartDate={app.setEditProjectStartDate}
+            setEndDate={app.setEditProjectEndDate}
           />
 
           <AssignmentModal

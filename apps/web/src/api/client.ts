@@ -54,6 +54,7 @@ export type CreateProjectPayload = {
   endDate: string;
   links?: string[];
 };
+export type UpdateProjectPayload = Partial<CreateProjectPayload>;
 
 export type CreateRolePayload = {
   name: string;
@@ -234,6 +235,8 @@ export const api = {
     request<ProjectTimelineRow[]>(`/timeline/year?year=${year}`, {}, token),
   createProject: (payload: CreateProjectPayload, token: string) =>
     request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateProject: (projectId: string, payload: UpdateProjectPayload, token: string) =>
+    request(`/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createAssignment: (payload: CreateAssignmentPayload, token: string) =>
     request('/assignments', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateAssignment: (assignmentId: string, payload: UpdateAssignmentPayload, token: string) =>

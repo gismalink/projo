@@ -37,6 +37,7 @@ export function useAppState() {
   const [isVacationModalOpen, setIsVacationModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [isProjectDatesModalOpen, setIsProjectDatesModalOpen] = useState(false);
   const [vacationEmployeeName, setVacationEmployeeName] = useState('');
 
   const [employeeFullName, setEmployeeFullName] = useState('Jane Smith');
@@ -63,6 +64,9 @@ export function useAppState() {
   const [projectName, setProjectName] = useState('Pilot CRM Rollout');
   const [projectStartDate, setProjectStartDate] = useState(`${new Date().getFullYear()}-02-01`);
   const [projectEndDate, setProjectEndDate] = useState(`${new Date().getFullYear()}-06-30`);
+  const [editProjectId, setEditProjectId] = useState('');
+  const [editProjectStartDate, setEditProjectStartDate] = useState('');
+  const [editProjectEndDate, setEditProjectEndDate] = useState('');
 
   const [assignmentProjectId, setAssignmentProjectId] = useState('');
   const [assignmentEmployeeId, setAssignmentEmployeeId] = useState('');
@@ -98,6 +102,7 @@ export function useAppState() {
     isVacationModalOpen,
     isProjectModalOpen,
     isAssignmentModalOpen,
+    isProjectDatesModalOpen,
     vacationEmployeeName,
     employeeFullName,
     employeeEmail,
@@ -120,6 +125,9 @@ export function useAppState() {
     projectName,
     projectStartDate,
     projectEndDate,
+    editProjectId,
+    editProjectStartDate,
+    editProjectEndDate,
     assignmentProjectId,
     assignmentEmployeeId,
     assignmentStartDate,
@@ -151,6 +159,7 @@ export function useAppState() {
     setIsVacationModalOpen,
     setIsProjectModalOpen,
     setIsAssignmentModalOpen,
+    setIsProjectDatesModalOpen,
     setVacationEmployeeName,
     setEmployeeFullName,
     setEmployeeEmail,
@@ -173,6 +182,9 @@ export function useAppState() {
     setProjectName,
     setProjectStartDate,
     setProjectEndDate,
+    setEditProjectId,
+    setEditProjectStartDate,
+    setEditProjectEndDate,
     setAssignmentProjectId,
     setAssignmentEmployeeId,
     setAssignmentStartDate,

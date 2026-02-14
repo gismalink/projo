@@ -29,6 +29,15 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setIsProjectModalOpen(true);
   }
 
+  function openProjectDatesModal(projectId: string) {
+    const detail = state.projectDetails[projectId];
+    if (!detail) return;
+    state.setEditProjectId(projectId);
+    state.setEditProjectStartDate(isoToInputDate(detail.startDate));
+    state.setEditProjectEndDate(isoToInputDate(detail.endDate));
+    state.setIsProjectDatesModalOpen(true);
+  }
+
   function pushToast(message: string) {
     const toast: Toast = { id: Date.now() + Math.floor(Math.random() * 1000), message };
     state.setToasts((prev) => [...prev, toast]);
@@ -315,6 +324,26 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  async function handleUpdateProjectDates(event: FormEvent) {
+    event.preventDefault();
+    if (!state.token || !state.editProjectId) return;
+
+    try {
+      await api.updateProject(
+        state.editProjectId,
+        {
+          startDate: new Date(state.editProjectStartDate).toISOString(),
+          endDate: new Date(state.editProjectEndDate).toISOString(),
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear, state.editProjectId);
+      state.setIsProjectDatesModalOpen(false);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
+    }
+  }
+
   async function handleSelectProject(projectId: string) {
     if (!state.token) return;
 
@@ -398,6 +427,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   return {
     toggleRoleFilter,
     openProjectModal,
+    openProjectDatesModal,
     openVacationModal,
     handleLogin,
     handleCreateRole,
@@ -407,6 +437,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleCreateVacation,
     handleCreateProject,
     handleCreateAssignment,
+    handleUpdateProjectDates,
     handleSelectProject,
     handleYearChange,
     handleEditorAssignmentChange,
