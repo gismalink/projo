@@ -130,8 +130,11 @@ export function App() {
               projectDetails={app.projectDetails}
               onOpenProjectModal={app.openProjectModal}
               onOpenProjectDatesModal={app.openProjectDatesModal}
-              onOpenAssignmentModal={(projectId) => {
+              onOpenAssignmentModal={(projectId, employeeId) => {
                 app.setAssignmentProjectId(projectId);
+                if (employeeId) {
+                  app.setAssignmentEmployeeId(employeeId);
+                }
                 app.setIsAssignmentModalOpen(true);
               }}
               onSelectProject={app.handleSelectProject}

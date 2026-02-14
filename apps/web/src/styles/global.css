@@ -227,31 +227,6 @@ li > div {
   margin-bottom: 0.4rem;
 }
 
-.department-filter-dropdown {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: 1px solid var(--ios-border);
-  border-radius: 999px;
-  padding: 0.22rem 0.45rem;
-  background: var(--ios-surface-strong);
-}
-
-.department-filter-icon {
-  color: var(--ios-text-secondary);
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-.department-filter-dropdown select {
-  border: 0;
-  background: transparent;
-  color: var(--ios-text-secondary);
-  font-size: 0.78rem;
-  outline: none;
-  max-width: 170px;
-}
-
 .role-filter-panel {
   display: flex;
   flex-wrap: wrap;
@@ -479,12 +454,83 @@ li > div {
   gap: 0.5rem;
 }
 
+.timeline-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 0.75rem;
+}
+
+.timeline-main {
+  min-width: 0;
+}
+
 .timeline-project-item {
   border: 1px solid var(--ios-border);
   border-radius: 16px;
   background: var(--ios-surface-strong);
   padding: 0;
   overflow: visible;
+}
+
+.timeline-project-item.drop-target {
+  border-color: rgba(10, 132, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.2);
+}
+
+.bench-column {
+  border: 1px solid var(--ios-border);
+  border-radius: 14px;
+  background: var(--ios-surface-strong);
+  padding: 0.55rem;
+  display: grid;
+  gap: 0.45rem;
+  align-content: start;
+  max-height: 72vh;
+  overflow: auto;
+}
+
+.bench-header {
+  font-size: 0.8rem;
+  color: var(--ios-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.bench-group {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.bench-group h4 {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ios-text-secondary);
+}
+
+.bench-members {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.bench-member {
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface);
+  color: var(--ios-text);
+  box-shadow: none;
+  border-radius: 10px;
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.bench-member strong {
+  font-size: 0.78rem;
+}
+
+.bench-member span {
+  font-size: 0.68rem;
+  color: var(--ios-text-secondary);
 }
 
 .timeline-row {
@@ -1035,6 +1081,14 @@ li > div {
 @media (max-width: 900px) {
   .timeline-layout {
     grid-template-columns: 1fr;
+  }
+
+  .timeline-board {
+    grid-template-columns: 1fr;
+  }
+
+  .bench-column {
+    max-height: none;
   }
 
   .timeline-meta {

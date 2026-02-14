@@ -7,14 +7,14 @@ type TimelineTabProps = {
   selectedYear: number;
   assignments: AssignmentItem[];
   vacations: Array<{ employeeId: string; startDate: string; endDate: string }>;
-  employees: Array<{ id: string; role: { name: string } }>;
+  employees: Array<{ id: string; fullName: string; role: { name: string }; department?: { name: string } | null }>;
   roles: Array<{ name: string; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
   expandedProjectIds: string[];
   projectDetails: Record<string, ProjectDetail>;
   onOpenProjectModal: () => void;
   onOpenProjectDatesModal: (projectId: string) => void;
-  onOpenAssignmentModal: (projectId: string) => void;
+  onOpenAssignmentModal: (projectId: string, employeeId?: string) => void;
   onSelectProject: (projectId: string) => Promise<void>;
   onYearChange: (nextYear: number) => Promise<void>;
   onDeleteAssignment: (projectId: string, assignmentId: string) => Promise<void>;
@@ -111,6 +111,8 @@ export function TimelineTab(props: TimelineTabProps) {
   const assignmentTooltipCacheRef = useRef(
     new Map<string, { mode: 'move' | 'resize-start' | 'resize-end'; text: string }>(),
   );
+  const [draggedBenchEmployeeId, setDraggedBenchEmployeeId] = useState<string | null>(null);
+  const [hoverProjectDropId, setHoverProjectDropId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!dragState && !assignmentDragState) return;
@@ -506,6 +508,36 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignments]);
 
+  const benchGroups = useMemo(() => {
+    const assignedEmployeeIds = new Set<string>();
+    for (const assignment of assignments) {
+      const start = new Date(assignment.assignmentStartDate);
+      const end = new Date(assignment.assignmentEndDate);
+      if (end < yearStart || start > yearEndDay) continue;
+      assignedEmployeeIds.add(assignment.employeeId);
+    }
+
+    const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string }>>();
+    for (const employee of employees) {
+      if (assignedEmployeeIds.has(employee.id)) continue;
+      const departmentName = employee.department?.name ?? t.unassignedDepartment;
+      const row = { id: employee.id, fullName: employee.fullName, roleName: employee.role.name };
+      const items = groups.get(departmentName);
+      if (items) {
+        items.push(row);
+      } else {
+        groups.set(departmentName, [row]);
+      }
+    }
+
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([departmentName, members]) => ({
+        departmentName,
+        members: members.sort((a, b) => a.fullName.localeCompare(b.fullName)),
+      }));
+  }, [assignments, employees, t.unassignedDepartment, yearEndDay, yearStart]);
+
   const vacationsByEmployeeId = useMemo(() => {
     const result = new Map<string, Array<{ startDate: string; endDate: string }>>();
     for (const vacation of vacations) {
@@ -611,11 +643,13 @@ export function TimelineTab(props: TimelineTabProps) {
           </div>
         </section>
 
-        <div className="timeline-rows">
-          {sortedTimeline.length === 0 ? (
-            <p className="muted">{t.noProjectsForYear}</p>
-          ) : (
-            sortedTimeline.map((row, rowIndex) => {
+        <div className="timeline-board">
+          <div className="timeline-main">
+            <div className="timeline-rows">
+              {sortedTimeline.length === 0 ? (
+                <p className="muted">{t.noProjectsForYear}</p>
+              ) : (
+                sortedTimeline.map((row, rowIndex) => {
               const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
               const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
               const style =
@@ -663,8 +697,28 @@ export function TimelineTab(props: TimelineTabProps) {
               const cachedProjectTooltip = projectTooltipCacheRef.current.get(row.id);
               const displayTooltipMode = tooltipMode ?? cachedProjectTooltip?.mode ?? 'move';
               const displayTooltipText = tooltipMode ? tooltipText : (cachedProjectTooltip?.text ?? '');
-              return (
-                <div key={row.id} className="timeline-project-item">
+                  return (
+                    <div
+                      key={row.id}
+                      className={hoverProjectDropId === row.id ? 'timeline-project-item drop-target' : 'timeline-project-item'}
+                      onDragOver={(event) => {
+                        if (!draggedBenchEmployeeId) return;
+                        event.preventDefault();
+                        setHoverProjectDropId(row.id);
+                      }}
+                      onDragLeave={(event) => {
+                        const nextTarget = event.relatedTarget as Node | null;
+                        if (nextTarget && (event.currentTarget as HTMLElement).contains(nextTarget)) return;
+                        setHoverProjectDropId((prev) => (prev === row.id ? null : prev));
+                      }}
+                      onDrop={(event) => {
+                        if (!draggedBenchEmployeeId) return;
+                        event.preventDefault();
+                        setHoverProjectDropId(null);
+                        onOpenAssignmentModal(row.id, draggedBenchEmployeeId);
+                        setDraggedBenchEmployeeId(null);
+                      }}
+                    >
                   <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
                     <div className="timeline-meta">
                       <div className="timeline-meta-main">
@@ -971,10 +1025,44 @@ export function TimelineTab(props: TimelineTabProps) {
                       </div>
                     </section>
                   ) : null}
-                </div>
-              );
-            })
-          )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <aside className="bench-column">
+            <div className="bench-header">{t.bench}</div>
+            {benchGroups.length === 0 ? (
+              <p className="muted">—</p>
+            ) : (
+              benchGroups.map((group) => (
+                <section key={group.departmentName} className="bench-group">
+                  <h4>{group.departmentName}</h4>
+                  <div className="bench-members">
+                    {group.members.map((member) => (
+                      <button
+                        type="button"
+                        key={member.id}
+                        className="bench-member"
+                        draggable
+                        title={`${member.fullName} · ${member.roleName}`}
+                        onDragStart={() => setDraggedBenchEmployeeId(member.id)}
+                        onDragEnd={() => {
+                          setDraggedBenchEmployeeId(null);
+                          setHoverProjectDropId(null);
+                        }}
+                      >
+                        <strong>{member.fullName}</strong>
+                        <span>{member.roleName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))
+            )}
+          </aside>
         </div>
       </article>
     </section>
