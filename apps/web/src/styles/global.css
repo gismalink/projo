@@ -281,6 +281,30 @@ li > div {
   padding: 0.15rem 0;
 }
 
+.day-grid {
+  position: relative;
+  height: 20px;
+  border-top: 1px solid #c8d7e6;
+  border-bottom: 1px solid #c8d7e6;
+  margin-bottom: 0.45rem;
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(var(--day-step) - 1px),
+      rgba(127, 154, 179, 0.45) calc(var(--day-step) - 1px),
+      rgba(127, 154, 179, 0.45) var(--day-step)
+    );
+}
+
+.day-marker {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: #4f6780;
+}
+
 .timeline-rows {
   display: flex;
   flex-direction: column;
@@ -354,7 +378,7 @@ li > div {
 
 .assignment-list {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.55rem;
 }
 
 .assignment-item {
@@ -364,14 +388,32 @@ li > div {
   color: #163651;
   border-radius: 8px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.8rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
 }
 
 .track {
   position: relative;
   width: 100%;
+  min-height: 26px;
+}
+
+.track-day-grid {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(var(--day-step) - 1px),
+      rgba(127, 154, 179, 0.28) calc(var(--day-step) - 1px),
+      rgba(127, 154, 179, 0.28) var(--day-step)
+    );
+  pointer-events: none;
+  z-index: 1;
 }
 
 .current-day-line {
@@ -386,6 +428,11 @@ li > div {
   border-radius: 99px;
 }
 
+.bar {
+  position: relative;
+  z-index: 3;
+}
+
 .assignment-item span {
   color: #4d6780;
   font-size: 0.85rem;
@@ -394,6 +441,50 @@ li > div {
 .assignment-item.active {
   border-color: #1d6fb3;
   background: #e8f4ff;
+}
+
+.assignment-item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.assignment-track {
+  position: relative;
+  height: 20px;
+  border-radius: 7px;
+  border: 1px solid #c3d4e3;
+  background: rgba(212, 226, 238, 0.35);
+  overflow: hidden;
+}
+
+.assignment-bar {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #0f4f8d 0%, #1775c2 100%);
+  z-index: 3;
+}
+
+.assignment-edit-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr)) auto;
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.icon-save-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .track {
@@ -488,5 +579,9 @@ li > div {
   .timeline-meta {
     flex-direction: column;
     gap: 0.2rem;
+  }
+
+  .assignment-edit-row {
+    grid-template-columns: 1fr;
   }
 }

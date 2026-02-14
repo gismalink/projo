@@ -53,6 +53,21 @@ export function TimelineTab(props: TimelineTabProps) {
   } = props;
 
   const expandedSet = new Set(expandedProjectIds);
+  const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
+  const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
+  const totalDays = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
+  const dayStep = `${(100 / totalDays).toFixed(5)}%`;
+  const dayMarkers = [];
+  for (let dayOffset = 0; dayOffset < totalDays; dayOffset += 7) {
+    const date = new Date(yearStart);
+    date.setUTCDate(date.getUTCDate() + dayOffset);
+    dayMarkers.push({
+      key: `${selectedYear}-${dayOffset}`,
+      left: `${((dayOffset / totalDays) * 100).toFixed(2)}%`,
+      label: String(date.getUTCDate()),
+    });
+  }
+
   const now = new Date();
   const isCurrentYear = now.getFullYear() === selectedYear;
   const todayPosition = isCurrentYear
@@ -65,6 +80,23 @@ export function TimelineTab(props: TimelineTabProps) {
         return `${Math.max(0, Math.min(100, (fromStart / total) * 100)).toFixed(2)}%`;
       })()
     : null;
+
+  const assignmentStyle = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const startInYear = new Date(Date.UTC(selectedYear, 0, 1));
+    const endInYear = new Date(Date.UTC(selectedYear, 11, 31));
+    const effectiveStart = start < startInYear ? startInYear : start;
+    const effectiveEnd = end > endInYear ? endInYear : end;
+    const totalDays = Math.max(1, Math.floor((endInYear.getTime() - startInYear.getTime()) / 86400000));
+    const startOffset = Math.floor((effectiveStart.getTime() - startInYear.getTime()) / 86400000) / totalDays;
+    const endOffset = Math.floor((effectiveEnd.getTime() - startInYear.getTime()) / 86400000) / totalDays;
+
+    return {
+      left: `${Math.max(0, startOffset * 100).toFixed(2)}%`,
+      width: `${Math.max((endOffset - startOffset) * 100, 1.2).toFixed(2)}%`,
+    };
+  };
 
   return (
     <section className="timeline-layout">
@@ -89,6 +121,14 @@ export function TimelineTab(props: TimelineTabProps) {
           {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
           {months.map((month) => (
             <span key={month}>{month}</span>
+          ))}
+        </div>
+        <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
+          {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+          {dayMarkers.map((marker) => (
+            <span key={marker.key} className="day-marker" style={{ left: marker.left }}>
+              {marker.label}
+            </span>
           ))}
         </div>
 
@@ -116,6 +156,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       </span>
                     </div>
                     <div className="track">
+                      <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                       {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
                       <div className="bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
                         {row.status}
@@ -149,51 +190,77 @@ export function TimelineTab(props: TimelineTabProps) {
                             <button
                               type="button"
                               key={assignment.id}
-                              className={assignment.id === selectedAssignmentId && selectedProjectId === detail.id ? 'assignment-item active' : 'assignment-item'}
+                              className={
+                                assignment.id === selectedAssignmentId && selectedProjectId === detail.id
+                                  ? 'assignment-item active'
+                                  : 'assignment-item'
+                              }
                               onClick={() => onEditorAssignmentChange(detail.id, assignment.id)}
                             >
-                              <strong>{assignment.employee.fullName}</strong>
-                              <span>
-                                {isoToInputDate(assignment.assignmentStartDate)} {t.fromTo} {isoToInputDate(assignment.assignmentEndDate)} ·{' '}
-                                {Number(assignment.allocationPercent)}%
-                              </span>
+                              <div className="assignment-item-header">
+                                <strong>{assignment.employee.fullName}</strong>
+                                <span>
+                                  {isoToInputDate(assignment.assignmentStartDate)} {t.fromTo}{' '}
+                                  {isoToInputDate(assignment.assignmentEndDate)} · {Number(assignment.allocationPercent)}%
+                                </span>
+                              </div>
+                              <div className="assignment-track">
+                                <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
+                                {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+                                <span className="assignment-bar" style={assignmentStyle(assignment.assignmentStartDate, assignment.assignmentEndDate)} />
+                              </div>
                             </button>
                           ))
                         )}
                       </div>
 
                       {selectedProjectId === detail.id && selectedAssignmentId ? (
-                        <form className="timeline-form" onSubmit={onUpdateAssignment}>
-                          <label>
-                            {t.editAssignment}
-                            <select value={selectedAssignmentId} onChange={(e) => onEditorAssignmentChange(detail.id, e.target.value)}>
-                              {detail.assignments.map((assignment) => (
-                                <option value={assignment.id} key={assignment.id}>
-                                  {assignment.employee.fullName}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            {t.start}
-                            <input type="date" value={editAssignmentStartDate} onChange={(e) => setEditAssignmentStartDate(e.target.value)} />
-                          </label>
-                          <label>
-                            {t.end}
-                            <input type="date" value={editAssignmentEndDate} onChange={(e) => setEditAssignmentEndDate(e.target.value)} />
-                          </label>
-                          <label>
-                            {t.allocationPercent}
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={editAssignmentPercent}
-                              onChange={(e) => setEditAssignmentPercent(Number(e.target.value))}
-                            />
-                          </label>
-                          <button type="submit">{t.saveAssignment}</button>
-                        </form>
+                        (() => {
+                          const selectedAssignment = detail.assignments.find((assignment) => assignment.id === selectedAssignmentId);
+                          if (!selectedAssignment) return null;
+
+                          return (
+                            <form className="timeline-form" onSubmit={onUpdateAssignment}>
+                              <label>{t.editAssignment}: {selectedAssignment.employee.fullName}</label>
+                              <div className="assignment-edit-row">
+                                <label>
+                                  {t.start}
+                                  <input
+                                    type="date"
+                                    value={editAssignmentStartDate}
+                                    onChange={(e) => setEditAssignmentStartDate(e.target.value)}
+                                  />
+                                </label>
+                                <label>
+                                  {t.end}
+                                  <input
+                                    type="date"
+                                    value={editAssignmentEndDate}
+                                    onChange={(e) => setEditAssignmentEndDate(e.target.value)}
+                                  />
+                                </label>
+                                <label>
+                                  {t.allocationPercent}
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={editAssignmentPercent}
+                                    onChange={(e) => setEditAssignmentPercent(Number(e.target.value))}
+                                  />
+                                </label>
+                                <button
+                                  type="submit"
+                                  className="icon-save-btn"
+                                  title={t.saveAssignment}
+                                  aria-label={t.saveAssignment}
+                                >
+                                  ✓
+                                </button>
+                              </div>
+                            </form>
+                          );
+                        })()
                       ) : null}
                     </section>
                   ) : null}
