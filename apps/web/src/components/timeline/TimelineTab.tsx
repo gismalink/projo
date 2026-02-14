@@ -188,6 +188,18 @@ export function TimelineTab(props: TimelineTabProps) {
     [locale],
   );
   const formatTooltipDate = (value: Date) => tooltipDateFormatter.format(toUtcDay(value));
+  const formatPlannedCost = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${amount.toFixed(2)} ${currency}`;
+    }
+  };
   const kpiDateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat('en-GB', {
@@ -542,7 +554,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           <span>{detail?.costSummary ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} hours` : '— hours'}</span>
                           <span>
                             {detail?.costSummary
-                              ? `${Number(detail.costSummary.totalPlannedCost).toFixed(2)}${detail.costSummary.currency.toLowerCase()}`
+                              ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)
                               : '—'}
                           </span>
                           <span>

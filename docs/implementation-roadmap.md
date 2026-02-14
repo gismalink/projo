@@ -43,7 +43,7 @@
 - [x] Формальный справочник `Department` в БД (связь с сотрудниками вместо UI-эвристик по ролям)
 - [x] Полная i18n-локализация всех backend- и frontend-сообщений
 - [x] Редактирование плановых дат проекта (`startDate`/`endDate`) из UI таймлайна/карточки проекта
-- [ ] Форматирование `costSummary.totalPlannedCost` через `Intl.NumberFormat` (RU/EN)
+- [x] Форматирование `costSummary.totalPlannedCost` через `Intl.NumberFormat` (RU/EN)
 
 ## Новый triage по экрану Timeline (2026-02-14)
 
