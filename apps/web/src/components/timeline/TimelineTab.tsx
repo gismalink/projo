@@ -1,5 +1,6 @@
 import { MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { BenchColumn } from './BenchColumn';
 
 type TimelineTabProps = {
   t: Record<string, string>;
@@ -1048,37 +1049,15 @@ export function TimelineTab(props: TimelineTabProps) {
             </div>
           </div>
 
-          <aside className="bench-column">
-            <div className="bench-header">{t.bench}</div>
-            {benchGroups.length === 0 ? (
-              <p className="muted">—</p>
-            ) : (
-              benchGroups.map((group) => (
-                <section key={group.departmentName} className="bench-group">
-                  <h4>{group.departmentName}</h4>
-                  <div className="bench-members">
-                    {group.members.map((member) => (
-                      <button
-                        type="button"
-                        key={member.id}
-                        className="bench-member"
-                        draggable
-                        title={`${member.fullName} · ${member.roleName}`}
-                        onDragStart={() => setDraggedBenchEmployeeId(member.id)}
-                        onDragEnd={() => {
-                          setDraggedBenchEmployeeId(null);
-                          setHoverProjectDropId(null);
-                        }}
-                      >
-                        <strong>{member.fullName}</strong>
-                        <span>{member.roleName}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ))
-            )}
-          </aside>
+          <BenchColumn
+            t={t}
+            benchGroups={benchGroups}
+            onMemberDragStart={setDraggedBenchEmployeeId}
+            onMemberDragEnd={() => {
+              setDraggedBenchEmployeeId(null);
+              setHoverProjectDropId(null);
+            }}
+          />
         </div>
       </article>
     </section>
