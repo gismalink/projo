@@ -64,6 +64,12 @@ export function PersonnelTab(props: PersonnelTabProps) {
     selectedDepartment === 'all'
       ? departmentGroups
       : departmentGroups.filter(([department]) => department === selectedDepartment);
+  const hasActiveFilters = selectedRoleFilters.length > 0 || selectedDepartment !== 'all';
+
+  const clearAllFilters = () => {
+    clearRoleFilters();
+    setSelectedDepartment('all');
+  };
 
   return (
     <section className="grid">
@@ -110,9 +116,15 @@ export function PersonnelTab(props: PersonnelTabProps) {
               </button>
             );
           })}
-          {selectedRoleFilters.length > 0 ? (
-            <button type="button" className="ghost-btn" onClick={clearRoleFilters}>
-              {t.clearFilter}
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className="filter-clear-icon-btn"
+              title={t.clearFilter}
+              aria-label={t.clearFilter}
+              onClick={clearAllFilters}
+            >
+              ⟲
             </button>
           ) : null}
         </div>

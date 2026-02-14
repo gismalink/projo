@@ -245,6 +245,22 @@ li > div {
   max-width: 170px;
 }
 
+.filter-clear-icon-btn {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  padding: 0;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  line-height: 1;
+  font-size: 0.9rem;
+}
+
+.filter-clear-icon-btn:hover {
+  background: rgba(10, 132, 255, 0.12);
+}
+
 .employee-cards {
   display: flex;
   flex-wrap: wrap;
