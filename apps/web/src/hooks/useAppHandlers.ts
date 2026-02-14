@@ -268,6 +268,32 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  function openEmployeeDepartmentModal(employee: Employee) {
+    state.setEditEmployeeId(employee.id);
+    state.setEditEmployeeName(employee.fullName);
+    state.setEditEmployeeDepartmentId(employee.department?.id ?? '');
+    state.setIsEmployeeDepartmentModalOpen(true);
+  }
+
+  async function handleUpdateEmployeeDepartment(event: FormEvent) {
+    event.preventDefault();
+    if (!state.token || !state.editEmployeeId || !state.editEmployeeDepartmentId) return;
+
+    try {
+      await api.updateEmployee(
+        state.editEmployeeId,
+        {
+          departmentId: state.editEmployeeDepartmentId,
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear);
+      state.setIsEmployeeDepartmentModalOpen(false);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
+    }
+  }
+
   async function handleCreateDepartment(name: string) {
     if (!state.token || !name.trim()) return;
     try {
@@ -595,11 +621,13 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     openProjectModal,
     openProjectDatesModal,
     openVacationModal,
+    openEmployeeDepartmentModal,
     handleLogin,
     handleCreateRole,
     handleCreateSkill,
     handleUpdateRole,
     handleCreateEmployee,
+    handleUpdateEmployeeDepartment,
     handleCreateDepartment,
     handleUpdateDepartment,
     handleDeleteDepartment,

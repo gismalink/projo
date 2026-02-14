@@ -35,6 +35,7 @@ export function useAppState() {
   const [selectedRoleFilters, setSelectedRoleFilters] = useState<string[]>([]);
 
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isEmployeeDepartmentModalOpen, setIsEmployeeDepartmentModalOpen] = useState(false);
   const [isEmployeeImportModalOpen, setIsEmployeeImportModalOpen] = useState(false);
   const [isDepartmentsModalOpen, setIsDepartmentsModalOpen] = useState(false);
   const [isVacationModalOpen, setIsVacationModalOpen] = useState(false);
@@ -52,6 +53,9 @@ export function useAppState() {
   const [employeeCsv, setEmployeeCsv] = useState(
     'fullName,email,role,department,grade,status,defaultCapacityHoursPerDay\nJohn Doe,john.doe@projo.local,Backend Developer,Engineering,мидл,active,8',
   );
+  const [editEmployeeId, setEditEmployeeId] = useState('');
+  const [editEmployeeName, setEditEmployeeName] = useState('');
+  const [editEmployeeDepartmentId, setEditEmployeeDepartmentId] = useState('');
 
   const [vacationEmployeeId, setVacationEmployeeId] = useState('');
   const [vacationStartDate, setVacationStartDate] = useState(`${new Date().getFullYear()}-07-01`);
@@ -107,6 +111,7 @@ export function useAppState() {
     vacations,
     selectedRoleFilters,
     isEmployeeModalOpen,
+    isEmployeeDepartmentModalOpen,
     isEmployeeImportModalOpen,
     isDepartmentsModalOpen,
     isVacationModalOpen,
@@ -121,6 +126,9 @@ export function useAppState() {
     employeeStatus,
     employeeGrade,
     employeeCsv,
+    editEmployeeId,
+    editEmployeeName,
+    editEmployeeDepartmentId,
     vacationEmployeeId,
     vacationStartDate,
     vacationEndDate,
@@ -169,6 +177,7 @@ export function useAppState() {
     setVacations,
     setSelectedRoleFilters,
     setIsEmployeeModalOpen,
+    setIsEmployeeDepartmentModalOpen,
     setIsEmployeeImportModalOpen,
     setIsDepartmentsModalOpen,
     setIsVacationModalOpen,
@@ -183,6 +192,9 @@ export function useAppState() {
     setEmployeeStatus,
     setEmployeeGrade,
     setEmployeeCsv,
+    setEditEmployeeId,
+    setEditEmployeeName,
+    setEditEmployeeDepartmentId,
     setVacationEmployeeId,
     setVacationStartDate,
     setVacationEndDate,

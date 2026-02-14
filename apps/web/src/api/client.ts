@@ -74,6 +74,8 @@ export type CreateEmployeePayload = {
   defaultCapacityHoursPerDay?: number;
 };
 
+export type UpdateEmployeePayload = Partial<CreateEmployeePayload>;
+
 export type ImportEmployeesCsvPayload = {
   csv: string;
 };
@@ -250,6 +252,8 @@ export const api = {
     request(`/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createEmployee: (payload: CreateEmployeePayload, token: string) =>
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateEmployee: (employeeId: string, payload: UpdateEmployeePayload, token: string) =>
+    request(`/employees/${employeeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createDepartment: (payload: CreateDepartmentPayload, token: string) =>
     request('/departments', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateDepartment: (departmentId: string, payload: UpdateDepartmentPayload, token: string) =>

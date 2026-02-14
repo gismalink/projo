@@ -293,6 +293,11 @@ li > div {
   gap: 0.5rem;
 }
 
+.employee-card-actions {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
 .role-badge {
   border-radius: 999px;
   padding: 0.1rem 0.5rem;

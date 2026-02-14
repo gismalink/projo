@@ -21,6 +21,7 @@ type PersonnelTabProps = {
   clearRoleFilters: () => void;
   openDepartmentsModal: () => void;
   openVacationModal: (employee: Employee) => void;
+  openEmployeeDepartmentModal: (employee: Employee) => void;
   openEmployeeModal: () => void;
   openEmployeeImportModal: () => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
@@ -40,6 +41,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
     clearRoleFilters,
     openDepartmentsModal,
     openVacationModal,
+    openEmployeeDepartmentModal,
     openEmployeeModal,
     openEmployeeImportModal,
     roleColorOrDefault,
@@ -181,15 +183,26 @@ export function PersonnelTab(props: PersonnelTabProps) {
                   <article className="employee-card" key={employee.id}>
                     <div className="employee-card-header">
                       <strong>{employee.fullName}</strong>
-                      <button
-                        type="button"
-                        className="create-role-icon-btn team-icon-btn"
-                        title={t.addVacationTooltip}
-                        aria-label={t.addVacationTooltip}
-                        onClick={() => openVacationModal(employee)}
-                      >
-                        🗓
-                      </button>
+                      <div className="employee-card-actions">
+                        <button
+                          type="button"
+                          className="create-role-icon-btn team-icon-btn"
+                          title={t.department}
+                          aria-label={t.department}
+                          onClick={() => openEmployeeDepartmentModal(employee)}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          className="create-role-icon-btn team-icon-btn"
+                          title={t.addVacationTooltip}
+                          aria-label={t.addVacationTooltip}
+                          onClick={() => openVacationModal(employee)}
+                        >
+                          🗓
+                        </button>
+                      </div>
                     </div>
                     <span>
                       <span className="role-badge" style={{ background: `${roleColor}22`, color: roleColor }}>

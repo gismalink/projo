@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
+import { EmployeeDepartmentModal } from '../components/modals/EmployeeDepartmentModal';
 import { DepartmentsModal } from '../components/modals/DepartmentsModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
@@ -80,6 +81,7 @@ export function App() {
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
               openDepartmentsModal={() => app.setIsDepartmentsModalOpen(true)}
               openVacationModal={app.openVacationModal}
+              openEmployeeDepartmentModal={app.openEmployeeDepartmentModal}
               openEmployeeModal={() => app.setIsEmployeeModalOpen(true)}
               openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
               roleColorOrDefault={roleColorOrDefault}
@@ -202,6 +204,17 @@ export function App() {
             setEmployeeDepartmentId={app.setEmployeeDepartmentId}
             setEmployeeGrade={app.setEmployeeGrade}
             setEmployeeStatus={app.setEmployeeStatus}
+          />
+
+          <EmployeeDepartmentModal
+            t={t}
+            isOpen={app.isEmployeeDepartmentModalOpen}
+            employeeName={app.editEmployeeName}
+            departments={app.departments}
+            employeeDepartmentId={app.editEmployeeDepartmentId}
+            onClose={() => app.setIsEmployeeDepartmentModalOpen(false)}
+            onSubmit={app.handleUpdateEmployeeDepartment}
+            setEmployeeDepartmentId={app.setEditEmployeeDepartmentId}
           />
 
           <EmployeeImportModal
