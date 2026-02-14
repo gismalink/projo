@@ -98,14 +98,6 @@ export function TimelineTab(props: TimelineTabProps) {
   const [draggedBenchEmployeeId, setDraggedBenchEmployeeId] = useState<string | null>(null);
   const [hoverProjectDropId, setHoverProjectDropId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!dragState && !assignmentDragState) return;
-    document.body.classList.add('timeline-no-select');
-    return () => {
-      document.body.classList.remove('timeline-no-select');
-    };
-  }, [dragState, assignmentDragState]);
-
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
   const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
@@ -473,6 +465,14 @@ export function TimelineTab(props: TimelineTabProps) {
     toApiDate,
     onAdjustProjectPlan,
   });
+
+  useEffect(() => {
+    if (!dragState && !assignmentDragState) return;
+    document.body.classList.add('timeline-no-select');
+    return () => {
+      document.body.classList.remove('timeline-no-select');
+    };
+  }, [dragState, assignmentDragState]);
 
   useEffect(() => {
     if (!assignmentDragState) return;
