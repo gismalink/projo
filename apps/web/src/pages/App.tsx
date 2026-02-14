@@ -82,7 +82,6 @@ export function App() {
               openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
               roleColorOrDefault={roleColorOrDefault}
               utilizationColor={utilizationColor}
-              isoToInputDate={isoToInputDate}
             />
           ) : null}
 

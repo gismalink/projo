@@ -22,7 +22,6 @@ type PersonnelTabProps = {
   openEmployeeImportModal: () => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
   utilizationColor: (value: number) => string;
-  isoToInputDate: (value: string) => string;
 };
 
 export function PersonnelTab(props: PersonnelTabProps) {
@@ -41,8 +40,15 @@ export function PersonnelTab(props: PersonnelTabProps) {
     openEmployeeImportModal,
     roleColorOrDefault,
     utilizationColor,
-    isoToInputDate,
   } = props;
+
+  const locale = t.prev === 'Назад' ? 'ru-RU' : 'en-US';
+  const vacationDateFormatter = new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+  const formatVacationDate = (value: string) => vacationDateFormatter.format(new Date(value));
 
   return (
     <section className="grid">
@@ -118,7 +124,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                       {employeeVacations.length === 0
                         ? t.noVacations
                         : employeeVacations
-                            .map((vacation) => `${isoToInputDate(vacation.startDate)} - ${isoToInputDate(vacation.endDate)}`)
+                            .map((vacation) => `${formatVacationDate(vacation.startDate)} - ${formatVacationDate(vacation.endDate)}`)
                             .join(' | ')}
                     </span>
                     <div className="utilization-block">
