@@ -1,6 +1,6 @@
 import { FormEvent } from 'react';
 import { api, ProjectDetail } from '../api/client';
-import { Employee, Role, Toast } from '../pages/app-types';
+import { Employee, Toast } from '../pages/app-types';
 import { isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
 import { AppState } from './useAppState';
 
@@ -210,11 +210,19 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
-  async function handleUpdateRoleColor(role: Role) {
+  async function handleUpdateRole(
+    roleId: string,
+    payload: {
+      name?: string;
+      shortName?: string;
+      description?: string;
+      level?: number;
+      colorHex?: string;
+    },
+  ) {
     if (!state.token) return;
     try {
-      const colorHex = roleColorOrDefault(state.roleColorDrafts[role.id]);
-      await api.updateRole(role.id, { colorHex }, state.token);
+      await api.updateRole(roleId, payload, state.token);
       await refreshData(state.token, state.selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiUpdateRoleColorFailed, errorText));
@@ -590,7 +598,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleLogin,
     handleCreateRole,
     handleCreateSkill,
-    handleUpdateRoleColor,
+    handleUpdateRole,
     handleCreateEmployee,
     handleCreateDepartment,
     handleUpdateDepartment,

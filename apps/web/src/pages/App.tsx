@@ -91,29 +91,16 @@ export function App() {
             <RolesTab
               t={t}
               roles={app.roles}
-              skills={app.skills}
               roleName={app.roleName}
               roleShortName={app.roleShortName}
               roleDescription={app.roleDescription}
               roleLevel={app.roleLevel}
-              skillName={app.skillName}
-              skillDescription={app.skillDescription}
-              roleColorDrafts={app.roleColorDrafts}
               onCreateRole={app.handleCreateRole}
-              onCreateSkill={app.handleCreateSkill}
-              onUpdateRoleColor={app.handleUpdateRoleColor}
+              onUpdateRole={app.handleUpdateRole}
               setRoleName={app.setRoleName}
               setRoleShortName={app.setRoleShortName}
               setRoleDescription={app.setRoleDescription}
               setRoleLevel={app.setRoleLevel}
-              setSkillName={app.setSkillName}
-              setSkillDescription={app.setSkillDescription}
-              setRoleColorDraft={(roleId, color) =>
-                app.setRoleColorDrafts((prev) => ({
-                  ...prev,
-                  [roleId]: color,
-                }))
-              }
               roleColorOrDefault={roleColorOrDefault}
             />
           ) : null}
