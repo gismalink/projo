@@ -434,9 +434,42 @@ export function TimelineTab(props: TimelineTabProps) {
                 <div key={row.id} className="timeline-project-item">
                   <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
                     <div className="timeline-meta">
-                      <strong>
-                        {row.code} · {row.name}
-                      </strong>
+                      <div className="timeline-meta-main">
+                        <div className="timeline-meta-controls">
+                          <button
+                            type="button"
+                            className="timeline-row-toggle"
+                            onClick={() => onMoveProject(row.id, 'up')}
+                            disabled={rowIndex === 0}
+                            aria-label="Move project up"
+                            title="Move up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="timeline-row-toggle"
+                            onClick={() => onMoveProject(row.id, 'down')}
+                            disabled={rowIndex === sortedTimeline.length - 1}
+                            aria-label="Move project down"
+                            title="Move down"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className={isExpanded ? 'timeline-row-toggle active' : 'timeline-row-toggle'}
+                            onClick={(event) => handleToggleClick(event, row.id)}
+                            aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
+                            title={isExpanded ? 'Collapse' : 'Expand'}
+                          >
+                            {isExpanded ? '▴' : '▾'}
+                          </button>
+                        </div>
+                        <strong>
+                          {row.code} · {row.name}
+                        </strong>
+                      </div>
                       <span>
                         {row.assignmentsCount} {t.assignmentsWord} · {row.totalPlannedHoursPerDay} h/day
                       </span>
@@ -488,37 +521,6 @@ export function TimelineTab(props: TimelineTabProps) {
                         );
                       })}
                     </div>
-                  </div>
-                  <div className="timeline-row-toggle-wrap">
-                    <button
-                      type="button"
-                      className="timeline-row-toggle"
-                      onClick={() => onMoveProject(row.id, 'up')}
-                      disabled={rowIndex === 0}
-                      aria-label="Move project up"
-                      title="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="timeline-row-toggle"
-                      onClick={(event) => handleToggleClick(event, row.id)}
-                      aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
-                      title={isExpanded ? 'Collapse' : 'Expand'}
-                    >
-                      {isExpanded ? '▴' : '▾'}
-                    </button>
-                    <button
-                      type="button"
-                      className="timeline-row-toggle"
-                      onClick={() => onMoveProject(row.id, 'down')}
-                      disabled={rowIndex === sortedTimeline.length - 1}
-                      aria-label="Move project down"
-                      title="Move down"
-                    >
-                      ↓
-                    </button>
                   </div>
 
                   {isExpanded && detail ? (
