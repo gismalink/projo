@@ -17,7 +17,7 @@
 - [x] Skills API + UI
 - [ ] CSV импорт сотрудников
 - [x] Отпуска (Vacation) CRUD
-- [ ] Ставки (CostRate) CRUD
+- [x] Ставки (CostRate) CRUD
 
 ### Этап 3: Проекты и таймлайн
 - [x] Projects CRUD

@@ -1,0 +1,114 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ErrorCode } from '../common/error-codes';
+import { PrismaService } from '../common/prisma.service';
+import { CreateCostRateDto } from './dto/create-cost-rate.dto';
+import { UpdateCostRateDto } from './dto/update-cost-rate.dto';
+
+@Injectable()
+export class CostRatesService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private ensureScope(dto: { employeeId?: string; roleId?: string }) {
+    if (!dto.employeeId && !dto.roleId) {
+      throw new BadRequestException(ErrorCode.COST_RATE_SCOPE_REQUIRED);
+    }
+  }
+
+  private ensureDateRange(validFrom: Date, validTo?: Date) {
+    if (validTo && validTo < validFrom) {
+      throw new BadRequestException(ErrorCode.COST_RATE_DATE_RANGE_INVALID);
+    }
+  }
+
+  private async ensureTargetsExist(dto: { employeeId?: string; roleId?: string }) {
+    if (dto.employeeId) {
+      const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId }, select: { id: true } });
+      if (!employee) throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
+    }
+    if (dto.roleId) {
+      const role = await this.prisma.role.findUnique({ where: { id: dto.roleId }, select: { id: true } });
+      if (!role) throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
+    }
+  }
+
+  async create(dto: CreateCostRateDto) {
+    this.ensureScope(dto);
+    const validFrom = new Date(dto.validFrom);
+    const validTo = dto.validTo ? new Date(dto.validTo) : undefined;
+    this.ensureDateRange(validFrom, validTo);
+    await this.ensureTargetsExist(dto);
+
+    return this.prisma.costRate.create({
+      data: {
+        employeeId: dto.employeeId,
+        roleId: dto.roleId,
+        amountPerHour: dto.amountPerHour,
+        currency: dto.currency ?? 'USD',
+        validFrom,
+        validTo,
+      },
+      include: {
+        employee: { select: { id: true, fullName: true } },
+        role: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  findAll() {
+    return this.prisma.costRate.findMany({
+      include: {
+        employee: { select: { id: true, fullName: true } },
+        role: { select: { id: true, name: true } },
+      },
+      orderBy: [{ validFrom: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async findOne(id: string) {
+    const row = await this.prisma.costRate.findUnique({
+      where: { id },
+      include: {
+        employee: { select: { id: true, fullName: true } },
+        role: { select: { id: true, name: true } },
+      },
+    });
+    if (!row) throw new NotFoundException(ErrorCode.COST_RATE_NOT_FOUND);
+    return row;
+  }
+
+  async update(id: string, dto: UpdateCostRateDto) {
+    const existing = await this.findOne(id);
+    const next = {
+      employeeId: dto.employeeId ?? existing.employeeId ?? undefined,
+      roleId: dto.roleId ?? existing.roleId ?? undefined,
+    };
+    this.ensureScope(next);
+    await this.ensureTargetsExist(next);
+
+    const nextValidFrom = dto.validFrom ? new Date(dto.validFrom) : existing.validFrom;
+    const nextValidTo =
+      dto.validTo !== undefined ? (dto.validTo ? new Date(dto.validTo) : undefined) : (existing.validTo ?? undefined);
+    this.ensureDateRange(nextValidFrom, nextValidTo);
+
+    return this.prisma.costRate.update({
+      where: { id },
+      data: {
+        employeeId: dto.employeeId,
+        roleId: dto.roleId,
+        amountPerHour: dto.amountPerHour,
+        currency: dto.currency,
+        validFrom: dto.validFrom ? new Date(dto.validFrom) : undefined,
+        validTo: dto.validTo !== undefined ? (dto.validTo ? new Date(dto.validTo) : null) : undefined,
+      },
+      include: {
+        employee: { select: { id: true, fullName: true } },
+        role: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.costRate.delete({ where: { id } });
+  }
+}

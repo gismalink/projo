@@ -31,6 +31,7 @@ model Role {
   level       Int?
   colorHex    String?  @db.VarChar(7)
   employees   Employee[]
+  costRates   CostRate[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -58,8 +59,27 @@ model Employee {
   assignments                ProjectAssignment[]
   vacations                  Vacation[]
   skills                     EmployeeSkill[]
+  costRates                  CostRate[]
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
+}
+
+model CostRate {
+  id            String    @id @default(cuid())
+  employeeId    String?
+  roleId        String?
+  amountPerHour Decimal   @db.Decimal(10, 2)
+  currency      String    @default("USD")
+  validFrom     DateTime
+  validTo       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  role     Role?     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, validFrom])
+  @@index([roleId, validFrom])
 }
 
 model Skill {
