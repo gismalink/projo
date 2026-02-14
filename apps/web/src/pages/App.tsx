@@ -121,6 +121,7 @@ export function App() {
               months={MONTHS_BY_LANG[lang]}
               selectedYear={app.selectedYear}
               assignments={app.assignments}
+              vacations={app.vacations}
               employees={app.employees}
               roles={app.roles}
               sortedTimeline={app.sortedTimeline}
@@ -144,6 +145,7 @@ export function App() {
               setEditAssignmentStartDate={app.setEditAssignmentStartDate}
               setEditAssignmentEndDate={app.setEditAssignmentEndDate}
               setEditAssignmentPercent={app.setEditAssignmentPercent}
+              onMoveProject={app.handleMoveProject}
               onAdjustProjectPlan={app.handleAdjustProjectPlan}
               timelineStyle={timelineStyle}
               isoToInputDate={isoToInputDate}

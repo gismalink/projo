@@ -20,6 +20,13 @@ body {
   min-height: 100vh;
 }
 
+body.timeline-no-select,
+body.timeline-no-select * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
 .container {
   max-width: 1120px;
   margin: 0 auto;
@@ -406,6 +413,7 @@ li > div {
 .timeline-row-toggle-wrap {
   display: flex;
   justify-content: center;
+  gap: 0.25rem;
   padding: 0.1rem 0 0.35rem;
 }
 
@@ -418,6 +426,11 @@ li > div {
   color: #174160;
   border: 1px solid #9eb8cf;
   line-height: 1;
+}
+
+.timeline-row-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .timeline-meta {
@@ -547,6 +560,15 @@ li > div {
   border-radius: 6px;
   background: linear-gradient(90deg, #0f4f8d 0%, #1775c2 100%);
   z-index: 3;
+}
+
+.assignment-vacation-bar {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 4px;
+  background: rgba(214, 69, 69, 0.78);
+  z-index: 4;
 }
 
 .assignment-edit-row {

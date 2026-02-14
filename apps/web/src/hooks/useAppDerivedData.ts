@@ -3,10 +3,12 @@ import { AppState } from './useAppState';
 import { daysInYear, overlapDaysInYear, roleColorOrDefault } from './app-helpers';
 
 export function useAppDerivedData(state: AppState, t: Record<string, string>) {
-  const sortedTimeline = useMemo(
-    () => [...state.timeline].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
-    [state.timeline],
-  );
+  const sortedTimeline = useMemo(() => {
+    const byId = new Map(state.timeline.map((row) => [row.id, row]));
+    const ordered = state.timelineOrder.map((id) => byId.get(id)).filter((row): row is (typeof state.timeline)[number] => Boolean(row));
+    const missing = state.timeline.filter((row) => !state.timelineOrder.includes(row.id));
+    return [...ordered, ...missing];
+  }, [state.timeline, state.timelineOrder]);
 
   const vacationsByEmployee = useMemo(() => {
     const map: Record<string, typeof state.vacations> = {};

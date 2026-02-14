@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useMemo, useState } from 'react';
+import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 
 type TimelineTabProps = {
@@ -6,6 +6,7 @@ type TimelineTabProps = {
   months: string[];
   selectedYear: number;
   assignments: AssignmentItem[];
+  vacations: Array<{ employeeId: string; startDate: string; endDate: string }>;
   employees: Array<{ id: string; role: { name: string } }>;
   roles: Array<{ name: string; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
@@ -26,6 +27,7 @@ type TimelineTabProps = {
   setEditAssignmentStartDate: (value: string) => void;
   setEditAssignmentEndDate: (value: string) => void;
   setEditAssignmentPercent: (value: number) => void;
+  onMoveProject: (projectId: string, direction: 'up' | 'down') => void;
   onAdjustProjectPlan: (
     projectId: string,
     nextStartIso: string,
@@ -43,6 +45,7 @@ export function TimelineTab(props: TimelineTabProps) {
     months,
     selectedYear,
     assignments,
+    vacations,
     employees,
     roles,
     sortedTimeline,
@@ -63,6 +66,7 @@ export function TimelineTab(props: TimelineTabProps) {
     setEditAssignmentStartDate,
     setEditAssignmentEndDate,
     setEditAssignmentPercent,
+    onMoveProject,
     onAdjustProjectPlan,
     timelineStyle,
     isoToInputDate,
@@ -77,6 +81,16 @@ export function TimelineTab(props: TimelineTabProps) {
     trackWidth: number;
     shiftDays: number;
   } | null>(null);
+  const suppressToggleClickRef = useRef(false);
+  const dragMovedRef = useRef(false);
+
+  useEffect(() => {
+    if (!dragState) return;
+    document.body.classList.add('timeline-no-select');
+    return () => {
+      document.body.classList.remove('timeline-no-select');
+    };
+  }, [dragState]);
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -188,7 +202,7 @@ export function TimelineTab(props: TimelineTabProps) {
   };
 
   const beginPlanDrag = (
-    event: MouseEvent,
+    event: ReactMouseEvent,
     row: ProjectTimelineRow,
     mode: 'move' | 'resize-start' | 'resize-end',
   ) => {
@@ -196,6 +210,7 @@ export function TimelineTab(props: TimelineTabProps) {
     event.stopPropagation();
     const track = (event.currentTarget as HTMLElement).closest('.track') as HTMLElement | null;
     if (!track) return;
+    dragMovedRef.current = false;
 
     setDragState({
       projectId: row.id,
@@ -239,21 +254,25 @@ export function TimelineTab(props: TimelineTabProps) {
 
   const onPlanDragMove = (event: MouseEvent) => {
     if (!dragState) return;
+    event.preventDefault();
     const deltaX = event.clientX - dragState.startX;
     const rawDays = (deltaX / dragState.trackWidth) * totalDays;
     const shiftDays = Math.round(rawDays);
+    if (Math.abs(deltaX) >= 2) {
+      dragMovedRef.current = true;
+    }
     if (shiftDays !== dragState.shiftDays) {
       setDragState({ ...dragState, shiftDays });
     }
   };
 
-  const endPlanDrag = async (event: MouseEvent) => {
+  const endPlanDrag = async (event?: MouseEvent) => {
     if (!dragState) return;
-    event.preventDefault();
-    event.stopPropagation();
+    event?.preventDefault();
 
     const current = dragState;
     setDragState(null);
+    suppressToggleClickRef.current = dragMovedRef.current;
     if (current.shiftDays === 0) return;
 
     const { nextStart, nextEnd } = resolveDragDates(current);
@@ -265,6 +284,17 @@ export function TimelineTab(props: TimelineTabProps) {
       current.mode === 'resize-end' ? 0 : effectiveShiftDays,
       current.mode,
     );
+  };
+
+  const handleToggleClick = (event: ReactMouseEvent, projectId: string) => {
+    if (suppressToggleClickRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressToggleClickRef.current = false;
+      return;
+    }
+
+    void onSelectProject(projectId);
   };
 
   const roleColorByName = useMemo(() => {
@@ -297,6 +327,39 @@ export function TimelineTab(props: TimelineTabProps) {
     }
     return result;
   }, [assignments]);
+
+  const vacationsByEmployeeId = useMemo(() => {
+    const result = new Map<string, Array<{ startDate: string; endDate: string }>>();
+    for (const vacation of vacations) {
+      const employeeVacations = result.get(vacation.employeeId);
+      if (employeeVacations) {
+        employeeVacations.push({ startDate: vacation.startDate, endDate: vacation.endDate });
+      } else {
+        result.set(vacation.employeeId, [{ startDate: vacation.startDate, endDate: vacation.endDate }]);
+      }
+    }
+    return result;
+  }, [vacations]);
+
+  useEffect(() => {
+    if (!dragState) return;
+
+    const handleWindowMouseMove = (event: MouseEvent) => {
+      onPlanDragMove(event);
+    };
+
+    const handleWindowMouseUp = (event: MouseEvent) => {
+      void endPlanDrag(event);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [dragState]);
 
   return (
     <section className="timeline-layout">
@@ -354,7 +417,7 @@ export function TimelineTab(props: TimelineTabProps) {
           {sortedTimeline.length === 0 ? (
             <p className="muted">{t.noProjectsForYear}</p>
           ) : (
-            sortedTimeline.map((row) => {
+            sortedTimeline.map((row, rowIndex) => {
               const style =
                 dragState && dragState.projectId === row.id
                   ? projectTrackStyle(
@@ -382,7 +445,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       {row.status} · {t.priorityWord} {row.priority} · {isoToInputDate(row.startDate)} {t.fromTo}{' '}
                       {isoToInputDate(row.endDate)}
                     </div>
-                    <div className="track project-track" onMouseMove={onPlanDragMove} onMouseUp={endPlanDrag} onMouseLeave={endPlanDrag}>
+                    <div className="track project-track">
                       <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                       {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
                       <div className="bar project-plan-bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
@@ -430,11 +493,31 @@ export function TimelineTab(props: TimelineTabProps) {
                     <button
                       type="button"
                       className="timeline-row-toggle"
-                      onClick={() => void onSelectProject(row.id)}
+                      onClick={() => onMoveProject(row.id, 'up')}
+                      disabled={rowIndex === 0}
+                      aria-label="Move project up"
+                      title="Move up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="timeline-row-toggle"
+                      onClick={(event) => handleToggleClick(event, row.id)}
                       aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
                       title={isExpanded ? 'Collapse' : 'Expand'}
                     >
                       {isExpanded ? '▴' : '▾'}
+                    </button>
+                    <button
+                      type="button"
+                      className="timeline-row-toggle"
+                      onClick={() => onMoveProject(row.id, 'down')}
+                      disabled={rowIndex === sortedTimeline.length - 1}
+                      aria-label="Move project down"
+                      title="Move down"
+                    >
+                      ↓
                     </button>
                   </div>
 
@@ -492,6 +575,14 @@ export function TimelineTab(props: TimelineTabProps) {
                               <div className="assignment-track">
                                 <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                                 {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+                                {(vacationsByEmployeeId.get(assignment.employeeId) ?? []).map((vacation, index) => (
+                                  <span
+                                    key={`${assignment.id}-vacation-${index}`}
+                                    className="assignment-vacation-bar"
+                                    style={assignmentStyle(vacation.startDate, vacation.endDate)}
+                                    title={`${isoToInputDate(vacation.startDate)} ${t.fromTo} ${isoToInputDate(vacation.endDate)}`}
+                                  />
+                                ))}
                                 <span className="assignment-bar" style={assignmentStyle(assignment.assignmentStartDate, assignment.assignmentEndDate)} />
                               </div>
                             </button>

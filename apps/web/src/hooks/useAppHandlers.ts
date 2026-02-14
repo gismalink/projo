@@ -116,6 +116,12 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setAssignments(nextAssignments);
     state.setProjects(nextProjects);
     state.setTimeline(timelineData);
+    state.setTimelineOrder((prev) => {
+      const ids = timelineData.map((row) => row.id);
+      const kept = prev.filter((id) => ids.includes(id));
+      const appended = ids.filter((id) => !kept.includes(id));
+      return [...kept, ...appended];
+    });
 
     state.setRoleColorDrafts((prev) => {
       const next = { ...prev };
@@ -435,9 +441,29 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     try {
       const timelineData = await api.getTimelineYear(nextYear, state.token);
       state.setTimeline(timelineData);
+      state.setTimelineOrder((prev) => {
+        const ids = timelineData.map((row) => row.id);
+        const kept = prev.filter((id) => ids.includes(id));
+        const appended = ids.filter((id) => !kept.includes(id));
+        return [...kept, ...appended];
+      });
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiLoadTimelineFailed, errorText));
     }
+  }
+
+  function handleMoveProject(projectId: string, direction: 'up' | 'down') {
+    const ids = state.timeline.map((row) => row.id);
+    state.setTimelineOrder((prev) => {
+      const base = prev.length === ids.length && ids.every((id) => prev.includes(id)) ? [...prev] : [...ids];
+      const index = base.indexOf(projectId);
+      if (index < 0) return base;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= base.length) return base;
+      const next = [...base];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   function shiftIsoDateByDays(value: string, days: number) {
@@ -481,7 +507,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         );
       }
 
-      await refreshData(state.token, state.selectedYear, projectId);
+      await refreshData(state.token, state.selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
     }
@@ -507,5 +533,6 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleEditorAssignmentChange,
     handleUpdateAssignment,
     handleAdjustProjectPlan,
+    handleMoveProject,
   };
 }

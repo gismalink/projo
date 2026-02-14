@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
@@ -8,39 +8,28 @@ import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 export class AssignmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private normalizeUtcDay(date: Date) {
-    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  }
-
-  private addDays(date: Date, days: number) {
-    const value = new Date(date);
-    value.setUTCDate(value.getUTCDate() + days);
-    return value;
-  }
-
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
       throw new BadRequestException(ErrorCode.ASSIGNMENT_DATE_RANGE_INVALID);
     }
   }
 
-  private async ensureNoVacationOverlap(params: { employeeId: string; startDate: Date; endDate: Date }) {
-    const overlap = await this.prisma.vacation.findFirst({
+  private async ensureUniqueEmployeeInProject(params: {
+    projectId: string;
+    employeeId: string;
+    excludeAssignmentId?: string;
+  }) {
+    const duplicate = await this.prisma.projectAssignment.findFirst({
       where: {
+        projectId: params.projectId,
         employeeId: params.employeeId,
-        startDate: { lte: params.endDate },
-        endDate: { gte: params.startDate },
+        id: params.excludeAssignmentId ? { not: params.excludeAssignmentId } : undefined,
       },
-      select: {
-        id: true,
-        startDate: true,
-        endDate: true,
-        type: true,
-      },
+      select: { id: true },
     });
 
-    if (overlap) {
-      throw new BadRequestException(ErrorCode.ASSIGNMENT_OVERLAPS_VACATION);
+    if (duplicate) {
+      throw new ConflictException(ErrorCode.ASSIGNMENT_EMPLOYEE_ALREADY_IN_PROJECT);
     }
   }
 
@@ -63,10 +52,9 @@ export class AssignmentsService {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
-    await this.ensureNoVacationOverlap({
+    await this.ensureUniqueEmployeeInProject({
+      projectId: dto.projectId,
       employeeId: dto.employeeId,
-      startDate,
-      endDate,
     });
 
     return this.prisma.projectAssignment.create({
@@ -123,19 +111,19 @@ export class AssignmentsService {
 
     const nextStart = dto.assignmentStartDate ? new Date(dto.assignmentStartDate) : existing.assignmentStartDate;
     const nextEnd = dto.assignmentEndDate ? new Date(dto.assignmentEndDate) : existing.assignmentEndDate;
-    const nextAllocationPercent = dto.allocationPercent ?? Number(existing.allocationPercent);
     this.ensureDateRange(nextStart, nextEnd);
 
     const projectId = dto.projectId ?? existing.projectId;
+    const employeeId = dto.employeeId ?? existing.employeeId;
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    await this.ensureNoVacationOverlap({
-      employeeId: dto.employeeId ?? existing.employeeId,
-      startDate: nextStart,
-      endDate: nextEnd,
+    await this.ensureUniqueEmployeeInProject({
+      projectId,
+      employeeId,
+      excludeAssignmentId: id,
     });
 
     return this.prisma.projectAssignment.update({

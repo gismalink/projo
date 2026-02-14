@@ -59,6 +59,7 @@ export function useAppState() {
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
+  const [timelineOrder, setTimelineOrder] = useState<string[]>([]);
   const [expandedProjectIds, setExpandedProjectIds] = useState<string[]>([]);
   const [projectDetails, setProjectDetails] = useState<Record<string, ProjectDetail>>({});
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -123,6 +124,7 @@ export function useAppState() {
     assignments,
     projects,
     timeline,
+    timelineOrder,
     expandedProjectIds,
     projectDetails,
     selectedProjectId,
@@ -182,6 +184,7 @@ export function useAppState() {
     setAssignments,
     setProjects,
     setTimeline,
+    setTimelineOrder,
     setExpandedProjectIds,
     setProjectDetails,
     setSelectedProjectId,
