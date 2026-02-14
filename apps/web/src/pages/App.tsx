@@ -125,7 +125,7 @@ export function App() {
               editAssignmentStartDate={app.editAssignmentStartDate}
               editAssignmentEndDate={app.editAssignmentEndDate}
               editAssignmentPercent={app.editAssignmentPercent}
-              onOpenProjectModal={() => app.setIsProjectModalOpen(true)}
+              onOpenProjectModal={app.openProjectModal}
               onOpenAssignmentModal={(projectId) => {
                 app.setAssignmentProjectId(projectId);
                 app.setIsAssignmentModalOpen(true);

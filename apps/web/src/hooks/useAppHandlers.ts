@@ -11,6 +11,24 @@ type Params = {
 };
 
 export function useAppHandlers({ state, t, errorText }: Params) {
+  function getNextProjectCode() {
+    const suffixes = state.projects
+      .map((project) => {
+        const match = project.code.match(/^PRJ-(\d+)$/i);
+        return match ? Number(match[1]) : null;
+      })
+      .filter((value): value is number => value !== null && Number.isFinite(value));
+
+    const maxValue = suffixes.length > 0 ? Math.max(...suffixes) : 0;
+    const nextValue = maxValue + 1;
+    return `PRJ-${String(nextValue).padStart(3, '0')}`;
+  }
+
+  function openProjectModal() {
+    state.setProjectCode(getNextProjectCode());
+    state.setIsProjectModalOpen(true);
+  }
+
   function pushToast(message: string) {
     const toast: Toast = { id: Date.now() + Math.floor(Math.random() * 1000), message };
     state.setToasts((prev) => [...prev, toast]);
@@ -28,7 +46,15 @@ export function useAppHandlers({ state, t, errorText }: Params) {
       return;
     }
 
-    const picked = detail.assignments.find((assignment) => assignment.id === assignmentId) ?? detail.assignments[0];
+    const picked = assignmentId ? detail.assignments.find((assignment) => assignment.id === assignmentId) : null;
+    if (!picked) {
+      state.setEditAssignmentId('');
+      state.setEditAssignmentStartDate('');
+      state.setEditAssignmentEndDate('');
+      state.setEditAssignmentPercent(0);
+      return;
+    }
+
     state.setEditAssignmentId(picked.id);
     state.setEditAssignmentStartDate(isoToInputDate(picked.assignmentStartDate));
     state.setEditAssignmentEndDate(isoToInputDate(picked.assignmentEndDate));
@@ -371,6 +397,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
   return {
     toggleRoleFilter,
+    openProjectModal,
     openVacationModal,
     handleLogin,
     handleCreateRole,

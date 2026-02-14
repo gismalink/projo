@@ -1,3 +1,7 @@
+html {
+  scrollbar-gutter: stable both-edges;
+}
+
 :root {
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: #12263a;

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -14,23 +15,32 @@ export class ProjectsService {
     }
   }
 
+  private handlePrismaError(error: unknown): never {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new ConflictException(ErrorCode.PROJECT_CODE_ALREADY_EXISTS);
+    }
+    throw error;
+  }
+
   create(dto: CreateProjectDto) {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
     this.ensureDateRange(startDate, endDate);
 
-    return this.prisma.project.create({
-      data: {
-        code: dto.code,
-        name: dto.name,
-        description: dto.description,
-        status: dto.status ?? 'planned',
-        priority: dto.priority ?? 3,
-        startDate,
-        endDate,
-        links: dto.links ?? [],
-      },
-    });
+    return this.prisma.project
+      .create({
+        data: {
+          code: dto.code,
+          name: dto.name,
+          description: dto.description,
+          status: dto.status ?? 'planned',
+          priority: dto.priority ?? 3,
+          startDate,
+          endDate,
+          links: dto.links ?? [],
+        },
+      })
+      .catch((error) => this.handlePrismaError(error));
   }
 
   findAll() {
@@ -78,19 +88,21 @@ export class ProjectsService {
       this.ensureDateRange(new Date(dto.startDate), new Date(dto.endDate));
     }
 
-    return this.prisma.project.update({
-      where: { id },
-      data: {
-        code: dto.code,
-        name: dto.name,
-        description: dto.description,
-        status: dto.status,
-        priority: dto.priority,
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-        links: dto.links,
-      },
-    });
+    return this.prisma.project
+      .update({
+        where: { id },
+        data: {
+          code: dto.code,
+          name: dto.name,
+          description: dto.description,
+          status: dto.status,
+          priority: dto.priority,
+          startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+          endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+          links: dto.links,
+        },
+      })
+      .catch((error) => this.handlePrismaError(error));
   }
 
   async remove(id: string) {
