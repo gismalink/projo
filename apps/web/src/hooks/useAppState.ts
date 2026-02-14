@@ -35,6 +35,8 @@ export function useAppState() {
 
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isVacationModalOpen, setIsVacationModalOpen] = useState(false);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [vacationEmployeeName, setVacationEmployeeName] = useState('');
 
   const [employeeFullName, setEmployeeFullName] = useState('Jane Smith');
@@ -52,6 +54,8 @@ export function useAppState() {
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<string[]>([]);
+  const [projectDetails, setProjectDetails] = useState<Record<string, ProjectDetail>>({});
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedProjectDetail, setSelectedProjectDetail] = useState<ProjectDetail | null>(null);
 
@@ -92,6 +96,8 @@ export function useAppState() {
     selectedRoleFilters,
     isEmployeeModalOpen,
     isVacationModalOpen,
+    isProjectModalOpen,
+    isAssignmentModalOpen,
     vacationEmployeeName,
     employeeFullName,
     employeeEmail,
@@ -106,6 +112,8 @@ export function useAppState() {
     assignments,
     projects,
     timeline,
+    expandedProjectIds,
+    projectDetails,
     selectedProjectId,
     selectedProjectDetail,
     projectCode,
@@ -141,6 +149,8 @@ export function useAppState() {
     setSelectedRoleFilters,
     setIsEmployeeModalOpen,
     setIsVacationModalOpen,
+    setIsProjectModalOpen,
+    setIsAssignmentModalOpen,
     setVacationEmployeeName,
     setEmployeeFullName,
     setEmployeeEmail,
@@ -155,6 +165,8 @@ export function useAppState() {
     setAssignments,
     setProjects,
     setTimeline,
+    setExpandedProjectIds,
+    setProjectDetails,
     setSelectedProjectId,
     setSelectedProjectDetail,
     setProjectCode,

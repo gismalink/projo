@@ -1,5 +1,5 @@
 import { FormEvent } from 'react';
-import { api } from '../api/client';
+import { api, ProjectDetail } from '../api/client';
 import { Employee, Role, Toast } from '../pages/app-types';
 import { isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
 import { AppState } from './useAppState';
@@ -19,7 +19,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }, 4500);
   }
 
-  function setAssignmentEditorFromDetail(detail: NonNullable<typeof state.selectedProjectDetail>, assignmentId?: string) {
+  function setAssignmentEditorFromDetail(detail: ProjectDetail, assignmentId?: string) {
     if (detail.assignments.length === 0) {
       state.setEditAssignmentId('');
       state.setEditAssignmentStartDate('');
@@ -37,6 +37,11 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
   async function loadProjectDetail(authToken: string, projectId: string, preserveEditor = true) {
     const detail = await api.getProject(projectId, authToken);
+    state.setProjectDetails((prev) => ({
+      ...prev,
+      [projectId]: detail,
+    }));
+    state.setExpandedProjectIds((prev) => (prev.includes(projectId) ? prev : [...prev, projectId]));
     state.setSelectedProjectId(projectId);
     state.setSelectedProjectDetail(detail);
 
@@ -91,12 +96,35 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     if (!state.assignmentProjectId && nextProjects[0]) state.setAssignmentProjectId(nextProjects[0].id);
     if (!state.assignmentEmployeeId && nextEmployees[0]) state.setAssignmentEmployeeId(nextEmployees[0].id);
 
-    const activeProjectId = preferredProjectId ?? state.selectedProjectId ?? nextProjects[0]?.id;
-    if (activeProjectId) {
-      await loadProjectDetail(authToken, activeProjectId, Boolean(state.selectedProjectId));
-    } else {
+    const knownProjectIds = new Set(nextProjects.map((project) => project.id));
+    const expandedIds = state.expandedProjectIds.filter((id) => knownProjectIds.has(id));
+    const idsToLoad = preferredProjectId
+      ? Array.from(new Set([...expandedIds, preferredProjectId]))
+      : expandedIds;
+
+    if (idsToLoad.length === 0) {
+      state.setExpandedProjectIds([]);
+      state.setProjectDetails({});
       state.setSelectedProjectId('');
       state.setSelectedProjectDetail(null);
+      state.setEditAssignmentId('');
+      return;
+    }
+
+    const details = await Promise.all(idsToLoad.map((id) => api.getProject(id, authToken)));
+    const detailsMap: Record<string, ProjectDetail> = {};
+    for (const detail of details) detailsMap[detail.id] = detail;
+
+    state.setExpandedProjectIds(idsToLoad);
+    state.setProjectDetails(detailsMap);
+
+    const nextActive = preferredProjectId ?? (state.selectedProjectId && detailsMap[state.selectedProjectId] ? state.selectedProjectId : idsToLoad[0]);
+    const nextDetail = detailsMap[nextActive] ?? null;
+    state.setSelectedProjectId(nextActive);
+    state.setSelectedProjectDetail(nextDetail);
+    if (nextDetail) {
+      setAssignmentEditorFromDetail(nextDetail, state.editAssignmentId || undefined);
+    } else {
       state.setEditAssignmentId('');
     }
   }
@@ -228,6 +256,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
       );
 
       await refreshData(state.token, state.selectedYear);
+      state.setIsProjectModalOpen(false);
       state.setProjectCode((prev) => {
         const match = prev.match(/(\d+)$/);
         if (!match) return `${prev}-1`;
@@ -254,6 +283,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         state.token,
       );
       await refreshData(state.token, state.selectedYear, state.assignmentProjectId);
+      state.setIsAssignmentModalOpen(false);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateAssignmentFailed, errorText));
     }
@@ -261,6 +291,25 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
   async function handleSelectProject(projectId: string) {
     if (!state.token) return;
+
+    if (state.expandedProjectIds.includes(projectId)) {
+      const nextExpanded = state.expandedProjectIds.filter((id) => id !== projectId);
+      state.setExpandedProjectIds(nextExpanded);
+      state.setProjectDetails((prev) => {
+        const next = { ...prev };
+        delete next[projectId];
+        return next;
+      });
+
+      if (state.selectedProjectId === projectId) {
+        const fallbackProjectId = nextExpanded[0] ?? '';
+        state.setSelectedProjectId(fallbackProjectId);
+        state.setSelectedProjectDetail(fallbackProjectId ? state.projectDetails[fallbackProjectId] ?? null : null);
+        if (!fallbackProjectId) state.setEditAssignmentId('');
+      }
+      return;
+    }
+
     try {
       await loadProjectDetail(state.token, projectId, false);
     } catch (e) {
@@ -268,10 +317,22 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
-  function handleEditorAssignmentChange(assignmentId: string) {
+  function handleEditorAssignmentChange(projectId: string, assignmentId: string) {
+    if (state.selectedProjectId === projectId && state.editAssignmentId === assignmentId) {
+      state.setEditAssignmentId('');
+      state.setEditAssignmentStartDate('');
+      state.setEditAssignmentEndDate('');
+      state.setEditAssignmentPercent(0);
+      return;
+    }
+
+    const detail = state.projectDetails[projectId];
+    if (!detail) return;
+
+    state.setSelectedProjectId(projectId);
+    state.setSelectedProjectDetail(detail);
     state.setEditAssignmentId(assignmentId);
-    if (!state.selectedProjectDetail) return;
-    const next = state.selectedProjectDetail.assignments.find((assignment) => assignment.id === assignmentId);
+    const next = detail.assignments.find((assignment) => assignment.id === assignmentId);
     if (!next) return;
     state.setEditAssignmentStartDate(isoToInputDate(next.assignmentStartDate));
     state.setEditAssignmentEndDate(isoToInputDate(next.assignmentEndDate));

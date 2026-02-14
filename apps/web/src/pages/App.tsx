@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ToastStack } from '../components/ToastStack';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
+import { ProjectModal } from '../components/modals/ProjectModal';
 import { VacationModal } from '../components/modals/VacationModal';
+import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
 import { TimelineTab } from '../components/timeline/TimelineTab';
@@ -116,38 +118,22 @@ export function App() {
               months={MONTHS_BY_LANG[lang]}
               selectedYear={app.selectedYear}
               sortedTimeline={app.sortedTimeline}
+              expandedProjectIds={app.expandedProjectIds}
+              projectDetails={app.projectDetails}
               selectedProjectId={app.selectedProjectId}
-              selectedProjectDetail={app.selectedProjectDetail}
               selectedAssignmentId={app.editAssignmentId}
-              projects={app.projects}
-              employees={app.employees}
-              projectCode={app.projectCode}
-              projectName={app.projectName}
-              projectStartDate={app.projectStartDate}
-              projectEndDate={app.projectEndDate}
-              assignmentProjectId={app.assignmentProjectId}
-              assignmentEmployeeId={app.assignmentEmployeeId}
-              assignmentStartDate={app.assignmentStartDate}
-              assignmentEndDate={app.assignmentEndDate}
-              assignmentPercent={app.assignmentPercent}
               editAssignmentStartDate={app.editAssignmentStartDate}
               editAssignmentEndDate={app.editAssignmentEndDate}
               editAssignmentPercent={app.editAssignmentPercent}
-              onCreateProject={app.handleCreateProject}
-              onCreateAssignment={app.handleCreateAssignment}
+              onOpenProjectModal={() => app.setIsProjectModalOpen(true)}
+              onOpenAssignmentModal={(projectId) => {
+                app.setAssignmentProjectId(projectId);
+                app.setIsAssignmentModalOpen(true);
+              }}
               onSelectProject={app.handleSelectProject}
               onUpdateAssignment={app.handleUpdateAssignment}
               onYearChange={app.handleYearChange}
               onEditorAssignmentChange={app.handleEditorAssignmentChange}
-              setProjectCode={app.setProjectCode}
-              setProjectName={app.setProjectName}
-              setProjectStartDate={app.setProjectStartDate}
-              setProjectEndDate={app.setProjectEndDate}
-              setAssignmentProjectId={app.setAssignmentProjectId}
-              setAssignmentEmployeeId={app.setAssignmentEmployeeId}
-              setAssignmentStartDate={app.setAssignmentStartDate}
-              setAssignmentEndDate={app.setAssignmentEndDate}
-              setAssignmentPercent={app.setAssignmentPercent}
               setEditAssignmentStartDate={app.setEditAssignmentStartDate}
               setEditAssignmentEndDate={app.setEditAssignmentEndDate}
               setEditAssignmentPercent={app.setEditAssignmentPercent}
@@ -155,6 +141,40 @@ export function App() {
               isoToInputDate={isoToInputDate}
             />
           ) : null}
+
+          <ProjectModal
+            t={t}
+            isOpen={app.isProjectModalOpen}
+            projectCode={app.projectCode}
+            projectName={app.projectName}
+            projectStartDate={app.projectStartDate}
+            projectEndDate={app.projectEndDate}
+            onClose={() => app.setIsProjectModalOpen(false)}
+            onSubmit={app.handleCreateProject}
+            setProjectCode={app.setProjectCode}
+            setProjectName={app.setProjectName}
+            setProjectStartDate={app.setProjectStartDate}
+            setProjectEndDate={app.setProjectEndDate}
+          />
+
+          <AssignmentModal
+            t={t}
+            isOpen={app.isAssignmentModalOpen}
+            projects={app.projects}
+            employees={app.employees}
+            assignmentProjectId={app.assignmentProjectId}
+            assignmentEmployeeId={app.assignmentEmployeeId}
+            assignmentStartDate={app.assignmentStartDate}
+            assignmentEndDate={app.assignmentEndDate}
+            assignmentPercent={app.assignmentPercent}
+            onClose={() => app.setIsAssignmentModalOpen(false)}
+            onSubmit={app.handleCreateAssignment}
+            setAssignmentProjectId={app.setAssignmentProjectId}
+            setAssignmentEmployeeId={app.setAssignmentEmployeeId}
+            setAssignmentStartDate={app.setAssignmentStartDate}
+            setAssignmentEndDate={app.setAssignmentEndDate}
+            setAssignmentPercent={app.setAssignmentPercent}
+          />
 
           <EmployeeModal
             t={t}
