@@ -188,6 +188,16 @@ export function TimelineTab(props: TimelineTabProps) {
     [locale],
   );
   const formatTooltipDate = (value: Date) => tooltipDateFormatter.format(toUtcDay(value));
+  const kpiDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
+    [],
+  );
+  const formatKpiDate = (value: string) => kpiDateFormatter.format(new Date(value));
 
   const assignmentStyle = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
@@ -527,14 +537,39 @@ export function TimelineTab(props: TimelineTabProps) {
                         <strong>
                           {row.code} · {row.name}
                         </strong>
+                        <div className="timeline-kpi-row">
+                          <span>{row.assignmentsCount} employers</span>
+                          <span>{detail?.costSummary ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} hours` : '— hours'}</span>
+                          <span>
+                            {detail?.costSummary
+                              ? `${Number(detail.costSummary.totalPlannedCost).toFixed(2)}${detail.costSummary.currency.toLowerCase()}`
+                              : '—'}
+                          </span>
+                          <span>
+                            {formatKpiDate(row.startDate)} - {formatKpiDate(row.endDate)}
+                          </span>
+                        </div>
                       </div>
-                      <span>
-                        {row.assignmentsCount} {t.assignmentsWord} · {row.totalPlannedHoursPerDay} h/day
-                      </span>
-                    </div>
-                    <div className="timeline-submeta">
-                      {row.status} · {t.priorityWord} {row.priority} · {isoToInputDate(row.startDate)} {t.fromTo}{' '}
-                      {isoToInputDate(row.endDate)}
+                      <div className="timeline-meta-actions">
+                        <button
+                          type="button"
+                          className="timeline-meta-icon-btn"
+                          onClick={() => onOpenProjectDatesModal(row.id)}
+                          title={t.editProjectDates}
+                          aria-label={t.editProjectDates}
+                        >
+                          📅
+                        </button>
+                        <button
+                          type="button"
+                          className="timeline-meta-icon-btn"
+                          onClick={() => onOpenAssignmentModal(row.id)}
+                          title={t.assignEmployee}
+                          aria-label={t.assignEmployee}
+                        >
+                          👤+
+                        </button>
+                      </div>
                     </div>
                     <div className="track project-track">
                       <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
@@ -558,7 +593,6 @@ export function TimelineTab(props: TimelineTabProps) {
                             {tooltipText}
                           </span>
                         ) : null}
-                        {row.status}
                         <span
                           className="project-plan-handle left"
                           onMouseDown={(event) => beginPlanDrag(event, row, 'resize-start')}
@@ -600,33 +634,6 @@ export function TimelineTab(props: TimelineTabProps) {
 
                   {isExpanded && detail ? (
                     <section className="project-card">
-                      <div className="project-card-tools">
-                        <button type="button" className="ghost-btn" onClick={() => onOpenProjectDatesModal(detail.id)}>
-                          {t.editProjectDates}
-                        </button>
-                        <button type="button" onClick={() => onOpenAssignmentModal(detail.id)}>
-                          {t.assignEmployee}
-                        </button>
-                      </div>
-
-                      {detail.costSummary ? (
-                        <div>
-                          <strong>{t.projectCard}</strong>
-                          <div className="timeline-submeta">
-                            {t.plannedHoursLabel}: {Number(detail.costSummary.totalPlannedHours).toFixed(2)}
-                          </div>
-                          <div className="timeline-submeta">
-                            {t.plannedCostLabel}: {Number(detail.costSummary.totalPlannedCost).toFixed(2)} {detail.costSummary.currency}
-                          </div>
-                          <div className="timeline-submeta">
-                            {t.currencyLabel}: {detail.costSummary.currency}
-                          </div>
-                          <div className="timeline-submeta">
-                            {t.missingRateDaysLabel}: {detail.costSummary.missingRateDays}
-                          </div>
-                        </div>
-                      ) : null}
-
                       <div className="assignment-list">
                         {detail.assignments.length === 0 ? (
                           <p className="muted">{t.noAssignments}</p>
