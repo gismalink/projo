@@ -18,6 +18,7 @@ type PersonnelTabProps = {
   utilizationByEmployee: Record<string, number>;
   toggleRoleFilter: (roleName: string) => void;
   clearRoleFilters: () => void;
+  openDepartmentsModal: () => void;
   openVacationModal: (employee: Employee) => void;
   openEmployeeModal: () => void;
   openEmployeeImportModal: () => void;
@@ -36,6 +37,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
     utilizationByEmployee,
     toggleRoleFilter,
     clearRoleFilters,
+    openDepartmentsModal,
     openVacationModal,
     openEmployeeModal,
     openEmployeeImportModal,
@@ -78,6 +80,9 @@ export function PersonnelTab(props: PersonnelTabProps) {
         <div className="section-header">
           <h2>{t.employeesList}</h2>
           <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button type="button" title={t.departmentsList} aria-label={t.departmentsList} onClick={openDepartmentsModal}>
+              🏢
+            </button>
             <button type="button" title={t.importEmployeesTooltip} aria-label={t.importEmployeesTooltip} onClick={openEmployeeImportModal}>
               ⬆
             </button>

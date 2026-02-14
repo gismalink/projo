@@ -838,6 +838,22 @@ li > div {
   font-weight: 700;
 }
 
+.department-manage-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.department-manage-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.department-manage-row:first-of-type {
+  grid-template-columns: 1fr auto;
+}
+
 .track {
   position: relative;
   height: 30px;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
+import { DepartmentsModal } from '../components/modals/DepartmentsModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
@@ -77,6 +78,7 @@ export function App() {
               utilizationByEmployee={app.utilizationByEmployee}
               toggleRoleFilter={app.toggleRoleFilter}
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
+              openDepartmentsModal={() => app.setIsDepartmentsModalOpen(true)}
               openVacationModal={app.openVacationModal}
               openEmployeeModal={() => app.setIsEmployeeModalOpen(true)}
               openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
@@ -217,6 +219,16 @@ export function App() {
             onClose={() => app.setIsEmployeeImportModalOpen(false)}
             onSubmit={app.handleImportEmployeesCsv}
             setCsv={app.setEmployeeCsv}
+          />
+
+          <DepartmentsModal
+            t={t}
+            isOpen={app.isDepartmentsModalOpen}
+            departments={app.departments}
+            onClose={() => app.setIsDepartmentsModalOpen(false)}
+            onCreate={app.handleCreateDepartment}
+            onUpdate={app.handleUpdateDepartment}
+            onDelete={app.handleDeleteDepartment}
           />
 
           <VacationModal

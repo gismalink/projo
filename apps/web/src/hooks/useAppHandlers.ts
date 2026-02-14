@@ -253,6 +253,36 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  async function handleCreateDepartment(name: string) {
+    if (!state.token || !name.trim()) return;
+    try {
+      await api.createDepartment({ name: name.trim() }, state.token);
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateDepartmentFailed, errorText));
+    }
+  }
+
+  async function handleUpdateDepartment(departmentId: string, name: string) {
+    if (!state.token || !name.trim()) return;
+    try {
+      await api.updateDepartment(departmentId, { name: name.trim() }, state.token);
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiUpdateDepartmentFailed, errorText));
+    }
+  }
+
+  async function handleDeleteDepartment(departmentId: string) {
+    if (!state.token) return;
+    try {
+      await api.deleteDepartment(departmentId, state.token);
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiDeleteDepartmentFailed, errorText));
+    }
+  }
+
   async function handleImportEmployeesCsv(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.employeeCsv.trim()) return;
@@ -555,6 +585,9 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleCreateSkill,
     handleUpdateRoleColor,
     handleCreateEmployee,
+    handleCreateDepartment,
+    handleUpdateDepartment,
+    handleDeleteDepartment,
     handleImportEmployeesCsv,
     handleCreateVacation,
     handleCreateProject,

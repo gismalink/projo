@@ -91,6 +91,13 @@ export type DepartmentItem = {
   _count?: { employees: number };
 };
 
+export type CreateDepartmentPayload = {
+  name: string;
+  description?: string;
+};
+
+export type UpdateDepartmentPayload = Partial<CreateDepartmentPayload>;
+
 export type SkillItem = {
   id: string;
   name: string;
@@ -242,6 +249,11 @@ export const api = {
     request(`/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createEmployee: (payload: CreateEmployeePayload, token: string) =>
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createDepartment: (payload: CreateDepartmentPayload, token: string) =>
+    request('/departments', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateDepartment: (departmentId: string, payload: UpdateDepartmentPayload, token: string) =>
+    request(`/departments/${departmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  deleteDepartment: (departmentId: string, token: string) => request(`/departments/${departmentId}`, { method: 'DELETE' }, token),
   importEmployeesCsv: (payload: ImportEmployeesCsvPayload, token: string) =>
     request<ImportEmployeesCsvResult>('/employees/import-csv', { method: 'POST', body: JSON.stringify(payload) }, token),
   getVacations: (token: string) => request<VacationItem[]>('/vacations', {}, token),
