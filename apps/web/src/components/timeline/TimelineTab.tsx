@@ -1,6 +1,8 @@
 import { MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { BenchColumn } from './BenchColumn';
+import { CompanyLoadCard } from './CompanyLoadCard';
+import { TimelineToolbar } from './TimelineToolbar';
 
 type TimelineTabProps = {
   t: Record<string, string>;
@@ -611,54 +613,23 @@ export function TimelineTab(props: TimelineTabProps) {
   return (
     <section className="timeline-layout">
       <article className="card timeline-card">
-        <div className="timeline-toolbar">
-          <h2>{t.yearTimeline}</h2>
-          <div className="year-switcher">
-            <button type="button" onClick={onOpenProjectModal}>
-              {t.createProject}
-            </button>
-            <button type="button" onClick={() => onYearChange(selectedYear - 1)}>
-              {t.prev}
-            </button>
-            <strong>{selectedYear}</strong>
-            <button type="button" onClick={() => onYearChange(selectedYear + 1)}>
-              {t.next}
-            </button>
-          </div>
-        </div>
+        <TimelineToolbar
+          t={t}
+          selectedYear={selectedYear}
+          onOpenProjectModal={onOpenProjectModal}
+          onYearChange={onYearChange}
+        />
 
-        <section className="company-load-card">
-          <div className="section-header">
-            <h3>{t.companyLoad}</h3>
-            <span className="muted">max {companyDailyLoad.max.toFixed(0)}%</span>
-          </div>
-          <div className="company-load-chart">
-            <span className="company-load-grid-line company-load-grid-line-limit" style={{ bottom: `${(100 / companyLoadScaleMax) * 100}%` }} />
-            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-            {companyDailyLoad.totals.map((value, index) => (
-              <span
-                key={`${selectedYear}-load-${index}`}
-                className={value > 100 ? 'company-load-bar overloaded' : 'company-load-bar'}
-                style={{ height: `${Math.max(2, (value / companyLoadScaleMax) * 100)}%` }}
-                title={`Day ${index + 1}: ${value.toFixed(1)}%`}
-              />
-            ))}
-          </div>
-          <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
-            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-            {dayMarkers.map((marker) => (
-              <span key={marker.key} className="day-marker" style={{ left: marker.left }}>
-                {marker.label}
-              </span>
-            ))}
-          </div>
-          <div className="month-grid">
-            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-            {months.map((month) => (
-              <span key={month}>{month}</span>
-            ))}
-          </div>
-        </section>
+        <CompanyLoadCard
+          t={t}
+          companyDailyLoad={companyDailyLoad}
+          companyLoadScaleMax={companyLoadScaleMax}
+          todayPosition={todayPosition}
+          dayStep={dayStep}
+          dayMarkers={dayMarkers}
+          months={months}
+          selectedYear={selectedYear}
+        />
 
         <div className="timeline-board">
           <div className="timeline-main">
