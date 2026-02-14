@@ -13,13 +13,13 @@ export class EmployeesService {
         ...dto,
         defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay ?? 8,
       },
-      include: { role: true },
+      include: { role: true, department: true },
     });
   }
 
   findAll() {
     return this.prisma.employee.findMany({
-      include: { role: true },
+      include: { role: true, department: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -27,7 +27,7 @@ export class EmployeesService {
   async findOne(id: string) {
     const employee = await this.prisma.employee.findUnique({
       where: { id },
-      include: { role: true },
+      include: { role: true, department: true },
     });
 
     if (!employee) {
@@ -42,7 +42,7 @@ export class EmployeesService {
     return this.prisma.employee.update({
       where: { id },
       data: dto,
-      include: { role: true },
+      include: { role: true, department: true },
     });
   }
 

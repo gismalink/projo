@@ -1,5 +1,13 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { api, AssignmentItem, ProjectDetail, ProjectListItem, ProjectTimelineRow, VacationItem } from '../api/client';
+import {
+  api,
+  AssignmentItem,
+  DepartmentItem,
+  ProjectDetail,
+  ProjectListItem,
+  ProjectTimelineRow,
+  VacationItem,
+} from '../api/client';
 
 type Role = {
   id: string;
@@ -17,6 +25,7 @@ type Employee = {
   status: string;
   grade?: string | null;
   role: { name: string };
+  department?: { id: string; name: string } | null;
 };
 
 type ActiveTab = 'timeline' | 'personnel' | 'roles';
@@ -168,15 +177,6 @@ function roleColorOrDefault(colorHex?: string | null) {
   return colorHex && /^#[0-9A-Fa-f]{6}$/.test(colorHex) ? colorHex : '#6E7B8A';
 }
 
-function departmentByRole(roleName: string) {
-  if (['BACKEND_DEVELOPER', 'UNITY_DEVELOPER', 'ARTIST_3D'].includes(roleName)) return 'Production';
-  if (['UI_DESIGNER', 'UX_DESIGNER'].includes(roleName)) return 'Design';
-  if (['QA_ENGINEER'].includes(roleName)) return 'QA';
-  if (['ANALYST'].includes(roleName)) return 'Analytics';
-  if (['PM', 'ADMIN', 'FINANCE', 'VIEWER'].includes(roleName)) return 'Management';
-  return 'Other';
-}
-
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
   const t = TEXT[lang];
@@ -185,6 +185,7 @@ export function App() {
   const [password, setPassword] = useState('admin12345');
   const [token, setToken] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [vacations, setVacations] = useState<VacationItem[]>([]);
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
@@ -209,6 +210,7 @@ export function App() {
   const [employeeFullName, setEmployeeFullName] = useState('Jane Smith');
   const [employeeEmail, setEmployeeEmail] = useState('jane.smith@projo.local');
   const [employeeRoleId, setEmployeeRoleId] = useState('');
+  const [employeeDepartmentId, setEmployeeDepartmentId] = useState('');
   const [employeeStatus, setEmployeeStatus] = useState('active');
   const [employeeGrade, setEmployeeGrade] = useState('мидл');
 
@@ -285,7 +287,7 @@ export function App() {
   const departmentGroups = useMemo(() => {
     const map: Record<string, Employee[]> = {};
     for (const employee of filteredEmployees) {
-      const dep = departmentByRole(employee.role?.name ?? '');
+      const dep = employee.department?.name ?? 'Unassigned';
       if (!map[dep]) map[dep] = [];
       map[dep].push(employee);
     }
@@ -354,22 +356,26 @@ export function App() {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] = await Promise.all([
+    const [rolesData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] =
+      await Promise.all([
       api.getRoles(authToken),
+      api.getDepartments(authToken),
       api.getEmployees(authToken),
       api.getVacations(authToken),
       api.getAssignments(authToken),
       api.getProjects(authToken),
       api.getTimelineYear(year, authToken),
-    ]);
+      ]);
 
     const nextRoles = rolesData as Role[];
+    const nextDepartments = departmentsData as DepartmentItem[];
     const nextEmployees = employeesData as Employee[];
     const nextVacations = vacationsData as VacationItem[];
     const nextAssignments = assignmentsData as AssignmentItem[];
     const nextProjects = projectsData as ProjectListItem[];
 
     setRoles(nextRoles);
+    setDepartments(nextDepartments);
     setEmployees(nextEmployees);
     setVacations(nextVacations);
     setAssignments(nextAssignments);
@@ -385,6 +391,7 @@ export function App() {
     });
 
     if (!employeeRoleId && nextRoles[0]) setEmployeeRoleId(nextRoles[0].id);
+    if (!employeeDepartmentId && nextDepartments[0]) setEmployeeDepartmentId(nextDepartments[0].id);
     if (!vacationEmployeeId && nextEmployees[0]) setVacationEmployeeId(nextEmployees[0].id);
     if (!assignmentProjectId && nextProjects[0]) setAssignmentProjectId(nextProjects[0].id);
     if (!assignmentEmployeeId && nextEmployees[0]) setAssignmentEmployeeId(nextEmployees[0].id);
@@ -460,6 +467,7 @@ export function App() {
           fullName: employeeFullName,
           email: employeeEmail,
           roleId: employeeRoleId,
+          departmentId: employeeDepartmentId || undefined,
           status: employeeStatus,
           grade: employeeGrade,
           defaultCapacityHoursPerDay: 8,
@@ -1047,6 +1055,17 @@ export function App() {
                       {roles.map((role) => (
                         <option key={role.id} value={role.id}>
                           {role.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Department
+                    <select value={employeeDepartmentId} onChange={(e) => setEmployeeDepartmentId(e.target.value)}>
+                      <option value="">Select department</option>
+                      {departments.map((department) => (
+                        <option key={department.id} value={department.id}>
+                          {department.name}
                         </option>
                       ))}
                     </select>

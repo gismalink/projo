@@ -35,6 +35,15 @@ model Role {
   updatedAt   DateTime @updatedAt
 }
 
+model Department {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  employees   Employee[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
 model Employee {
   id                         String   @id @default(cuid())
   fullName                   String
@@ -44,6 +53,8 @@ model Employee {
   defaultCapacityHoursPerDay Decimal  @default(8.0) @db.Decimal(4, 2)
   roleId                     String
   role                       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  departmentId               String?
+  department                 Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   assignments                ProjectAssignment[]
   vacations                  Vacation[]
   createdAt                  DateTime @default(now())

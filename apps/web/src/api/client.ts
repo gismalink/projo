@@ -55,9 +55,17 @@ export type CreateEmployeePayload = {
   fullName: string;
   email: string;
   roleId: string;
+  departmentId?: string;
   grade?: string;
   status?: string;
   defaultCapacityHoursPerDay?: number;
+};
+
+export type DepartmentItem = {
+  id: string;
+  name: string;
+  description?: string | null;
+  _count?: { employees: number };
 };
 
 export type UpdateRolePayload = Partial<CreateRolePayload>;
@@ -160,6 +168,7 @@ export const api = {
     }),
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
+  getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),
   createRole: (payload: CreateRolePayload, token: string) =>
     request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateRole: (roleId: string, payload: UpdateRolePayload, token: string) =>
