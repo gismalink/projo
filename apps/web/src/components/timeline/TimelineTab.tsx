@@ -2,6 +2,7 @@ import { MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } f
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
+import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
 import { TimelineToolbar } from './TimelineToolbar';
 
 type TimelineTabProps = {
@@ -841,177 +842,27 @@ export function TimelineTab(props: TimelineTabProps) {
                   </div>
 
                   {isExpanded && detail ? (
-                    <section className="project-card">
-                      <div className="assignment-list">
-                        {detail.assignments.length === 0 ? (
-                          <p className="muted">{t.noAssignments}</p>
-                        ) : (
-                          detail.assignments.map((assignment) => (
-                            <div
-                              key={assignment.id}
-                              className="assignment-item"
-                            >
-                              <div className="assignment-item-header">
-                                <strong>{assignment.employee.fullName}</strong>
-                                <span>{Number(assignment.allocationPercent)}%</span>
-                                <span
-                                  role="button"
-                                  tabIndex={0}
-                                  className="assignment-remove-btn"
-                                  title={t.removeAssignment}
-                                  aria-label={t.removeAssignment}
-                                  onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    if (!window.confirm(t.confirmRemoveAssignment)) return;
-                                    void onDeleteAssignment(detail.id, assignment.id);
-                                  }}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter' || event.key === ' ') {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      if (!window.confirm(t.confirmRemoveAssignment)) return;
-                                      void onDeleteAssignment(detail.id, assignment.id);
-                                    }
-                                  }}
-                                >
-                                  ✕
-                                </span>
-                              </div>
-                              <div className="assignment-track">
-                                <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
-                                {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-                                {(() => {
-                                  const dragPreview =
-                                    assignmentDragState && assignmentDragState.assignmentId === assignment.id
-                                      ? resolveAssignmentDragDates(assignmentDragState)
-                                      : null;
-                                  const pendingPreview =
-                                    pendingAssignmentPreview && pendingAssignmentPreview.assignmentId === assignment.id
-                                      ? pendingAssignmentPreview
-                                      : null;
-                                  const startIso = dragPreview
-                                    ? dragPreview.nextStart.toISOString()
-                                    : pendingPreview
-                                      ? pendingPreview.nextStart.toISOString()
-                                      : assignment.assignmentStartDate;
-                                  const endIso = dragPreview
-                                    ? dragPreview.nextEnd.toISOString()
-                                    : pendingPreview
-                                      ? pendingPreview.nextEnd.toISOString()
-                                      : assignment.assignmentEndDate;
-                                  const assignmentTooltipMode =
-                                    assignmentDragState && assignmentDragState.assignmentId === assignment.id
-                                      ? assignmentDragState.mode
-                                      : hoverAssignmentDragMode &&
-                                          hoverAssignmentDragMode.projectId === detail.id &&
-                                          hoverAssignmentDragMode.assignmentId === assignment.id
-                                        ? hoverAssignmentDragMode.mode
-                                        : null;
-                                  const assignmentTooltipStart = dragPreview?.nextStart ?? toUtcDay(new Date(assignment.assignmentStartDate));
-                                  const assignmentTooltipEnd = dragPreview?.nextEnd ?? toUtcDay(new Date(assignment.assignmentEndDate));
-                                  const assignmentTooltipText =
-                                    assignmentTooltipMode === 'resize-start'
-                                      ? formatTooltipDate(assignmentTooltipStart)
-                                      : assignmentTooltipMode === 'resize-end'
-                                        ? formatTooltipDate(assignmentTooltipEnd)
-                                        : assignmentTooltipMode === 'move'
-                                          ? `${formatTooltipDate(assignmentTooltipStart)} - ${formatTooltipDate(assignmentTooltipEnd)}`
-                                          : '';
-                                  const assignmentTooltipKey = `${detail.id}:${assignment.id}`;
-                                  if (assignmentTooltipMode) {
-                                    assignmentTooltipCacheRef.current.set(assignmentTooltipKey, {
-                                      mode: assignmentTooltipMode,
-                                      text: assignmentTooltipText,
-                                    });
-                                  }
-                                  const cachedAssignmentTooltip = assignmentTooltipCacheRef.current.get(assignmentTooltipKey);
-                                  const displayAssignmentTooltipMode =
-                                    assignmentTooltipMode ?? cachedAssignmentTooltip?.mode ?? 'move';
-                                  const displayAssignmentTooltipText = assignmentTooltipMode
-                                    ? assignmentTooltipText
-                                    : (cachedAssignmentTooltip?.text ?? '');
-
-                                  return (
-                                    <span
-                                      className="assignment-bar"
-                                      style={{
-                                        ...assignmentStyle(startIso, endIso),
-                                        background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
-                                      }}
-                                      onMouseMove={(event) => handleAssignmentBarHover(event, detail.id, assignment.id)}
-                                      onMouseLeave={() => clearAssignmentBarHover(detail.id, assignment.id)}
-                                    >
-                                      <span
-                                        className={
-                                          displayAssignmentTooltipMode === 'resize-start'
-                                            ? `project-plan-tooltip edge-left${assignmentTooltipMode ? ' visible' : ''}`
-                                            : displayAssignmentTooltipMode === 'resize-end'
-                                              ? `project-plan-tooltip edge-right${assignmentTooltipMode ? ' visible' : ''}`
-                                              : displayAssignmentTooltipMode === 'move'
-                                                ? `project-plan-tooltip center${assignmentTooltipMode ? ' visible' : ''}`
-                                                : 'project-plan-tooltip center'
-                                        }
-                                        aria-hidden={assignmentTooltipMode ? undefined : true}
-                                      >
-                                        {displayAssignmentTooltipText}
-                                      </span>
-                                      <span
-                                        className="assignment-plan-handle left"
-                                        onMouseDown={(event) =>
-                                          beginAssignmentDrag(
-                                            event,
-                                            detail.id,
-                                            assignment.id,
-                                            assignment.assignmentStartDate,
-                                            assignment.assignmentEndDate,
-                                            'resize-start',
-                                          )
-                                        }
-                                      />
-                                      <span
-                                        className="assignment-plan-handle center"
-                                        onMouseDown={(event) =>
-                                          beginAssignmentDrag(
-                                            event,
-                                            detail.id,
-                                            assignment.id,
-                                            assignment.assignmentStartDate,
-                                            assignment.assignmentEndDate,
-                                            'move',
-                                          )
-                                        }
-                                      />
-                                      <span
-                                        className="assignment-plan-handle right"
-                                        onMouseDown={(event) =>
-                                          beginAssignmentDrag(
-                                            event,
-                                            detail.id,
-                                            assignment.id,
-                                            assignment.assignmentStartDate,
-                                            assignment.assignmentEndDate,
-                                            'resize-end',
-                                          )
-                                        }
-                                      />
-                                    </span>
-                                  );
-                                })()}
-                                {(vacationsByEmployeeId.get(assignment.employeeId) ?? []).map((vacation, index) => (
-                                  <span
-                                    key={`${assignment.id}-vacation-${index}`}
-                                    className="assignment-vacation-bar"
-                                    style={assignmentStyle(vacation.startDate, vacation.endDate)}
-                                    title={`${isoToInputDate(vacation.startDate)} ${t.fromTo} ${isoToInputDate(vacation.endDate)}`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </section>
+                    <ProjectAssignmentsCard
+                      t={t}
+                      detail={detail}
+                      dayStep={dayStep}
+                      todayPosition={todayPosition}
+                      assignmentStyle={assignmentStyle}
+                      employeeRoleColorById={employeeRoleColorById}
+                      onDeleteAssignment={onDeleteAssignment}
+                      assignmentDragState={assignmentDragState}
+                      resolveAssignmentDragDates={resolveAssignmentDragDates}
+                      pendingAssignmentPreview={pendingAssignmentPreview}
+                      hoverAssignmentDragMode={hoverAssignmentDragMode}
+                      toUtcDay={toUtcDay}
+                      formatTooltipDate={formatTooltipDate}
+                      assignmentTooltipCacheRef={assignmentTooltipCacheRef}
+                      handleAssignmentBarHover={handleAssignmentBarHover}
+                      clearAssignmentBarHover={clearAssignmentBarHover}
+                      beginAssignmentDrag={beginAssignmentDrag}
+                      vacationsByEmployeeId={vacationsByEmployeeId}
+                      isoToInputDate={isoToInputDate}
+                    />
                   ) : null}
                     </div>
                   );
