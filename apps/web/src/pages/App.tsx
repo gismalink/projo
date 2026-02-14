@@ -7,6 +7,7 @@ import {
   ProjectDetail,
   ProjectListItem,
   ProjectTimelineRow,
+  SkillItem,
   VacationItem,
 } from '../api/client';
 
@@ -65,6 +66,9 @@ const TEXT: Record<Lang, Record<string, string>> = {
     roleColor: 'Цвет роли',
     saveColor: 'Сохранить цвет',
     createRole: 'Создать роль',
+    createSkill: 'Создать навык',
+    skillsList: 'Список навыков',
+    skillMgmt: 'Управление навыками',
     createProject: 'Создать проект',
     assignEmployee: 'Назначить сотрудника',
     yearTimeline: 'Годовой таймлайн',
@@ -92,6 +96,7 @@ const TEXT: Record<Lang, Record<string, string>> = {
     uiLoginFailed: 'Ошибка входа',
     uiCreateRoleFailed: 'Не удалось создать роль',
     uiUpdateRoleColorFailed: 'Не удалось обновить цвет роли',
+    uiCreateSkillFailed: 'Не удалось создать навык',
     uiCreateEmployeeFailed: 'Не удалось создать сотрудника',
     uiCreateVacationFailed: 'Не удалось создать отпуск',
     uiCreateProjectFailed: 'Не удалось создать проект',
@@ -143,6 +148,9 @@ const TEXT: Record<Lang, Record<string, string>> = {
     roleColor: 'Role color',
     saveColor: 'Save color',
     createRole: 'Create role',
+    createSkill: 'Create skill',
+    skillsList: 'Skills List',
+    skillMgmt: 'Skill management',
     createProject: 'Create project',
     assignEmployee: 'Assign employee',
     yearTimeline: 'Year timeline',
@@ -170,6 +178,7 @@ const TEXT: Record<Lang, Record<string, string>> = {
     uiLoginFailed: 'Login failed',
     uiCreateRoleFailed: 'Failed to create role',
     uiUpdateRoleColorFailed: 'Failed to update role color',
+    uiCreateSkillFailed: 'Failed to create skill',
     uiCreateEmployeeFailed: 'Failed to create employee',
     uiCreateVacationFailed: 'Failed to create vacation',
     uiCreateProjectFailed: 'Failed to create project',
@@ -209,6 +218,7 @@ const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_ROLE_NOT_FOUND: 'Роль не найдена',
     ERR_EMPLOYEE_NOT_FOUND: 'Сотрудник не найден',
     ERR_DEPARTMENT_NOT_FOUND: 'Отдел не найден',
+    ERR_SKILL_NOT_FOUND: 'Навык не найден',
     ERR_VACATION_NOT_FOUND: 'Отпуск не найден',
     ERR_PROJECT_NOT_FOUND: 'Проект не найден',
     ERR_ASSIGNMENT_NOT_FOUND: 'Назначение не найдено',
@@ -224,6 +234,7 @@ const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_ROLE_NOT_FOUND: 'Role not found',
     ERR_EMPLOYEE_NOT_FOUND: 'Employee not found',
     ERR_DEPARTMENT_NOT_FOUND: 'Department not found',
+    ERR_SKILL_NOT_FOUND: 'Skill not found',
     ERR_VACATION_NOT_FOUND: 'Vacation not found',
     ERR_PROJECT_NOT_FOUND: 'Project not found',
     ERR_ASSIGNMENT_NOT_FOUND: 'Assignment not found',
@@ -301,6 +312,7 @@ export function App() {
   const [password, setPassword] = useState('admin12345');
   const [token, setToken] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [skills, setSkills] = useState<SkillItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [vacations, setVacations] = useState<VacationItem[]>([]);
@@ -322,6 +334,8 @@ export function App() {
   const [roleName, setRoleName] = useState('Analyst');
   const [roleDescription, setRoleDescription] = useState('Business analyst role');
   const [roleLevel, setRoleLevel] = useState(3);
+  const [skillName, setSkillName] = useState('TypeScript');
+  const [skillDescription, setSkillDescription] = useState('Frontend and backend development');
 
   const [employeeFullName, setEmployeeFullName] = useState('Jane Smith');
   const [employeeEmail, setEmployeeEmail] = useState('jane.smith@projo.local');
@@ -472,9 +486,10 @@ export function App() {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] =
+    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] =
       await Promise.all([
       api.getRoles(authToken),
+      api.getSkills(authToken),
       api.getDepartments(authToken),
       api.getEmployees(authToken),
       api.getVacations(authToken),
@@ -484,6 +499,7 @@ export function App() {
       ]);
 
     const nextRoles = rolesData as Role[];
+    const nextSkills = skillsData as SkillItem[];
     const nextDepartments = departmentsData as DepartmentItem[];
     const nextEmployees = employeesData as Employee[];
     const nextVacations = vacationsData as VacationItem[];
@@ -491,6 +507,7 @@ export function App() {
     const nextProjects = projectsData as ProjectListItem[];
 
     setRoles(nextRoles);
+    setSkills(nextSkills);
     setDepartments(nextDepartments);
     setEmployees(nextEmployees);
     setVacations(nextVacations);
@@ -570,6 +587,25 @@ export function App() {
       await refreshData(token, selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, lang, t.uiUpdateRoleColorFailed));
+    }
+  }
+
+  async function handleCreateSkill(event: FormEvent) {
+    event.preventDefault();
+    if (!token) return;
+
+    try {
+      await api.createSkill(
+        {
+          name: skillName,
+          description: skillDescription,
+        },
+        token,
+      );
+      await refreshData(token, selectedYear);
+      setSkillName((prev) => `${prev}-2`);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, lang, t.uiCreateSkillFailed));
     }
   }
 
@@ -929,6 +965,35 @@ export function App() {
                         <button type="button" className="ghost-btn" onClick={() => handleUpdateRoleColor(role)}>
                           {t.saveColor}
                         </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+
+              <article className="card">
+                <h2>{t.skillMgmt}</h2>
+                <form className="timeline-form" onSubmit={handleCreateSkill}>
+                  <label>
+                    {t.name}
+                    <input value={skillName} onChange={(e) => setSkillName(e.target.value)} />
+                  </label>
+                  <label>
+                    {t.description}
+                    <input value={skillDescription} onChange={(e) => setSkillDescription(e.target.value)} />
+                  </label>
+                  <button type="submit">{t.createSkill}</button>
+                </form>
+
+                <h2>{t.skillsList}</h2>
+                <ul>
+                  {skills.map((skill) => (
+                    <li key={skill.id} className="role-row">
+                      <div>
+                        <strong>{skill.name}</strong>
+                        <span>
+                          {skill._count?.employees ?? 0} {t.employeesShort}
+                        </span>
                       </div>
                     </li>
                   ))}

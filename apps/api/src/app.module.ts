@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { PrismaModule } from './common/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RolesModule } from './roles/roles.module';
+import { SkillsModule } from './skills/skills.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { UsersModule } from './users/users.module';
 import { VacationsModule } from './vacations/vacations.module';
@@ -20,6 +21,7 @@ import { VacationsModule } from './vacations/vacations.module';
     UsersModule,
     AuthModule,
     RolesModule,
+    SkillsModule,
     EmployeesModule,
     ProjectsModule,
     AssignmentsModule,

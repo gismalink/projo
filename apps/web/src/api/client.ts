@@ -79,7 +79,19 @@ export type DepartmentItem = {
   _count?: { employees: number };
 };
 
+export type SkillItem = {
+  id: string;
+  name: string;
+  description?: string | null;
+  _count?: { employees: number };
+};
+
 export type UpdateRolePayload = Partial<CreateRolePayload>;
+export type CreateSkillPayload = {
+  name: string;
+  description?: string;
+};
+export type UpdateSkillPayload = Partial<CreateSkillPayload>;
 
 export type VacationItem = {
   id: string;
@@ -201,8 +213,13 @@ export const api = {
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
   getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),
+  getSkills: (token: string) => request<SkillItem[]>('/skills', {}, token),
   createRole: (payload: CreateRolePayload, token: string) =>
     request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createSkill: (payload: CreateSkillPayload, token: string) =>
+    request('/skills', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateSkill: (skillId: string, payload: UpdateSkillPayload, token: string) =>
+    request(`/skills/${skillId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   updateRole: (roleId: string, payload: UpdateRolePayload, token: string) =>
     request(`/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createEmployee: (payload: CreateEmployeePayload, token: string) =>
