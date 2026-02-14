@@ -234,6 +234,21 @@ li > div {
   gap: 0.45rem;
 }
 
+.team-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.team-icon-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .role-tag {
   max-width: 180px;
 }

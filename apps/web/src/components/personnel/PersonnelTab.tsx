@@ -80,14 +80,32 @@ export function PersonnelTab(props: PersonnelTabProps) {
       <article className="card">
         <div className="section-header">
           <h2>{t.employeesList}</h2>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
-            <button type="button" title={t.departmentsList} aria-label={t.departmentsList} onClick={openDepartmentsModal}>
+          <div className="team-actions">
+            <button
+              type="button"
+              className="create-role-icon-btn team-icon-btn"
+              title={t.departmentsList}
+              aria-label={t.departmentsList}
+              onClick={openDepartmentsModal}
+            >
               🏢
             </button>
-            <button type="button" title={t.importEmployeesTooltip} aria-label={t.importEmployeesTooltip} onClick={openEmployeeImportModal}>
+            <button
+              type="button"
+              className="create-role-icon-btn team-icon-btn"
+              title={t.importEmployeesTooltip}
+              aria-label={t.importEmployeesTooltip}
+              onClick={openEmployeeImportModal}
+            >
               ⬆
             </button>
-            <button type="button" title={t.createEmployeeTooltip} aria-label={t.createEmployeeTooltip} onClick={openEmployeeModal}>
+            <button
+              type="button"
+              className="create-role-icon-btn team-icon-btn"
+              title={t.createEmployeeTooltip}
+              aria-label={t.createEmployeeTooltip}
+              onClick={openEmployeeModal}
+            >
               +
             </button>
           </div>
@@ -140,7 +158,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
           {hasActiveFilters ? (
             <button
               type="button"
-              className="filter-clear-icon-btn"
+              className="create-role-icon-btn team-icon-btn"
               title={t.clearFilter}
               aria-label={t.clearFilter}
               onClick={clearAllFilters}
@@ -165,7 +183,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                       <strong>{employee.fullName}</strong>
                       <button
                         type="button"
-                        className="ghost-btn"
+                        className="create-role-icon-btn team-icon-btn"
                         title={t.addVacationTooltip}
                         aria-label={t.addVacationTooltip}
                         onClick={() => openVacationModal(employee)}

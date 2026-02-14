@@ -141,7 +141,7 @@ export function RolesTab(props: RolesTabProps) {
     <section className="grid">
       <article className="card">
         <div className="section-header roles-list-header">
-          <span />
+          <h2>{t.rolesList}</h2>
           <button
             type="button"
             className="create-role-icon-btn"
