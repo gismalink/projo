@@ -3,5 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts"
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo \"@projo/shared: nothing to build\"",
+    "lint": "echo \"@projo/shared: no lint config\"",
+    "test": "echo \"@projo/shared: no tests\""
+  }
 }

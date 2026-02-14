@@ -13,6 +13,8 @@
     "dev:web": "npm run dev -w @projo/web",
     "build": "npm run build -ws",
     "lint": "npm run lint -ws",
-    "test": "npm run test -ws"
+    "test": "npm run test -ws",
+    "verify": "bash ./scripts/verify-all.sh",
+    "ci:check": "npm run verify"
   }
 }

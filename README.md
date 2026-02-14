@@ -23,6 +23,12 @@ MVP foundation for project planning app (API + Web + Postgres).
    - Both: `npm run dev:all`
    - API only: `npm run dev:api`
    - Web only: `npm run dev:web`
+6. Run full verification:
+   - `npm run verify`
+
+## Architecture
+- Quick architecture map: `docs/architecture-overview.md`
+- Delivery checklist: `docs/workflow-checklist.md`
 
 ## API endpoints (MVP slice)
 - `POST /api/auth/login`
@@ -59,5 +65,4 @@ Created automatically on API startup if not found.
 ## Next steps
 - Implement cost engine (planned project cost by rates).
 - Add reports/export and tests (unit + integration + e2e).
-- Add skills directory and CSV import for employees.
-- Add tests (unit + integration + e2e).
+- Add CSV import for employees.
