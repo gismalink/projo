@@ -67,7 +67,23 @@ export function PersonnelTab(props: PersonnelTabProps) {
       ? departmentGroups
       : departmentGroups.filter(([department]) => department === selectedDepartment);
   const hasActiveFilters = selectedRoleFilters.length > 0 || selectedDepartment !== 'all';
-  const compactRoleLabel = (value: string) => (value.length > 14 ? `${value.slice(0, 12)}…` : value);
+  const compactFilterLabel = (value: string) => (value.length > 10 ? `${value.slice(0, 8)}…` : value);
+  const compactRoleLabel = (value: string) => {
+    const parts = value
+      .trim()
+      .split(/[\s_-]+/)
+      .filter(Boolean);
+
+    if (parts.length === 0) return value;
+    if (parts.length === 1) {
+      const token = parts[0].toUpperCase();
+      return token.length > 7 ? `${token.slice(0, 6)}…` : token;
+    }
+
+    const first = parts[0].slice(0, 3).toUpperCase();
+    const second = parts[1].slice(0, 3).toUpperCase();
+    return `${first}_${second}`;
+  };
 
   const clearAllFilters = () => {
     clearRoleFilters();
@@ -93,19 +109,29 @@ export function PersonnelTab(props: PersonnelTabProps) {
         </div>
 
         <div className="department-filter-row">
-          <label className="department-filter-dropdown" title={t.selectDepartment} aria-label={t.selectDepartment}>
-            <span className="department-filter-icon" aria-hidden>
+          <div className="role-filter-panel" role="group" aria-label={t.selectDepartment}>
+            <button
+              type="button"
+              className={selectedDepartment === 'all' ? 'role-tag active' : 'role-tag'}
+              onClick={() => setSelectedDepartment('all')}
+              title={`${t.department}: ${t.clearFilter}`}
+              aria-label={`${t.department}: ${t.clearFilter}`}
+            >
               🏢
-            </span>
-            <select value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)}>
-              <option value="all">{t.department}: {t.clearFilter}</option>
-              {departmentOptions.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </select>
-          </label>
+            </button>
+            {departmentGroups.map(([department, departmentEmployees]) => (
+              <button
+                type="button"
+                key={department}
+                className={selectedDepartment === department ? 'role-tag active' : 'role-tag'}
+                onClick={() => setSelectedDepartment(department)}
+                title={`${department} (${departmentEmployees.length})`}
+                aria-label={`${department} (${departmentEmployees.length})`}
+              >
+                {compactFilterLabel(department)} ({departmentEmployees.length})
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="role-filter-panel">
