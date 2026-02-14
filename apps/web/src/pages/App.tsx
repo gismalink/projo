@@ -117,6 +117,7 @@ export function App() {
               t={t}
               months={MONTHS_BY_LANG[lang]}
               selectedYear={app.selectedYear}
+              assignments={app.assignments}
               sortedTimeline={app.sortedTimeline}
               expandedProjectIds={app.expandedProjectIds}
               projectDetails={app.projectDetails}

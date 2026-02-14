@@ -1,10 +1,11 @@
-import { FormEvent } from 'react';
-import { ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { FormEvent, useMemo } from 'react';
+import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 
 type TimelineTabProps = {
   t: Record<string, string>;
   months: string[];
   selectedYear: number;
+  assignments: AssignmentItem[];
   sortedTimeline: ProjectTimelineRow[];
   expandedProjectIds: string[];
   projectDetails: Record<string, ProjectDetail>;
@@ -31,6 +32,7 @@ export function TimelineTab(props: TimelineTabProps) {
     t,
     months,
     selectedYear,
+    assignments,
     sortedTimeline,
     expandedProjectIds,
     projectDetails,
@@ -81,6 +83,33 @@ export function TimelineTab(props: TimelineTabProps) {
       })()
     : null;
 
+  const companyDailyLoad = useMemo(() => {
+    const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
+    const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
+    const days = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
+    const totals = Array.from({ length: days }, () => 0);
+
+    for (const assignment of assignments) {
+      const allocation = Number(assignment.allocationPercent);
+      if (!Number.isFinite(allocation) || allocation <= 0) continue;
+
+      const start = new Date(assignment.assignmentStartDate);
+      const end = new Date(assignment.assignmentEndDate);
+      const effectiveStart = start < yearStart ? yearStart : start;
+      const effectiveEnd = end >= yearEnd ? new Date(yearEnd.getTime() - 86400000) : end;
+      if (effectiveEnd < effectiveStart) continue;
+
+      const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / 86400000));
+      const endIndex = Math.min(days - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / 86400000));
+      for (let i = startIndex; i <= endIndex; i += 1) {
+        totals[i] += allocation;
+      }
+    }
+
+    const max = Math.max(1, ...totals);
+    return { totals, max };
+  }, [assignments, selectedYear]);
+
   const assignmentStyle = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -117,20 +146,37 @@ export function TimelineTab(props: TimelineTabProps) {
           </div>
         </div>
 
-        <div className="month-grid">
-          {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-          {months.map((month) => (
-            <span key={month}>{month}</span>
-          ))}
-        </div>
-        <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
-          {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-          {dayMarkers.map((marker) => (
-            <span key={marker.key} className="day-marker" style={{ left: marker.left }}>
-              {marker.label}
-            </span>
-          ))}
-        </div>
+        <section className="company-load-card">
+          <div className="section-header">
+            <h3>{t.companyLoad}</h3>
+            <span className="muted">max {companyDailyLoad.max.toFixed(0)}%</span>
+          </div>
+          <div className="company-load-chart">
+            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+            {companyDailyLoad.totals.map((value, index) => (
+              <span
+                key={`${selectedYear}-load-${index}`}
+                className="company-load-bar"
+                style={{ height: `${Math.max(2, (value / companyDailyLoad.max) * 100)}%` }}
+                title={`Day ${index + 1}: ${value.toFixed(1)}%`}
+              />
+            ))}
+          </div>
+          <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
+            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+            {dayMarkers.map((marker) => (
+              <span key={marker.key} className="day-marker" style={{ left: marker.left }}>
+                {marker.label}
+              </span>
+            ))}
+          </div>
+          <div className="month-grid">
+            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+            {months.map((month) => (
+              <span key={month}>{month}</span>
+            ))}
+          </div>
+        </section>
 
         <div className="timeline-rows">
           {sortedTimeline.length === 0 ? (
@@ -155,6 +201,10 @@ export function TimelineTab(props: TimelineTabProps) {
                         {row.assignmentsCount} {t.assignmentsWord} · {row.totalPlannedHoursPerDay} h/day
                       </span>
                     </div>
+                    <div className="timeline-submeta">
+                      {row.status} · {t.priorityWord} {row.priority} · {isoToInputDate(row.startDate)} {t.fromTo}{' '}
+                      {isoToInputDate(row.endDate)}
+                    </div>
                     <div className="track">
                       <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                       {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
@@ -166,20 +216,10 @@ export function TimelineTab(props: TimelineTabProps) {
 
                   {isExpanded && detail ? (
                     <section className="project-card">
-                      <div className="section-header">
-                        <h3>{detail.code} · {detail.name}</h3>
+                      <div className="project-card-tools">
                         <button type="button" onClick={() => onOpenAssignmentModal(detail.id)}>
                           {t.assignEmployee}
                         </button>
-                      </div>
-
-                      <div className="project-card-header">
-                        <span>
-                          {detail.status} · {t.priorityWord} {detail.priority}
-                        </span>
-                        <span>
-                          {isoToInputDate(detail.startDate)} {t.fromTo} {isoToInputDate(detail.endDate)}
-                        </span>
                       </div>
 
                       <div className="assignment-list">
