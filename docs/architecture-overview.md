@@ -31,9 +31,10 @@
   - `Vacation` for employee time off.
   - `Skill` with many-to-many bridge `EmployeeSkill`.
 - Business rules (enforced in services):
-  - assignment dates inside project range,
-  - no employee overload >100% per day,
-  - no assignment overlap with vacation.
+  - one employee can appear only once per project (`@@unique([projectId, employeeId])` + service-level guard),
+  - assignment date range must be valid (`start <= end`),
+  - overload >100% and overlap with vacation are treated as UI soft warnings (no hard-block on create/update),
+  - assignment dates outside project range are allowed for iterative planning shifts.
 
 ## 5. Frontend architecture (`apps/web`)
 - API layer: `apps/web/src/api/client.ts`.
@@ -47,6 +48,11 @@
   - `apps/web/src/hooks/useAppData.ts`: composition facade for `App.tsx`.
 - i18n dictionaries:
   - `apps/web/src/pages/app-i18n.ts` (`ru`/`en` text + error mappings).
+- Timeline interaction notes:
+  - manual project-row ordering is stored in client state (`timelineOrder`),
+  - planned bar supports drag move/resize with window-level mouse tracking,
+  - post-drop optimistic preview prevents one-frame rollback before API refresh,
+  - project card expand/collapse is controlled only by dedicated toggle button.
 
 ## 6. Automation and quality gates
 - Workspace scripts:

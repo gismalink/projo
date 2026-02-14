@@ -52,15 +52,17 @@ Created automatically on API startup if not found.
 - Personnel tab: role-tag filters with counts, employee cards grouped by departments, yearly utilization indicator.
 - Roles tab: role creation and roles list.
 - Roles tab: editable role colors that are reflected in employee role badges.
-- Timeline tab: project quick-create form, assignment quick-create form, and yearly gantt-like bars.
-- Project Card: click timeline row to inspect project assignments and edit assignment dates/allocation.
+- Timeline tab: yearly gantt-like planning with draggable `planned` project bar (move/resize), employee strips, and company-load overview.
+- Timeline tab: project-row controls in header (`↑/↓/▾`) with manual ordering (no auto-sort jump).
+- Project Card: expands only by dedicated toggle button and supports assignment dates/allocation editing.
 - UI localization switch: `RU/EN`.
 - Errors are shown as toast notifications at the bottom of the screen.
 
 ## Business rules already enforced
-- Assignment dates must be inside project date range.
-- Employee allocation cannot exceed 100% on any day across overlapping assignments.
-- Assignment cannot overlap employee vacation period.
+- One employee cannot be assigned twice to the same project.
+- Assignment date range must be valid (`start <= end`).
+- Overload and vacation overlap are soft warnings in timeline UI (without hard API block).
+- Assignment dates outside project range are allowed for iterative planning.
 
 ## Next steps
 - Implement cost engine (planned project cost by rates).

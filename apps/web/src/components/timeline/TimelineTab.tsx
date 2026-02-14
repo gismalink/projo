@@ -81,6 +81,17 @@ export function TimelineTab(props: TimelineTabProps) {
     trackWidth: number;
     shiftDays: number;
   } | null>(null);
+  const [pendingPlanPreview, setPendingPlanPreview] = useState<{
+    projectId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+    nextStart: Date;
+    nextEnd: Date;
+    shiftDays: number;
+  } | null>(null);
+  const [hoverDragMode, setHoverDragMode] = useState<{
+    projectId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+  } | null>(null);
   const suppressToggleClickRef = useRef(false);
   const dragMovedRef = useRef(false);
 
@@ -166,6 +177,17 @@ export function TimelineTab(props: TimelineTabProps) {
   };
 
   const toApiDate = (value: Date) => toUtcDay(value).toISOString();
+  const locale = t.prev === 'Назад' ? 'ru-RU' : 'en-US';
+  const tooltipDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }),
+    [locale],
+  );
+  const formatTooltipDate = (value: Date) => tooltipDateFormatter.format(toUtcDay(value));
 
   const assignmentStyle = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
@@ -272,18 +294,50 @@ export function TimelineTab(props: TimelineTabProps) {
 
     const current = dragState;
     setDragState(null);
+    setHoverDragMode(null);
     suppressToggleClickRef.current = dragMovedRef.current;
     if (current.shiftDays === 0) return;
 
     const { nextStart, nextEnd } = resolveDragDates(current);
     const effectiveShiftDays = diffDays(current.startDate, nextStart);
-    await onAdjustProjectPlan(
-      current.projectId,
-      toApiDate(nextStart),
-      toApiDate(nextEnd),
-      current.mode === 'resize-end' ? 0 : effectiveShiftDays,
-      current.mode,
-    );
+    setPendingPlanPreview({
+      projectId: current.projectId,
+      mode: current.mode,
+      nextStart,
+      nextEnd,
+      shiftDays: current.mode === 'resize-end' ? 0 : effectiveShiftDays,
+    });
+
+    try {
+      await onAdjustProjectPlan(
+        current.projectId,
+        toApiDate(nextStart),
+        toApiDate(nextEnd),
+        current.mode === 'resize-end' ? 0 : effectiveShiftDays,
+        current.mode,
+      );
+    } finally {
+      setPendingPlanPreview((prev) => (prev && prev.projectId === current.projectId ? null : prev));
+    }
+  };
+
+  const handlePlanBarHover = (event: ReactMouseEvent<HTMLElement>, row: ProjectTimelineRow) => {
+    if (dragState) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const edgeWidth = 10;
+    let mode: 'move' | 'resize-start' | 'resize-end' = 'move';
+    if (x <= edgeWidth) {
+      mode = 'resize-start';
+    } else if (x >= rect.width - edgeWidth) {
+      mode = 'resize-end';
+    }
+    setHoverDragMode({ projectId: row.id, mode });
+  };
+
+  const clearPlanBarHover = (row: ProjectTimelineRow) => {
+    if (dragState) return;
+    setHoverDragMode((prev) => (prev && prev.projectId === row.id ? null : prev));
   };
 
   const handleToggleClick = (event: ReactMouseEvent, projectId: string) => {
@@ -418,18 +472,47 @@ export function TimelineTab(props: TimelineTabProps) {
             <p className="muted">{t.noProjectsForYear}</p>
           ) : (
             sortedTimeline.map((row, rowIndex) => {
+              const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
+              const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
               const style =
-                dragState && dragState.projectId === row.id
-                  ? projectTrackStyle(
-                      resolveDragDates(dragState).nextStart.toISOString(),
-                      resolveDragDates(dragState).nextEnd.toISOString(),
-                    )
+                dragPreview
+                  ? timelineStyle({
+                      ...row,
+                      startDate: dragPreview.nextStart.toISOString(),
+                      endDate: dragPreview.nextEnd.toISOString(),
+                    })
+                  : pendingPreview
+                    ? timelineStyle({
+                        ...row,
+                        startDate: pendingPreview.nextStart.toISOString(),
+                        endDate: pendingPreview.nextEnd.toISOString(),
+                      })
                   : timelineStyle(row);
               const isExpanded = expandedSet.has(row.id);
               const detail = projectDetails[row.id];
               const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
               const assignmentShiftDays =
-                dragState && dragState.projectId === row.id && dragState.mode !== 'resize-end' ? dragState.shiftDays : 0;
+                dragState && dragState.projectId === row.id && dragState.mode !== 'resize-end' && dragPreview
+                  ? diffDays(dragState.startDate, dragPreview.nextStart)
+                  : pendingPreview && pendingPreview.mode !== 'resize-end'
+                    ? pendingPreview.shiftDays
+                  : 0;
+              const tooltipMode =
+                dragState && dragState.projectId === row.id
+                  ? dragState.mode
+                  : hoverDragMode && hoverDragMode.projectId === row.id
+                    ? hoverDragMode.mode
+                    : null;
+              const tooltipStart = dragPreview?.nextStart ?? toUtcDay(new Date(row.startDate));
+              const tooltipEnd = dragPreview?.nextEnd ?? toUtcDay(new Date(row.endDate));
+              const tooltipText =
+                tooltipMode === 'resize-start'
+                  ? formatTooltipDate(tooltipStart)
+                  : tooltipMode === 'resize-end'
+                    ? formatTooltipDate(tooltipEnd)
+                    : tooltipMode === 'move'
+                      ? `${formatTooltipDate(tooltipStart)} - ${formatTooltipDate(tooltipEnd)}`
+                      : '';
               return (
                 <div key={row.id} className="timeline-project-item">
                   <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
@@ -481,7 +564,25 @@ export function TimelineTab(props: TimelineTabProps) {
                     <div className="track project-track">
                       <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                       {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-                      <div className="bar project-plan-bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
+                      <div
+                        className="bar project-plan-bar"
+                        style={style}
+                        onMouseMove={(event) => handlePlanBarHover(event, row)}
+                        onMouseLeave={() => clearPlanBarHover(row)}
+                      >
+                        {tooltipMode ? (
+                          <span
+                            className={
+                              tooltipMode === 'resize-start'
+                                ? 'project-plan-tooltip edge-left'
+                                : tooltipMode === 'resize-end'
+                                  ? 'project-plan-tooltip edge-right'
+                                  : 'project-plan-tooltip center'
+                            }
+                          >
+                            {tooltipText}
+                          </span>
+                        ) : null}
                         {row.status}
                         <span
                           className="project-plan-handle left"
@@ -516,7 +617,6 @@ export function TimelineTab(props: TimelineTabProps) {
                               height: `${thickness}px`,
                               top: `${top}px`,
                             }}
-                            title={`${assignment.employeeId}: ${clampedAllocation}%`}
                           />
                         );
                       })}
