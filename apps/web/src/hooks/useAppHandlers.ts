@@ -193,11 +193,18 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
     try {
       await api.createRole(
-        { name: state.roleName, description: state.roleDescription, level: state.roleLevel, colorHex: '#6E7B8A' },
+        {
+          name: state.roleName,
+          shortName: state.roleShortName || undefined,
+          description: state.roleDescription,
+          level: state.roleLevel,
+          colorHex: '#6E7B8A',
+        },
         state.token,
       );
       await refreshData(state.token, state.selectedYear);
       state.setRoleName((prev) => `${prev}-2`);
+      state.setRoleShortName('');
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateRoleFailed, errorText));
     }

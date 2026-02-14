@@ -7,7 +7,7 @@ type TimelineTabProps = {
   selectedYear: number;
   assignments: AssignmentItem[];
   vacations: Array<{ employeeId: string; startDate: string; endDate: string }>;
-  employees: Array<{ id: string; fullName: string; role: { name: string }; department?: { name: string } | null }>;
+  employees: Array<{ id: string; fullName: string; role: { name: string; shortName?: string | null }; department?: { name: string } | null }>;
   roles: Array<{ name: string; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
   expandedProjectIds: string[];
@@ -509,19 +509,35 @@ export function TimelineTab(props: TimelineTabProps) {
   }, [assignments]);
 
   const benchGroups = useMemo(() => {
-    const assignedEmployeeIds = new Set<string>();
+    const annualUtilizationByEmployeeId = new Map<string, number>();
     for (const assignment of assignments) {
-      const start = new Date(assignment.assignmentStartDate);
-      const end = new Date(assignment.assignmentEndDate);
-      if (end < yearStart || start > yearEndDay) continue;
-      assignedEmployeeIds.add(assignment.employeeId);
+      const allocation = Number(assignment.allocationPercent);
+      if (!Number.isFinite(allocation) || allocation <= 0) continue;
+
+      const start = toUtcDay(new Date(assignment.assignmentStartDate));
+      const end = toUtcDay(new Date(assignment.assignmentEndDate));
+      const effectiveStart = start < yearStart ? yearStart : start;
+      const effectiveEnd = end > yearEndDay ? yearEndDay : end;
+      if (effectiveEnd < effectiveStart) continue;
+
+      const overlapDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / 86400000) + 1;
+      const weightedUtilization = (allocation * overlapDays) / totalDays;
+      annualUtilizationByEmployeeId.set(
+        assignment.employeeId,
+        (annualUtilizationByEmployeeId.get(assignment.employeeId) ?? 0) + weightedUtilization,
+      );
     }
 
     const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string }>>();
     for (const employee of employees) {
-      if (assignedEmployeeIds.has(employee.id)) continue;
+      const annualUtilization = annualUtilizationByEmployeeId.get(employee.id) ?? 0;
+      if (annualUtilization >= 100) continue;
       const departmentName = employee.department?.name ?? t.unassignedDepartment;
-      const row = { id: employee.id, fullName: employee.fullName, roleName: employee.role.name };
+      const row = {
+        id: employee.id,
+        fullName: employee.fullName,
+        roleName: employee.role.shortName?.trim() ? employee.role.shortName : employee.role.name,
+      };
       const items = groups.get(departmentName);
       if (items) {
         items.push(row);
@@ -536,7 +552,7 @@ export function TimelineTab(props: TimelineTabProps) {
         departmentName,
         members: members.sort((a, b) => a.fullName.localeCompare(b.fullName)),
       }));
-  }, [assignments, employees, t.unassignedDepartment, yearEndDay, yearStart]);
+  }, [assignments, employees, t.unassignedDepartment, toUtcDay, totalDays, yearEndDay, yearStart]);
 
   const vacationsByEmployeeId = useMemo(() => {
     const result = new Map<string, Array<{ startDate: string; endDate: string }>>();

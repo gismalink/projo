@@ -38,6 +38,7 @@ export function useAppDerivedData(state: AppState, t: Record<string, string>) {
     return Array.from(counts.entries())
       .map(([roleNameValue, count]) => ({
         roleName: roleNameValue,
+        roleShortName: roleByName.get(roleNameValue)?.shortName ?? roleNameValue,
         count,
         colorHex: roleColorOrDefault(roleByName.get(roleNameValue)?.colorHex),
       }))

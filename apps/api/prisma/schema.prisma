@@ -27,6 +27,7 @@ model User {
 model Role {
   id          String   @id @default(cuid())
   name        String   @unique
+  shortName   String?  @db.VarChar(20)
   description String?
   level       Int?
   colorHex    String?  @db.VarChar(7)

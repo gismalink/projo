@@ -1,6 +1,7 @@
 export type Role = {
   id: string;
   name: string;
+  shortName?: string | null;
   description?: string;
   level?: number;
   colorHex?: string | null;
@@ -13,7 +14,7 @@ export type Employee = {
   email: string;
   status: string;
   grade?: string | null;
-  role: { name: string };
+  role: { name: string; shortName?: string | null };
   department?: { id: string; name: string } | null;
 };
 

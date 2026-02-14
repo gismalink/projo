@@ -7,6 +7,7 @@ type RolesTabProps = {
   roles: Role[];
   skills: SkillItem[];
   roleName: string;
+  roleShortName: string;
   roleDescription: string;
   roleLevel: number;
   skillName: string;
@@ -16,6 +17,7 @@ type RolesTabProps = {
   onCreateSkill: (event: FormEvent) => Promise<void>;
   onUpdateRoleColor: (role: Role) => Promise<void>;
   setRoleName: (value: string) => void;
+  setRoleShortName: (value: string) => void;
   setRoleDescription: (value: string) => void;
   setRoleLevel: (value: number) => void;
   setSkillName: (value: string) => void;
@@ -30,6 +32,7 @@ export function RolesTab(props: RolesTabProps) {
     roles,
     skills,
     roleName,
+    roleShortName,
     roleDescription,
     roleLevel,
     skillName,
@@ -39,6 +42,7 @@ export function RolesTab(props: RolesTabProps) {
     onCreateSkill,
     onUpdateRoleColor,
     setRoleName,
+    setRoleShortName,
     setRoleDescription,
     setRoleLevel,
     setSkillName,
@@ -55,6 +59,10 @@ export function RolesTab(props: RolesTabProps) {
           <label>
             {t.name}
             <input value={roleName} onChange={(e) => setRoleName(e.target.value)} />
+          </label>
+          <label>
+            {t.shortName}
+            <input value={roleShortName} onChange={(e) => setRoleShortName(e.target.value)} />
           </label>
           <label>
             {t.description}
@@ -76,6 +84,7 @@ export function RolesTab(props: RolesTabProps) {
               <div>
                 <strong>{role.name}</strong>
                 <span>
+                  {role.shortName ?? role.name} • {' '}
                   {t.levelEmployees} {role.level ?? '-'} • {role._count?.employees ?? 0} {t.employeesShort}
                 </span>
               </div>

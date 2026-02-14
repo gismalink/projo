@@ -58,6 +58,7 @@ export type UpdateProjectPayload = Partial<CreateProjectPayload>;
 
 export type CreateRolePayload = {
   name: string;
+  shortName?: string;
   description?: string;
   level?: number;
   colorHex?: string;

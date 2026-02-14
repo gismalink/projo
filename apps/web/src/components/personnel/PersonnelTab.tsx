@@ -4,6 +4,7 @@ import { VacationItem } from '../../api/client';
 
 type RoleStat = {
   roleName: string;
+  roleShortName: string;
   count: number;
   colorHex: string;
 };
@@ -68,22 +69,6 @@ export function PersonnelTab(props: PersonnelTabProps) {
       : departmentGroups.filter(([department]) => department === selectedDepartment);
   const hasActiveFilters = selectedRoleFilters.length > 0 || selectedDepartment !== 'all';
   const compactFilterLabel = (value: string) => (value.length > 10 ? `${value.slice(0, 8)}…` : value);
-  const compactRoleLabel = (value: string) => {
-    const parts = value
-      .trim()
-      .split(/[\s_-]+/)
-      .filter(Boolean);
-
-    if (parts.length === 0) return value;
-    if (parts.length === 1) {
-      const token = parts[0].toUpperCase();
-      return token.length > 7 ? `${token.slice(0, 6)}…` : token;
-    }
-
-    const first = parts[0].slice(0, 3).toUpperCase();
-    const second = parts[1].slice(0, 3).toUpperCase();
-    return `${first}_${second}`;
-  };
 
   const clearAllFilters = () => {
     clearRoleFilters();
@@ -148,7 +133,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 aria-label={`${tag.roleName} (${tag.count})`}
               >
                 <span className="dot" style={{ background: tag.colorHex }} />
-                {compactRoleLabel(tag.roleName)} ({tag.count})
+                {tag.roleShortName} ({tag.count})
               </button>
             );
           })}

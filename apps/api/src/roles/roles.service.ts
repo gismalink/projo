@@ -10,17 +10,17 @@ export class RolesService {
 
   async ensureDefaultRoles() {
     const defaults = [
-      { name: 'ADMIN', description: 'System administrator', level: 1, colorHex: '#6E7B8A' },
-      { name: 'PM', description: 'Project manager', level: 2, colorHex: '#6E7B8A' },
-      { name: 'VIEWER', description: 'Read-only user', level: 3, colorHex: '#6E7B8A' },
-      { name: 'FINANCE', description: 'Finance visibility role', level: 3, colorHex: '#6E7B8A' },
-      { name: 'UNITY_DEVELOPER', description: 'Unity developer', level: 3, colorHex: '#9B8AFB' },
-      { name: 'UI_DESIGNER', description: 'UI designer', level: 3, colorHex: '#46B7D6' },
-      { name: 'UX_DESIGNER', description: 'UX designer', level: 3, colorHex: '#31B28D' },
-      { name: 'BACKEND_DEVELOPER', description: 'Backend developer', level: 3, colorHex: '#5B8DEF' },
-      { name: 'ARTIST_3D', description: '3D artist', level: 3, colorHex: '#C178E8' },
-      { name: 'ANALYST', description: 'Business/system analyst', level: 3, colorHex: '#E6A23C' },
-      { name: 'QA_ENGINEER', description: 'QA test engineer', level: 3, colorHex: '#F06A8A' },
+      { name: 'ADMIN', shortName: 'ADMIN', description: 'System administrator', level: 1, colorHex: '#6E7B8A' },
+      { name: 'PM', shortName: 'PM', description: 'Project manager', level: 2, colorHex: '#6E7B8A' },
+      { name: 'VIEWER', shortName: 'VIEW', description: 'Read-only user', level: 3, colorHex: '#6E7B8A' },
+      { name: 'FINANCE', shortName: 'FIN', description: 'Finance visibility role', level: 3, colorHex: '#6E7B8A' },
+      { name: 'UNITY_DEVELOPER', shortName: 'UNITY', description: 'Unity developer', level: 3, colorHex: '#9B8AFB' },
+      { name: 'UI_DESIGNER', shortName: 'UI', description: 'UI designer', level: 3, colorHex: '#46B7D6' },
+      { name: 'UX_DESIGNER', shortName: 'UX', description: 'UX designer', level: 3, colorHex: '#31B28D' },
+      { name: 'BACKEND_DEVELOPER', shortName: 'BACK', description: 'Backend developer', level: 3, colorHex: '#5B8DEF' },
+      { name: 'ARTIST_3D', shortName: '3DART', description: '3D artist', level: 3, colorHex: '#C178E8' },
+      { name: 'ANALYST', shortName: 'ANLST', description: 'Business/system analyst', level: 3, colorHex: '#E6A23C' },
+      { name: 'QA_ENGINEER', shortName: 'QA', description: 'QA test engineer', level: 3, colorHex: '#F06A8A' },
     ];
 
     await Promise.all(
@@ -29,6 +29,7 @@ export class RolesService {
           where: { name: role.name },
           update: {
             colorHex: role.colorHex,
+            shortName: role.shortName,
           },
           create: role,
         }),

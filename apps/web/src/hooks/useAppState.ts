@@ -23,6 +23,7 @@ export function useAppState() {
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [roleColorDrafts, setRoleColorDrafts] = useState<Record<string, string>>({});
   const [roleName, setRoleName] = useState('Analyst');
+  const [roleShortName, setRoleShortName] = useState('ANLST');
   const [roleDescription, setRoleDescription] = useState('Business analyst role');
   const [roleLevel, setRoleLevel] = useState(3);
   const [skillName, setSkillName] = useState('TypeScript');
@@ -96,6 +97,7 @@ export function useAppState() {
     skills,
     roleColorDrafts,
     roleName,
+    roleShortName,
     roleDescription,
     roleLevel,
     skillName,
@@ -157,6 +159,7 @@ export function useAppState() {
     setSkills,
     setRoleColorDrafts,
     setRoleName,
+    setRoleShortName,
     setRoleDescription,
     setRoleLevel,
     setSkillName,

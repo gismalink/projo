@@ -93,6 +93,7 @@ export function App() {
               roles={app.roles}
               skills={app.skills}
               roleName={app.roleName}
+              roleShortName={app.roleShortName}
               roleDescription={app.roleDescription}
               roleLevel={app.roleLevel}
               skillName={app.skillName}
@@ -102,6 +103,7 @@ export function App() {
               onCreateSkill={app.handleCreateSkill}
               onUpdateRoleColor={app.handleUpdateRoleColor}
               setRoleName={app.setRoleName}
+              setRoleShortName={app.setRoleShortName}
               setRoleDescription={app.setRoleDescription}
               setRoleLevel={app.setRoleLevel}
               setSkillName={app.setSkillName}
