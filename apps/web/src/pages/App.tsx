@@ -142,6 +142,8 @@ export function App() {
               onUpdateAssignment={app.handleUpdateAssignment}
               onYearChange={app.handleYearChange}
               onEditorAssignmentChange={app.handleEditorAssignmentChange}
+              onDeleteAssignment={app.handleDeleteAssignment}
+              onAdjustAssignmentPlan={app.handleAdjustAssignmentPlan}
               setEditAssignmentStartDate={app.setEditAssignmentStartDate}
               setEditAssignmentEndDate={app.setEditAssignmentEndDate}
               setEditAssignmentPercent={app.setEditAssignmentPercent}

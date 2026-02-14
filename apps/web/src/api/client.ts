@@ -260,4 +260,5 @@ export const api = {
     request('/assignments', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateAssignment: (assignmentId: string, payload: UpdateAssignmentPayload, token: string) =>
     request(`/assignments/${assignmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  deleteAssignment: (assignmentId: string, token: string) => request(`/assignments/${assignmentId}`, { method: 'DELETE' }, token),
 };

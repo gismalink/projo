@@ -590,6 +590,8 @@ li > div {
   background: var(--ios-surface-strong);
   color: var(--ios-text);
   border-radius: 12px;
+  position: relative;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -653,6 +655,39 @@ li > div {
   align-items: center;
 }
 
+.assignment-remove-btn {
+  position: absolute;
+  right: -30px;
+  top: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--ios-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--ios-text-secondary);
+  background: rgba(255, 255, 255, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transform: translateX(-4px);
+}
+
+.assignment-item:hover .assignment-remove-btn,
+.assignment-remove-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.assignment-remove-btn:hover {
+  color: #fff;
+  background: var(--ios-danger);
+  border-color: var(--ios-danger);
+}
+
 .assignment-track {
   position: relative;
   height: 20px;
@@ -669,6 +704,39 @@ li > div {
   border-radius: 6px;
   background: linear-gradient(90deg, #2a9dff 0%, var(--ios-accent) 100%);
   z-index: 3;
+}
+
+.assignment-plan-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+}
+
+.assignment-plan-handle.left,
+.assignment-plan-handle.right {
+  width: 8px;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.assignment-plan-handle.left {
+  left: 0;
+  cursor: ew-resize;
+}
+
+.assignment-plan-handle.right {
+  right: 0;
+  cursor: ew-resize;
+}
+
+.assignment-plan-handle.center {
+  left: 8px;
+  right: 8px;
+  cursor: grab;
+}
+
+.assignment-plan-handle.center:active {
+  cursor: grabbing;
 }
 
 .assignment-vacation-bar {

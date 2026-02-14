@@ -24,6 +24,13 @@ type TimelineTabProps = {
   onUpdateAssignment: (event: FormEvent) => Promise<void>;
   onYearChange: (nextYear: number) => Promise<void>;
   onEditorAssignmentChange: (projectId: string, assignmentId: string) => void;
+  onDeleteAssignment: (projectId: string, assignmentId: string) => Promise<void>;
+  onAdjustAssignmentPlan: (
+    projectId: string,
+    assignmentId: string,
+    nextStartIso: string,
+    nextEndIso: string,
+  ) => Promise<void>;
   setEditAssignmentStartDate: (value: string) => void;
   setEditAssignmentEndDate: (value: string) => void;
   setEditAssignmentPercent: (value: number) => void;
@@ -63,6 +70,8 @@ export function TimelineTab(props: TimelineTabProps) {
     onUpdateAssignment,
     onYearChange,
     onEditorAssignmentChange,
+    onDeleteAssignment,
+    onAdjustAssignmentPlan,
     setEditAssignmentStartDate,
     setEditAssignmentEndDate,
     setEditAssignmentPercent,
@@ -92,16 +101,35 @@ export function TimelineTab(props: TimelineTabProps) {
     projectId: string;
     mode: 'move' | 'resize-start' | 'resize-end';
   } | null>(null);
+  const [assignmentDragState, setAssignmentDragState] = useState<{
+    projectId: string;
+    assignmentId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+    startDate: Date;
+    endDate: Date;
+    startX: number;
+    trackWidth: number;
+    shiftDays: number;
+  } | null>(null);
+  const [pendingAssignmentPreview, setPendingAssignmentPreview] = useState<{
+    projectId: string;
+    assignmentId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+    nextStart: Date;
+    nextEnd: Date;
+  } | null>(null);
   const suppressToggleClickRef = useRef(false);
   const dragMovedRef = useRef(false);
+  const suppressAssignmentClickRef = useRef(false);
+  const assignmentDragMovedRef = useRef(false);
 
   useEffect(() => {
-    if (!dragState) return;
+    if (!dragState && !assignmentDragState) return;
     document.body.classList.add('timeline-no-select');
     return () => {
       document.body.classList.remove('timeline-no-select');
     };
-  }, [dragState]);
+  }, [dragState, assignmentDragState]);
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -200,17 +228,6 @@ export function TimelineTab(props: TimelineTabProps) {
       return `${amount.toFixed(2)} ${currency}`;
     }
   };
-  const kpiDateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
-    [],
-  );
-  const formatKpiDate = (value: string) => kpiDateFormatter.format(new Date(value));
-
   const assignmentStyle = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -337,6 +354,93 @@ export function TimelineTab(props: TimelineTabProps) {
     setHoverDragMode((prev) => (prev && prev.projectId === row.id ? null : prev));
   };
 
+  const beginAssignmentDrag = (
+    event: ReactMouseEvent,
+    projectId: string,
+    assignmentId: string,
+    startIso: string,
+    endIso: string,
+    mode: 'move' | 'resize-start' | 'resize-end',
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = (event.currentTarget as HTMLElement).closest('.assignment-track') as HTMLElement | null;
+    if (!track) return;
+    assignmentDragMovedRef.current = false;
+    setAssignmentDragState({
+      projectId,
+      assignmentId,
+      mode,
+      startDate: new Date(startIso),
+      endDate: new Date(endIso),
+      startX: event.clientX,
+      trackWidth: Math.max(1, track.getBoundingClientRect().width),
+      shiftDays: 0,
+    });
+  };
+
+  const resolveAssignmentDragDates = (state: NonNullable<typeof assignmentDragState>) => {
+    let nextStart = toUtcDay(state.startDate);
+    let nextEnd = toUtcDay(state.endDate);
+    if (state.mode === 'move') {
+      const minShift = diffDays(state.startDate, yearStartDay);
+      const maxShift = diffDays(state.endDate, yearEndDay);
+      const boundedShift = Math.min(maxShift, Math.max(minShift, state.shiftDays));
+      nextStart = shiftDateByDays(state.startDate, boundedShift);
+      nextEnd = shiftDateByDays(state.endDate, boundedShift);
+    } else if (state.mode === 'resize-start') {
+      const candidateStart = shiftDateByDays(state.startDate, state.shiftDays);
+      const clampedStart = candidateStart < yearStartDay ? yearStartDay : candidateStart;
+      nextStart = clampedStart <= nextEnd ? clampedStart : nextEnd;
+    } else {
+      const candidateEnd = shiftDateByDays(state.endDate, state.shiftDays);
+      const clampedEnd = candidateEnd > yearEndDay ? yearEndDay : candidateEnd;
+      nextEnd = clampedEnd >= nextStart ? clampedEnd : nextStart;
+    }
+    return { nextStart, nextEnd };
+  };
+
+  const onAssignmentDragMove = (event: MouseEvent) => {
+    if (!assignmentDragState) return;
+    event.preventDefault();
+    const deltaX = event.clientX - assignmentDragState.startX;
+    const rawDays = (deltaX / assignmentDragState.trackWidth) * totalDays;
+    const shiftDays = Math.round(rawDays);
+    if (Math.abs(deltaX) >= 2) {
+      assignmentDragMovedRef.current = true;
+    }
+    if (shiftDays !== assignmentDragState.shiftDays) {
+      setAssignmentDragState({ ...assignmentDragState, shiftDays });
+    }
+  };
+
+  const endAssignmentDrag = async (event?: MouseEvent) => {
+    if (!assignmentDragState) return;
+    event?.preventDefault();
+
+    const current = assignmentDragState;
+    setAssignmentDragState(null);
+    suppressAssignmentClickRef.current = assignmentDragMovedRef.current;
+    if (current.shiftDays === 0) return;
+
+    const { nextStart, nextEnd } = resolveAssignmentDragDates(current);
+    setPendingAssignmentPreview({
+      projectId: current.projectId,
+      assignmentId: current.assignmentId,
+      mode: current.mode,
+      nextStart,
+      nextEnd,
+    });
+
+    try {
+      await onAdjustAssignmentPlan(current.projectId, current.assignmentId, toApiDate(nextStart), toApiDate(nextEnd));
+    } finally {
+      setPendingAssignmentPreview((prev) =>
+        prev && prev.assignmentId === current.assignmentId && prev.projectId === current.projectId ? null : prev,
+      );
+    }
+  };
+
   const handleToggleClick = (event: ReactMouseEvent, projectId: string) => {
     if (suppressToggleClickRef.current) {
       event.preventDefault();
@@ -411,6 +515,26 @@ export function TimelineTab(props: TimelineTabProps) {
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
   }, [dragState]);
+
+  useEffect(() => {
+    if (!assignmentDragState) return;
+
+    const handleWindowMouseMove = (event: MouseEvent) => {
+      onAssignmentDragMove(event);
+    };
+
+    const handleWindowMouseUp = (event: MouseEvent) => {
+      void endAssignmentDrag(event);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [assignmentDragState]);
 
   return (
     <section className="timeline-layout">
@@ -557,9 +681,6 @@ export function TimelineTab(props: TimelineTabProps) {
                               ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)
                               : '—'}
                           </span>
-                          <span>
-                            {formatKpiDate(row.startDate)} - {formatKpiDate(row.endDate)}
-                          </span>
                         </div>
                       </div>
                       <div className="timeline-meta-actions">
@@ -659,7 +780,15 @@ export function TimelineTab(props: TimelineTabProps) {
                                   ? 'assignment-item active'
                                   : 'assignment-item'
                               }
-                              onClick={() => onEditorAssignmentChange(detail.id, assignment.id)}
+                              onClick={(event) => {
+                                if (suppressAssignmentClickRef.current) {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  suppressAssignmentClickRef.current = false;
+                                  return;
+                                }
+                                onEditorAssignmentChange(detail.id, assignment.id);
+                              }}
                             >
                               <div className="assignment-item-header">
                                 <strong>{assignment.employee.fullName}</strong>
@@ -667,10 +796,103 @@ export function TimelineTab(props: TimelineTabProps) {
                                   {isoToInputDate(assignment.assignmentStartDate)} {t.fromTo}{' '}
                                   {isoToInputDate(assignment.assignmentEndDate)} · {Number(assignment.allocationPercent)}%
                                 </span>
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  className="assignment-remove-btn"
+                                  title={t.removeAssignment}
+                                  aria-label={t.removeAssignment}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    if (!window.confirm(t.confirmRemoveAssignment)) return;
+                                    void onDeleteAssignment(detail.id, assignment.id);
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      if (!window.confirm(t.confirmRemoveAssignment)) return;
+                                      void onDeleteAssignment(detail.id, assignment.id);
+                                    }
+                                  }}
+                                >
+                                  ✕
+                                </span>
                               </div>
                               <div className="assignment-track">
                                 <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                                 {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+                                {(() => {
+                                  const dragPreview =
+                                    assignmentDragState && assignmentDragState.assignmentId === assignment.id
+                                      ? resolveAssignmentDragDates(assignmentDragState)
+                                      : null;
+                                  const pendingPreview =
+                                    pendingAssignmentPreview && pendingAssignmentPreview.assignmentId === assignment.id
+                                      ? pendingAssignmentPreview
+                                      : null;
+                                  const startIso = dragPreview
+                                    ? dragPreview.nextStart.toISOString()
+                                    : pendingPreview
+                                      ? pendingPreview.nextStart.toISOString()
+                                      : assignment.assignmentStartDate;
+                                  const endIso = dragPreview
+                                    ? dragPreview.nextEnd.toISOString()
+                                    : pendingPreview
+                                      ? pendingPreview.nextEnd.toISOString()
+                                      : assignment.assignmentEndDate;
+
+                                  return (
+                                    <span
+                                      className="assignment-bar"
+                                      style={{
+                                        ...assignmentStyle(startIso, endIso),
+                                        background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
+                                      }}
+                                    >
+                                      <span
+                                        className="assignment-plan-handle left"
+                                        onMouseDown={(event) =>
+                                          beginAssignmentDrag(
+                                            event,
+                                            detail.id,
+                                            assignment.id,
+                                            assignment.assignmentStartDate,
+                                            assignment.assignmentEndDate,
+                                            'resize-start',
+                                          )
+                                        }
+                                      />
+                                      <span
+                                        className="assignment-plan-handle center"
+                                        onMouseDown={(event) =>
+                                          beginAssignmentDrag(
+                                            event,
+                                            detail.id,
+                                            assignment.id,
+                                            assignment.assignmentStartDate,
+                                            assignment.assignmentEndDate,
+                                            'move',
+                                          )
+                                        }
+                                      />
+                                      <span
+                                        className="assignment-plan-handle right"
+                                        onMouseDown={(event) =>
+                                          beginAssignmentDrag(
+                                            event,
+                                            detail.id,
+                                            assignment.id,
+                                            assignment.assignmentStartDate,
+                                            assignment.assignmentEndDate,
+                                            'resize-end',
+                                          )
+                                        }
+                                      />
+                                    </span>
+                                  );
+                                })()}
                                 {(vacationsByEmployeeId.get(assignment.employeeId) ?? []).map((vacation, index) => (
                                   <span
                                     key={`${assignment.id}-vacation-${index}`}
@@ -679,7 +901,6 @@ export function TimelineTab(props: TimelineTabProps) {
                                     title={`${isoToInputDate(vacation.startDate)} ${t.fromTo} ${isoToInputDate(vacation.endDate)}`}
                                   />
                                 ))}
-                                <span className="assignment-bar" style={assignmentStyle(assignment.assignmentStartDate, assignment.assignmentEndDate)} />
                               </div>
                             </button>
                           ))

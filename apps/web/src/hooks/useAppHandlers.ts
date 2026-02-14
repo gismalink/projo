@@ -435,6 +435,38 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  async function handleDeleteAssignment(projectId: string, assignmentId: string) {
+    if (!state.token) return;
+    try {
+      await api.deleteAssignment(assignmentId, state.token);
+      await refreshData(state.token, state.selectedYear, projectId);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiUpdateAssignmentFailed, errorText));
+    }
+  }
+
+  async function handleAdjustAssignmentPlan(
+    projectId: string,
+    assignmentId: string,
+    nextStartIso: string,
+    nextEndIso: string,
+  ) {
+    if (!state.token) return;
+    try {
+      await api.updateAssignment(
+        assignmentId,
+        {
+          assignmentStartDate: nextStartIso,
+          assignmentEndDate: nextEndIso,
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear, projectId);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiUpdateAssignmentFailed, errorText));
+    }
+  }
+
   async function handleYearChange(nextYear: number) {
     state.setSelectedYear(nextYear);
     if (!state.token) return;
@@ -532,6 +564,8 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleYearChange,
     handleEditorAssignmentChange,
     handleUpdateAssignment,
+    handleDeleteAssignment,
+    handleAdjustAssignmentPlan,
     handleAdjustProjectPlan,
     handleMoveProject,
   };
