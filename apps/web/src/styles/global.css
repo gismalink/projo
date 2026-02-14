@@ -332,29 +332,6 @@ li > div {
   margin-bottom: 0.1rem;
 }
 
-.company-load-content {
-  display: grid;
-  grid-template-columns: 3rem 1fr;
-  gap: 0.4rem;
-  align-items: stretch;
-}
-
-.company-load-axis {
-  position: relative;
-  border: 1px solid #c3d4e3;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.45);
-}
-
-.company-load-axis-label {
-  position: absolute;
-  right: 0.35rem;
-  transform: translateY(50%);
-  font-size: 0.68rem;
-  color: #4f6780;
-  line-height: 1;
-}
-
 .company-load-chart {
   position: relative;
   display: flex;
@@ -416,7 +393,7 @@ li > div {
   background: transparent;
   text-align: left;
   padding: 0.55rem 0.75rem;
-  cursor: pointer;
+  cursor: default;
   color: #17334d;
   width: 100%;
 }
@@ -424,6 +401,23 @@ li > div {
 .timeline-row.selected {
   border-color: #3a7fba;
   background: rgba(58, 127, 186, 0.16);
+}
+
+.timeline-row-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 0.1rem 0 0.35rem;
+}
+
+.timeline-row-toggle {
+  min-width: 28px;
+  height: 22px;
+  padding: 0 0.35rem;
+  border-radius: 6px;
+  background: #eef5fc;
+  color: #174160;
+  border: 1px solid #9eb8cf;
+  line-height: 1;
 }
 
 .timeline-meta {
@@ -604,6 +598,58 @@ li > div {
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 0.5rem;
+}
+
+.track.project-track {
+  border-radius: 0;
+}
+
+.bar.project-plan-bar {
+  top: 0;
+  bottom: 0;
+  height: auto;
+  border-radius: 0;
+  background: #c3d4e3;
+  color: #35516b;
+}
+
+.project-plan-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+}
+
+.project-plan-handle.left,
+.project-plan-handle.right {
+  width: 10px;
+  background: rgba(53, 81, 107, 0.18);
+}
+
+.project-plan-handle.left {
+  left: 0;
+  cursor: ew-resize;
+}
+
+.project-plan-handle.right {
+  right: 0;
+  cursor: ew-resize;
+}
+
+.project-plan-handle.center {
+  left: 10px;
+  right: 10px;
+  cursor: grab;
+}
+
+.project-plan-handle.center:active {
+  cursor: grabbing;
+}
+
+.project-assignee-bar {
+  position: absolute;
+  border-radius: 0;
+  z-index: 4;
 }
 
 .muted {

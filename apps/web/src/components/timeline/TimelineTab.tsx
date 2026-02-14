@@ -1,4 +1,4 @@
-import { FormEvent, useMemo } from 'react';
+import { FormEvent, MouseEvent, useMemo, useState } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 
 type TimelineTabProps = {
@@ -6,6 +6,8 @@ type TimelineTabProps = {
   months: string[];
   selectedYear: number;
   assignments: AssignmentItem[];
+  employees: Array<{ id: string; role: { name: string } }>;
+  roles: Array<{ name: string; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
   expandedProjectIds: string[];
   projectDetails: Record<string, ProjectDetail>;
@@ -24,6 +26,13 @@ type TimelineTabProps = {
   setEditAssignmentStartDate: (value: string) => void;
   setEditAssignmentEndDate: (value: string) => void;
   setEditAssignmentPercent: (value: number) => void;
+  onAdjustProjectPlan: (
+    projectId: string,
+    nextStartIso: string,
+    nextEndIso: string,
+    shiftDays: number,
+    mode: 'move' | 'resize-start' | 'resize-end',
+  ) => Promise<void>;
   timelineStyle: (row: ProjectTimelineRow) => { left: string; width: string };
   isoToInputDate: (value: string) => string;
 };
@@ -34,6 +43,8 @@ export function TimelineTab(props: TimelineTabProps) {
     months,
     selectedYear,
     assignments,
+    employees,
+    roles,
     sortedTimeline,
     expandedProjectIds,
     projectDetails,
@@ -52,9 +63,20 @@ export function TimelineTab(props: TimelineTabProps) {
     setEditAssignmentStartDate,
     setEditAssignmentEndDate,
     setEditAssignmentPercent,
+    onAdjustProjectPlan,
     timelineStyle,
     isoToInputDate,
   } = props;
+
+  const [dragState, setDragState] = useState<{
+    projectId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+    startDate: Date;
+    endDate: Date;
+    startX: number;
+    trackWidth: number;
+    shiftDays: number;
+  } | null>(null);
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -113,13 +135,23 @@ export function TimelineTab(props: TimelineTabProps) {
   }, [assignments, selectedYear]);
 
   const companyLoadScaleMax = Math.max(100, Math.ceil(companyDailyLoad.max / 25) * 25);
-  const companyLoadTicks = useMemo(() => {
-    const ticks: number[] = [];
-    for (let value = 0; value <= companyLoadScaleMax; value += 25) {
-      ticks.push(value);
-    }
-    return ticks;
-  }, [companyLoadScaleMax]);
+
+  const toUtcDay = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+  const yearStartDay = new Date(Date.UTC(selectedYear, 0, 1));
+  const yearEndDay = new Date(Date.UTC(selectedYear, 11, 31));
+
+  const shiftDateByDays = (value: Date, days: number) => {
+    const next = toUtcDay(value);
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
+  };
+
+  const diffDays = (from: Date, to: Date) => {
+    const diff = toUtcDay(to).getTime() - toUtcDay(from).getTime();
+    return Math.round(diff / 86400000);
+  };
+
+  const toApiDate = (value: Date) => toUtcDay(value).toISOString();
 
   const assignmentStyle = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
@@ -137,6 +169,134 @@ export function TimelineTab(props: TimelineTabProps) {
       width: `${Math.max((endOffset - startOffset) * 100, 1.2).toFixed(2)}%`,
     };
   };
+
+  const projectTrackStyle = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const startInYear = new Date(Date.UTC(selectedYear, 0, 1));
+    const endInYear = new Date(Date.UTC(selectedYear, 11, 31));
+    const effectiveStart = start < startInYear ? startInYear : start;
+    const effectiveEnd = end > endInYear ? endInYear : end;
+    const totalDays = Math.max(1, Math.floor((endInYear.getTime() - startInYear.getTime()) / 86400000));
+    const startOffset = Math.floor((effectiveStart.getTime() - startInYear.getTime()) / 86400000) / totalDays;
+    const endOffset = Math.floor((effectiveEnd.getTime() - startInYear.getTime()) / 86400000) / totalDays;
+
+    return {
+      left: `${Math.max(0, startOffset * 100).toFixed(2)}%`,
+      width: `${Math.max((endOffset - startOffset) * 100, 1.2).toFixed(2)}%`,
+    };
+  };
+
+  const beginPlanDrag = (
+    event: MouseEvent,
+    row: ProjectTimelineRow,
+    mode: 'move' | 'resize-start' | 'resize-end',
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = (event.currentTarget as HTMLElement).closest('.track') as HTMLElement | null;
+    if (!track) return;
+
+    setDragState({
+      projectId: row.id,
+      mode,
+      startDate: new Date(row.startDate),
+      endDate: new Date(row.endDate),
+      startX: event.clientX,
+      trackWidth: Math.max(1, track.getBoundingClientRect().width),
+      shiftDays: 0,
+    });
+  };
+
+  const resolveDragDates = (state: NonNullable<typeof dragState>) => {
+    let nextStart = toUtcDay(state.startDate);
+    let nextEnd = toUtcDay(state.endDate);
+    if (state.mode === 'move') {
+      nextStart = shiftDateByDays(state.startDate, state.shiftDays);
+      nextEnd = shiftDateByDays(state.endDate, state.shiftDays);
+
+      if (nextStart < yearStartDay) {
+        const moveRight = diffDays(nextStart, yearStartDay);
+        nextStart = shiftDateByDays(nextStart, moveRight);
+        nextEnd = shiftDateByDays(nextEnd, moveRight);
+      }
+      if (nextEnd > yearEndDay) {
+        const moveLeft = diffDays(yearEndDay, nextEnd);
+        nextStart = shiftDateByDays(nextStart, moveLeft);
+        nextEnd = shiftDateByDays(nextEnd, moveLeft);
+      }
+    } else if (state.mode === 'resize-start') {
+      const candidateStart = shiftDateByDays(state.startDate, state.shiftDays);
+      const clampedStart = candidateStart < yearStartDay ? yearStartDay : candidateStart;
+      nextStart = clampedStart <= nextEnd ? clampedStart : nextEnd;
+    } else {
+      const candidateEnd = shiftDateByDays(state.endDate, state.shiftDays);
+      const clampedEnd = candidateEnd > yearEndDay ? yearEndDay : candidateEnd;
+      nextEnd = clampedEnd >= nextStart ? clampedEnd : nextStart;
+    }
+    return { nextStart, nextEnd };
+  };
+
+  const onPlanDragMove = (event: MouseEvent) => {
+    if (!dragState) return;
+    const deltaX = event.clientX - dragState.startX;
+    const rawDays = (deltaX / dragState.trackWidth) * totalDays;
+    const shiftDays = Math.round(rawDays);
+    if (shiftDays !== dragState.shiftDays) {
+      setDragState({ ...dragState, shiftDays });
+    }
+  };
+
+  const endPlanDrag = async (event: MouseEvent) => {
+    if (!dragState) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const current = dragState;
+    setDragState(null);
+    if (current.shiftDays === 0) return;
+
+    const { nextStart, nextEnd } = resolveDragDates(current);
+    const effectiveShiftDays = diffDays(current.startDate, nextStart);
+    await onAdjustProjectPlan(
+      current.projectId,
+      toApiDate(nextStart),
+      toApiDate(nextEnd),
+      current.mode === 'resize-end' ? 0 : effectiveShiftDays,
+      current.mode,
+    );
+  };
+
+  const roleColorByName = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const role of roles) {
+      if (role.colorHex && /^#[0-9A-Fa-f]{6}$/.test(role.colorHex)) {
+        result.set(role.name, role.colorHex);
+      }
+    }
+    return result;
+  }, [roles]);
+
+  const employeeRoleColorById = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const employee of employees) {
+      result.set(employee.id, roleColorByName.get(employee.role.name) ?? '#6E7B8A');
+    }
+    return result;
+  }, [employees, roleColorByName]);
+
+  const assignmentsByProjectId = useMemo(() => {
+    const result = new Map<string, AssignmentItem[]>();
+    for (const assignment of assignments) {
+      const projectAssignments = result.get(assignment.projectId);
+      if (projectAssignments) {
+        projectAssignments.push(assignment);
+      } else {
+        result.set(assignment.projectId, [assignment]);
+      }
+    }
+    return result;
+  }, [assignments]);
 
   return (
     <section className="timeline-layout">
@@ -162,32 +322,17 @@ export function TimelineTab(props: TimelineTabProps) {
             <h3>{t.companyLoad}</h3>
             <span className="muted">max {companyDailyLoad.max.toFixed(0)}%</span>
           </div>
-          <div className="company-load-content">
-            <div className="company-load-axis">
-              {companyLoadTicks.map((tick) => (
-                <span key={`${selectedYear}-axis-${tick}`} className="company-load-axis-label" style={{ bottom: `${(tick / companyLoadScaleMax) * 100}%` }}>
-                  {tick}%
-                </span>
-              ))}
-            </div>
-            <div className="company-load-chart">
-              {companyLoadTicks.map((tick) => (
-                <span
-                  key={`${selectedYear}-grid-${tick}`}
-                  className={tick === 100 ? 'company-load-grid-line company-load-grid-line-limit' : 'company-load-grid-line'}
-                  style={{ bottom: `${(tick / companyLoadScaleMax) * 100}%` }}
-                />
-              ))}
-              {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-              {companyDailyLoad.totals.map((value, index) => (
-                <span
-                  key={`${selectedYear}-load-${index}`}
-                  className={value > 100 ? 'company-load-bar overloaded' : 'company-load-bar'}
-                  style={{ height: `${Math.max(2, (value / companyLoadScaleMax) * 100)}%` }}
-                  title={`Day ${index + 1}: ${value.toFixed(1)}%`}
-                />
-              ))}
-            </div>
+          <div className="company-load-chart">
+            <span className="company-load-grid-line company-load-grid-line-limit" style={{ bottom: `${(100 / companyLoadScaleMax) * 100}%` }} />
+            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+            {companyDailyLoad.totals.map((value, index) => (
+              <span
+                key={`${selectedYear}-load-${index}`}
+                className={value > 100 ? 'company-load-bar overloaded' : 'company-load-bar'}
+                style={{ height: `${Math.max(2, (value / companyLoadScaleMax) * 100)}%` }}
+                title={`Day ${index + 1}: ${value.toFixed(1)}%`}
+              />
+            ))}
           </div>
           <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
             {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
@@ -210,16 +355,21 @@ export function TimelineTab(props: TimelineTabProps) {
             <p className="muted">{t.noProjectsForYear}</p>
           ) : (
             sortedTimeline.map((row) => {
-              const style = timelineStyle(row);
+              const style =
+                dragState && dragState.projectId === row.id
+                  ? projectTrackStyle(
+                      resolveDragDates(dragState).nextStart.toISOString(),
+                      resolveDragDates(dragState).nextEnd.toISOString(),
+                    )
+                  : timelineStyle(row);
               const isExpanded = expandedSet.has(row.id);
               const detail = projectDetails[row.id];
+              const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+              const assignmentShiftDays =
+                dragState && dragState.projectId === row.id && dragState.mode !== 'resize-end' ? dragState.shiftDays : 0;
               return (
                 <div key={row.id} className="timeline-project-item">
-                  <button
-                    type="button"
-                    className={isExpanded ? 'timeline-row selected' : 'timeline-row'}
-                    onClick={() => onSelectProject(row.id)}
-                  >
+                  <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
                     <div className="timeline-meta">
                       <strong>
                         {row.code} · {row.name}
@@ -232,14 +382,61 @@ export function TimelineTab(props: TimelineTabProps) {
                       {row.status} · {t.priorityWord} {row.priority} · {isoToInputDate(row.startDate)} {t.fromTo}{' '}
                       {isoToInputDate(row.endDate)}
                     </div>
-                    <div className="track">
+                    <div className="track project-track" onMouseMove={onPlanDragMove} onMouseUp={endPlanDrag} onMouseLeave={endPlanDrag}>
                       <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                       {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-                      <div className="bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
+                      <div className="bar project-plan-bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
                         {row.status}
+                        <span
+                          className="project-plan-handle left"
+                          onMouseDown={(event) => beginPlanDrag(event, row, 'resize-start')}
+                        />
+                        <span
+                          className="project-plan-handle center"
+                          onMouseDown={(event) => beginPlanDrag(event, row, 'move')}
+                        />
+                        <span
+                          className="project-plan-handle right"
+                          onMouseDown={(event) => beginPlanDrag(event, row, 'resize-end')}
+                        />
                       </div>
+                      {projectAssignments.map((assignment, index) => {
+                        const allocation = Number(assignment.allocationPercent);
+                        const clampedAllocation = Number.isFinite(allocation) ? Math.max(0, Math.min(100, allocation)) : 0;
+                        const thickness = Math.max(1, Math.round(clampedAllocation / 10));
+                        const maxTop = 26 - thickness;
+                        const top = maxTop > 0 ? (index * 3) % maxTop : 0;
+
+                        return (
+                          <span
+                            key={assignment.id}
+                            className="project-assignee-bar"
+                            style={{
+                              ...projectTrackStyle(
+                                shiftDateByDays(new Date(assignment.assignmentStartDate), assignmentShiftDays).toISOString(),
+                                shiftDateByDays(new Date(assignment.assignmentEndDate), assignmentShiftDays).toISOString(),
+                              ),
+                              backgroundColor: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
+                              height: `${thickness}px`,
+                              top: `${top}px`,
+                            }}
+                            title={`${assignment.employeeId}: ${clampedAllocation}%`}
+                          />
+                        );
+                      })}
                     </div>
-                  </button>
+                  </div>
+                  <div className="timeline-row-toggle-wrap">
+                    <button
+                      type="button"
+                      className="timeline-row-toggle"
+                      onClick={() => void onSelectProject(row.id)}
+                      aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
+                      title={isExpanded ? 'Collapse' : 'Expand'}
+                    >
+                      {isExpanded ? '▴' : '▾'}
+                    </button>
+                  </div>
 
                   {isExpanded && detail ? (
                     <section className="project-card">

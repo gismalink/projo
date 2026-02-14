@@ -24,50 +24,6 @@ export class AssignmentsService {
     }
   }
 
-  private async ensureNoOverload(params: {
-    employeeId: string;
-    startDate: Date;
-    endDate: Date;
-    allocationPercent: number;
-    excludeAssignmentId?: string;
-  }) {
-    const overlappingAssignments = await this.prisma.projectAssignment.findMany({
-      where: {
-        employeeId: params.employeeId,
-        assignmentStartDate: { lte: params.endDate },
-        assignmentEndDate: { gte: params.startDate },
-        id: params.excludeAssignmentId ? { not: params.excludeAssignmentId } : undefined,
-      },
-      select: {
-        assignmentStartDate: true,
-        assignmentEndDate: true,
-        allocationPercent: true,
-      },
-    });
-
-    let cursor = this.normalizeUtcDay(params.startDate);
-    const end = this.normalizeUtcDay(params.endDate);
-
-    while (cursor <= end) {
-      const nextDay = this.addDays(cursor, 1);
-      const overlaps = overlappingAssignments.reduce((sum, assignment) => {
-        const assignmentStart = this.normalizeUtcDay(assignment.assignmentStartDate);
-        const assignmentEnd = this.normalizeUtcDay(assignment.assignmentEndDate);
-        if (assignmentStart <= cursor && assignmentEnd >= cursor) {
-          return sum + Number(assignment.allocationPercent);
-        }
-
-        return sum;
-      }, 0);
-
-      if (overlaps + params.allocationPercent > 100) {
-        throw new BadRequestException(ErrorCode.ASSIGNMENT_EMPLOYEE_OVERLOADED);
-      }
-
-      cursor = nextDay;
-    }
-  }
-
   private async ensureNoVacationOverlap(params: { employeeId: string; startDate: Date; endDate: Date }) {
     const overlap = await this.prisma.vacation.findFirst({
       where: {
@@ -107,16 +63,6 @@ export class AssignmentsService {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
-    if (startDate < project.startDate || endDate > project.endDate) {
-      throw new BadRequestException(ErrorCode.ASSIGNMENT_OUTSIDE_PROJECT_RANGE);
-    }
-
-    await this.ensureNoOverload({
-      employeeId: dto.employeeId,
-      startDate,
-      endDate,
-      allocationPercent,
-    });
     await this.ensureNoVacationOverlap({
       employeeId: dto.employeeId,
       startDate,
@@ -186,17 +132,6 @@ export class AssignmentsService {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    if (nextStart < project.startDate || nextEnd > project.endDate) {
-      throw new BadRequestException(ErrorCode.ASSIGNMENT_OUTSIDE_PROJECT_RANGE);
-    }
-
-    await this.ensureNoOverload({
-      employeeId: dto.employeeId ?? existing.employeeId,
-      startDate: nextStart,
-      endDate: nextEnd,
-      allocationPercent: nextAllocationPercent,
-      excludeAssignmentId: id,
-    });
     await this.ensureNoVacationOverlap({
       employeeId: dto.employeeId ?? existing.employeeId,
       startDate: nextStart,

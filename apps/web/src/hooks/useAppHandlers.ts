@@ -440,6 +440,53 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  function shiftIsoDateByDays(value: string, days: number) {
+    const date = new Date(value);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString();
+  }
+
+  async function handleAdjustProjectPlan(
+    projectId: string,
+    nextStartIso: string,
+    nextEndIso: string,
+    shiftDays: number,
+    mode: 'move' | 'resize-start' | 'resize-end',
+  ) {
+    if (!state.token) return;
+
+    try {
+      await api.updateProject(
+        projectId,
+        {
+          startDate: nextStartIso,
+          endDate: nextEndIso,
+        },
+        state.token,
+      );
+
+      if (mode !== 'resize-end' && shiftDays !== 0) {
+        const projectAssignments = state.assignments.filter((assignment) => assignment.projectId === projectId);
+        await Promise.all(
+          projectAssignments.map((assignment) =>
+            api.updateAssignment(
+              assignment.id,
+              {
+                assignmentStartDate: shiftIsoDateByDays(assignment.assignmentStartDate, shiftDays),
+                assignmentEndDate: shiftIsoDateByDays(assignment.assignmentEndDate, shiftDays),
+              },
+              state.token as string,
+            ),
+          ),
+        );
+      }
+
+      await refreshData(state.token, state.selectedYear, projectId);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
+    }
+  }
+
   return {
     toggleRoleFilter,
     openProjectModal,
@@ -459,5 +506,6 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleYearChange,
     handleEditorAssignmentChange,
     handleUpdateAssignment,
+    handleAdjustProjectPlan,
   };
 }
