@@ -13,4 +13,9 @@ export class CreateRoleDto {
   @IsInt()
   @Min(1)
   level?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  colorHex?: string;
 }

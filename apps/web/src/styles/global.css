@@ -100,10 +100,41 @@ button {
   gap: 0.6rem;
 }
 
+.lang-toggle {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
 .ghost-btn {
   background: #eef5fc;
   color: #174160;
   border: 1px solid #9eb8cf;
+}
+
+.role-filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.role-tag {
+  background: #fff;
+  color: #1a3f5d;
+  border: 1px solid #b8ccdf;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.role-tag.active {
+  font-weight: 700;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
 }
 
 ul {
@@ -132,6 +163,89 @@ li > div {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+}
+
+.employee-row {
+  align-items: flex-start;
+}
+
+.employee-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.employee-card {
+  width: min(100%, 280px);
+  border: 1px solid #d0deea;
+  border-radius: 10px;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+  background: #fbfdff;
+}
+
+.employee-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.role-badge {
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.vacation-line {
+  color: #395470;
+  font-size: 0.82rem;
+}
+
+.utilization-block {
+  margin-top: 0.2rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.utilization-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #44607a;
+}
+
+.utilization-bar-bg {
+  width: 100%;
+  height: 8px;
+  border-radius: 99px;
+  background: #d8e4ef;
+  overflow: hidden;
+}
+
+.utilization-bar {
+  height: 100%;
+  border-radius: 99px;
+}
+
+.role-row {
+  align-items: center;
+}
+
+.role-color-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.role-color-editor input[type="color"] {
+  width: 38px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .timeline-form {
@@ -307,6 +421,25 @@ li > div {
   padding: 1rem;
   display: grid;
   gap: 0.7rem;
+}
+
+.toast-stack {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.toast-item {
+  background: #1b3042;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  min-width: 260px;
+  max-width: 520px;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 900px) {

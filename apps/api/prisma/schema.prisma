@@ -29,6 +29,7 @@ model Role {
   name        String   @unique
   description String?
   level       Int?
+  colorHex    String?  @db.VarChar(7)
   employees   Employee[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

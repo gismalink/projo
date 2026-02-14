@@ -48,6 +48,7 @@ export type CreateRolePayload = {
   name: string;
   description?: string;
   level?: number;
+  colorHex?: string;
 };
 
 export type CreateEmployeePayload = {
@@ -58,6 +59,8 @@ export type CreateEmployeePayload = {
   status?: string;
   defaultCapacityHoursPerDay?: number;
 };
+
+export type UpdateRolePayload = Partial<CreateRolePayload>;
 
 export type VacationItem = {
   id: string;
@@ -92,6 +95,17 @@ export type CreateAssignmentPayload = {
 };
 
 export type UpdateAssignmentPayload = Partial<CreateAssignmentPayload>;
+
+export type AssignmentItem = {
+  id: string;
+  projectId: string;
+  employeeId: string;
+  assignmentStartDate: string;
+  assignmentEndDate: string;
+  allocationPercent: string | number;
+  plannedHoursPerDay: string | number | null;
+  roleOnProject: string | null;
+};
 
 export type ProjectDetail = {
   id: string;
@@ -148,11 +162,14 @@ export const api = {
   getEmployees: (token: string) => request('/employees', {}, token),
   createRole: (payload: CreateRolePayload, token: string) =>
     request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateRole: (roleId: string, payload: UpdateRolePayload, token: string) =>
+    request(`/roles/${roleId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createEmployee: (payload: CreateEmployeePayload, token: string) =>
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
   getVacations: (token: string) => request<VacationItem[]>('/vacations', {}, token),
   createVacation: (payload: CreateVacationPayload, token: string) =>
     request('/vacations', { method: 'POST', body: JSON.stringify(payload) }, token),
+  getAssignments: (token: string) => request<AssignmentItem[]>('/assignments', {}, token),
   getProjects: (token: string) => request('/projects', {}, token),
   getProject: (projectId: string, token: string) => request<ProjectDetail>(`/projects/${projectId}`, {}, token),
   getTimelineYear: (year: number, token: string) =>

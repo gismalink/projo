@@ -43,9 +43,13 @@ Created automatically on API startup if not found.
 ## UI features in this build
 - Login screen with bootstrap admin.
 - Personnel tab: employees list, `Создать работника` popup, `Добавить отпуск` popup from employee row.
+- Personnel tab: role-tag filters with counts, employee cards grouped by departments, yearly utilization indicator.
 - Roles tab: role creation and roles list.
+- Roles tab: editable role colors that are reflected in employee role badges.
 - Timeline tab: project quick-create form, assignment quick-create form, and yearly gantt-like bars.
 - Project Card: click timeline row to inspect project assignments and edit assignment dates/allocation.
+- UI localization switch: `RU/EN`.
+- Errors are shown as toast notifications at the bottom of the screen.
 
 ## Business rules already enforced
 - Assignment dates must be inside project date range.
