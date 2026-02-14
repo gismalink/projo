@@ -140,57 +140,55 @@ export function RolesTab(props: RolesTabProps) {
   return (
     <section className="grid">
       <article className="card">
-        <div className="section-header">
-          <h2>{t.roleMgmt}</h2>
-          <button type="button" onClick={() => setIsCreateRoleOpen(true)}>
-            {t.createRole}
+        <div className="section-header roles-list-header">
+          <span />
+          <button
+            type="button"
+            className="create-role-icon-btn"
+            onClick={() => setIsCreateRoleOpen(true)}
+            title={t.createRole}
+            aria-label={t.createRole}
+          >
+            ＋
           </button>
         </div>
-      </article>
-
-      <article className="card">
-        <h2>{t.rolesList}</h2>
-        <ul>
+        <div className="role-table-head" aria-hidden="true">
+          <span>{t.name}</span>
+          <span>{t.shortName}</span>
+          <span>{t.description}</span>
+          <span>{t.level}</span>
+          <span>{t.color}</span>
+        </div>
+        <ul className="roles-list">
           {roles.map((role) => (
             <li key={role.id} className="role-row">
-              <div className="timeline-form">
-                <label>
-                  {t.name}
-                  <input
-                    value={roleDrafts[role.id]?.name ?? role.name}
-                    onChange={(event) => updateRoleDraft(role.id, { name: event.target.value })}
-                  />
-                </label>
-                <label>
-                  {t.shortName}
-                  <input
-                    value={roleDrafts[role.id]?.shortName ?? (role.shortName ?? '')}
-                    onChange={(event) => updateRoleDraft(role.id, { shortName: event.target.value })}
-                  />
-                </label>
-                <label>
-                  {t.description}
-                  <input
-                    value={roleDrafts[role.id]?.description ?? role.description}
-                    onChange={(event) => updateRoleDraft(role.id, { description: event.target.value })}
-                  />
-                </label>
-                <label>
-                  {t.level}
-                  <input
-                    type="number"
-                    min={1}
-                    value={roleDrafts[role.id]?.level ?? role.level}
-                    onChange={(event) => {
-                      const nextLevel = Number(event.target.value);
-                      updateRoleDraft(role.id, { level: Number.isFinite(nextLevel) && nextLevel > 0 ? nextLevel : 1 });
-                    }}
-                  />
-                </label>
-                <span>
-                  {role.shortName ?? role.name} • {t.levelEmployees} {role.level ?? '-'} • {role._count?.employees ?? 0}{' '}
-                  {t.employeesShort}
-                </span>
+              <div className="role-fields">
+                <input
+                  aria-label={t.name}
+                  value={roleDrafts[role.id]?.name ?? role.name}
+                  onChange={(event) => updateRoleDraft(role.id, { name: event.target.value })}
+                />
+                <input
+                  aria-label={t.shortName}
+                  value={roleDrafts[role.id]?.shortName ?? (role.shortName ?? '')}
+                  onChange={(event) => updateRoleDraft(role.id, { shortName: event.target.value })}
+                />
+                <input
+                  aria-label={t.description}
+                  value={roleDrafts[role.id]?.description ?? role.description}
+                  onChange={(event) => updateRoleDraft(role.id, { description: event.target.value })}
+                />
+                <input
+                  aria-label={t.level}
+                  className="role-level-input"
+                  type="number"
+                  min={1}
+                  value={roleDrafts[role.id]?.level ?? role.level}
+                  onChange={(event) => {
+                    const nextLevel = Number(event.target.value);
+                    updateRoleDraft(role.id, { level: Number.isFinite(nextLevel) && nextLevel > 0 ? nextLevel : 1 });
+                  }}
+                />
               </div>
               <div className="role-color-editor">
                 <input
