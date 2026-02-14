@@ -1,8 +1,9 @@
-import { MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
+import { ProjectTimelineItem } from './ProjectTimelineItem';
 import { TimelineToolbar } from './TimelineToolbar';
 
 type TimelineTabProps = {
@@ -481,6 +482,26 @@ export function TimelineTab(props: TimelineTabProps) {
     void onSelectProject(projectId);
   };
 
+  const handleProjectRowDragOver = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
+    if (!draggedBenchEmployeeId) return;
+    event.preventDefault();
+    setHoverProjectDropId(projectId);
+  };
+
+  const handleProjectRowDragLeave = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (nextTarget && (event.currentTarget as HTMLElement).contains(nextTarget)) return;
+    setHoverProjectDropId((prev) => (prev === projectId ? null : prev));
+  };
+
+  const handleProjectRowDrop = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
+    if (!draggedBenchEmployeeId) return;
+    event.preventDefault();
+    setHoverProjectDropId(null);
+    onOpenAssignmentModal(projectId, draggedBenchEmployeeId);
+    setDraggedBenchEmployeeId(null);
+  };
+
   const roleColorByName = useMemo(() => {
     const result = new Map<string, string>();
     for (const role of roles) {
@@ -639,232 +660,112 @@ export function TimelineTab(props: TimelineTabProps) {
                 <p className="muted">{t.noProjectsForYear}</p>
               ) : (
                 sortedTimeline.map((row, rowIndex) => {
-              const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
-              const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
-              const style =
-                dragPreview
-                  ? timelineStyle({
-                      ...row,
-                      startDate: dragPreview.nextStart.toISOString(),
-                      endDate: dragPreview.nextEnd.toISOString(),
-                    })
-                  : pendingPreview
-                    ? timelineStyle({
-                        ...row,
-                        startDate: pendingPreview.nextStart.toISOString(),
-                        endDate: pendingPreview.nextEnd.toISOString(),
-                      })
-                  : timelineStyle(row);
-              const isExpanded = expandedSet.has(row.id);
-              const detail = projectDetails[row.id];
-              const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
-              const assignmentShiftDays =
-                dragState && dragState.projectId === row.id && dragState.mode !== 'resize-end' && dragPreview
-                  ? diffDays(dragState.startDate, dragPreview.nextStart)
-                  : pendingPreview && pendingPreview.mode !== 'resize-end'
-                    ? pendingPreview.shiftDays
-                  : 0;
-              const tooltipMode =
-                dragState && dragState.projectId === row.id
-                  ? dragState.mode
-                  : hoverDragMode && hoverDragMode.projectId === row.id
-                    ? hoverDragMode.mode
-                    : null;
-              const tooltipStart = dragPreview?.nextStart ?? toUtcDay(new Date(row.startDate));
-              const tooltipEnd = dragPreview?.nextEnd ?? toUtcDay(new Date(row.endDate));
-              const tooltipText =
-                tooltipMode === 'resize-start'
-                  ? formatTooltipDate(tooltipStart)
-                  : tooltipMode === 'resize-end'
-                    ? formatTooltipDate(tooltipEnd)
-                    : tooltipMode === 'move'
-                      ? `${formatTooltipDate(tooltipStart)} - ${formatTooltipDate(tooltipEnd)}`
-                      : '';
-              if (tooltipMode) {
-                projectTooltipCacheRef.current.set(row.id, { mode: tooltipMode, text: tooltipText });
-              }
-              const cachedProjectTooltip = projectTooltipCacheRef.current.get(row.id);
-              const displayTooltipMode = tooltipMode ?? cachedProjectTooltip?.mode ?? 'move';
-              const displayTooltipText = tooltipMode ? tooltipText : (cachedProjectTooltip?.text ?? '');
+                  const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
+                  const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
+                  const style =
+                    dragPreview
+                      ? timelineStyle({
+                          ...row,
+                          startDate: dragPreview.nextStart.toISOString(),
+                          endDate: dragPreview.nextEnd.toISOString(),
+                        })
+                      : pendingPreview
+                        ? timelineStyle({
+                            ...row,
+                            startDate: pendingPreview.nextStart.toISOString(),
+                            endDate: pendingPreview.nextEnd.toISOString(),
+                          })
+                        : timelineStyle(row);
+                  const isExpanded = expandedSet.has(row.id);
+                  const detail = projectDetails[row.id];
+                  const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+                  const assignmentShiftDays =
+                    dragState && dragState.projectId === row.id && dragState.mode !== 'resize-end' && dragPreview
+                      ? diffDays(dragState.startDate, dragPreview.nextStart)
+                      : pendingPreview && pendingPreview.mode !== 'resize-end'
+                        ? pendingPreview.shiftDays
+                        : 0;
+                  const tooltipMode =
+                    dragState && dragState.projectId === row.id
+                      ? dragState.mode
+                      : hoverDragMode && hoverDragMode.projectId === row.id
+                        ? hoverDragMode.mode
+                        : null;
+                  const tooltipStart = dragPreview?.nextStart ?? toUtcDay(new Date(row.startDate));
+                  const tooltipEnd = dragPreview?.nextEnd ?? toUtcDay(new Date(row.endDate));
+                  const tooltipText =
+                    tooltipMode === 'resize-start'
+                      ? formatTooltipDate(tooltipStart)
+                      : tooltipMode === 'resize-end'
+                        ? formatTooltipDate(tooltipEnd)
+                        : tooltipMode === 'move'
+                          ? `${formatTooltipDate(tooltipStart)} - ${formatTooltipDate(tooltipEnd)}`
+                          : '';
+                  if (tooltipMode) {
+                    projectTooltipCacheRef.current.set(row.id, { mode: tooltipMode, text: tooltipText });
+                  }
+                  const cachedProjectTooltip = projectTooltipCacheRef.current.get(row.id);
+                  const displayTooltipMode = tooltipMode ?? cachedProjectTooltip?.mode ?? 'move';
+                  const displayTooltipText = tooltipMode ? tooltipText : (cachedProjectTooltip?.text ?? '');
+
                   return (
-                    <div
+                    <ProjectTimelineItem
                       key={row.id}
-                      className={hoverProjectDropId === row.id ? 'timeline-project-item drop-target' : 'timeline-project-item'}
-                      onDragOver={(event) => {
-                        if (!draggedBenchEmployeeId) return;
-                        event.preventDefault();
-                        setHoverProjectDropId(row.id);
-                      }}
-                      onDragLeave={(event) => {
-                        const nextTarget = event.relatedTarget as Node | null;
-                        if (nextTarget && (event.currentTarget as HTMLElement).contains(nextTarget)) return;
-                        setHoverProjectDropId((prev) => (prev === row.id ? null : prev));
-                      }}
-                      onDrop={(event) => {
-                        if (!draggedBenchEmployeeId) return;
-                        event.preventDefault();
-                        setHoverProjectDropId(null);
-                        onOpenAssignmentModal(row.id, draggedBenchEmployeeId);
-                        setDraggedBenchEmployeeId(null);
-                      }}
-                    >
-                  <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
-                    <div className="timeline-meta">
-                      <div className="timeline-meta-main">
-                        <div className="timeline-meta-controls">
-                          <button
-                            type="button"
-                            className="timeline-row-toggle"
-                            onClick={() => onMoveProject(row.id, 'up')}
-                            disabled={rowIndex === 0}
-                            aria-label="Move project up"
-                            title="Move up"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="timeline-row-toggle"
-                            onClick={() => onMoveProject(row.id, 'down')}
-                            disabled={rowIndex === sortedTimeline.length - 1}
-                            aria-label="Move project down"
-                            title="Move down"
-                          >
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            className={isExpanded ? 'timeline-row-toggle active' : 'timeline-row-toggle'}
-                            onClick={(event) => handleToggleClick(event, row.id)}
-                            aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
-                            title={isExpanded ? 'Collapse' : 'Expand'}
-                          >
-                            {isExpanded ? '▴' : '▾'}
-                          </button>
-                        </div>
-                        <strong>
-                          {row.code} · {row.name}
-                        </strong>
-                        <div className="timeline-kpi-row">
-                          <span>{row.assignmentsCount} employers</span>
-                          <span>{detail?.costSummary ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} hours` : '— hours'}</span>
-                          <span>
-                            {detail?.costSummary
-                              ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)
-                              : '—'}
-                          </span>
-                          <span>
-                            {isoToInputDate(row.startDate)} {t.fromTo} {isoToInputDate(row.endDate)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="timeline-meta-actions">
-                        <button
-                          type="button"
-                          className="timeline-meta-icon-btn"
-                          onClick={() => onOpenProjectDatesModal(row.id)}
-                          title={t.editProjectDates}
-                          aria-label={t.editProjectDates}
-                        >
-                          📅
-                        </button>
-                        <button
-                          type="button"
-                          className="timeline-meta-icon-btn"
-                          onClick={() => onOpenAssignmentModal(row.id)}
-                          title={t.assignEmployee}
-                          aria-label={t.assignEmployee}
-                        >
-                          👤+
-                        </button>
-                      </div>
-                    </div>
-                    <div className="track project-track">
-                      <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
-                      {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-                      <div
-                        className="bar project-plan-bar"
-                        style={style}
-                        onMouseMove={(event) => handlePlanBarHover(event, row)}
-                        onMouseLeave={() => clearPlanBarHover(row)}
-                      >
-                        <span
-                          className={
-                            displayTooltipMode === 'resize-start'
-                              ? `project-plan-tooltip edge-left${tooltipMode ? ' visible' : ''}`
-                              : displayTooltipMode === 'resize-end'
-                                ? `project-plan-tooltip edge-right${tooltipMode ? ' visible' : ''}`
-                                : displayTooltipMode === 'move'
-                                  ? `project-plan-tooltip center${tooltipMode ? ' visible' : ''}`
-                                  : 'project-plan-tooltip center'
-                          }
-                          aria-hidden={tooltipMode ? undefined : true}
-                        >
-                          {displayTooltipText}
-                        </span>
-                        <span
-                          className="project-plan-handle left"
-                          onMouseDown={(event) => beginPlanDrag(event, row, 'resize-start')}
-                        />
-                        <span
-                          className="project-plan-handle center"
-                          onMouseDown={(event) => beginPlanDrag(event, row, 'move')}
-                        />
-                        <span
-                          className="project-plan-handle right"
-                          onMouseDown={(event) => beginPlanDrag(event, row, 'resize-end')}
-                        />
-                      </div>
-                      {projectAssignments.map((assignment, index) => {
-                        const allocation = Number(assignment.allocationPercent);
-                        const clampedAllocation = Number.isFinite(allocation) ? Math.max(0, Math.min(100, allocation)) : 0;
-                        const thickness = Math.max(1, Math.round(clampedAllocation / 10));
-                        const maxTop = 26 - thickness;
-                        const top = maxTop > 0 ? (index * 3) % maxTop : 0;
-
-                        return (
-                          <span
-                            key={assignment.id}
-                            className="project-assignee-bar"
-                            style={{
-                              ...assignmentStyle(
-                                shiftDateByDays(new Date(assignment.assignmentStartDate), assignmentShiftDays).toISOString(),
-                                shiftDateByDays(new Date(assignment.assignmentEndDate), assignmentShiftDays).toISOString(),
-                              ),
-                              backgroundColor: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
-                              height: `${thickness}px`,
-                              top: `${top}px`,
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {isExpanded && detail ? (
-                    <ProjectAssignmentsCard
                       t={t}
+                      row={row}
+                      rowIndex={rowIndex}
+                      rowCount={sortedTimeline.length}
+                      isExpanded={isExpanded}
                       detail={detail}
+                      style={style}
                       dayStep={dayStep}
                       todayPosition={todayPosition}
+                      projectAssignments={projectAssignments}
+                      assignmentShiftDays={assignmentShiftDays}
                       assignmentStyle={assignmentStyle}
+                      shiftDateByDays={shiftDateByDays}
                       employeeRoleColorById={employeeRoleColorById}
-                      onDeleteAssignment={onDeleteAssignment}
-                      assignmentDragState={assignmentDragState}
-                      resolveAssignmentDragDates={resolveAssignmentDragDates}
-                      pendingAssignmentPreview={pendingAssignmentPreview}
-                      hoverAssignmentDragMode={hoverAssignmentDragMode}
-                      toUtcDay={toUtcDay}
-                      formatTooltipDate={formatTooltipDate}
-                      assignmentTooltipCacheRef={assignmentTooltipCacheRef}
-                      handleAssignmentBarHover={handleAssignmentBarHover}
-                      clearAssignmentBarHover={clearAssignmentBarHover}
-                      beginAssignmentDrag={beginAssignmentDrag}
-                      vacationsByEmployeeId={vacationsByEmployeeId}
+                      displayTooltipMode={displayTooltipMode}
+                      tooltipMode={tooltipMode}
+                      displayTooltipText={displayTooltipText}
                       isoToInputDate={isoToInputDate}
-                    />
-                  ) : null}
-                    </div>
+                      formatPlannedCost={formatPlannedCost}
+                      isDropTarget={hoverProjectDropId === row.id}
+                      onRowDragOver={handleProjectRowDragOver}
+                      onRowDragLeave={handleProjectRowDragLeave}
+                      onRowDrop={handleProjectRowDrop}
+                      onMoveProject={onMoveProject}
+                      onToggleProject={handleToggleClick}
+                      onOpenProjectDatesModal={onOpenProjectDatesModal}
+                      onOpenAssignmentModal={onOpenAssignmentModal}
+                      onPlanBarHover={handlePlanBarHover}
+                      onClearPlanBarHover={clearPlanBarHover}
+                      onBeginPlanDrag={beginPlanDrag}
+                    >
+                      {isExpanded && detail ? (
+                        <ProjectAssignmentsCard
+                          t={t}
+                          detail={detail}
+                          dayStep={dayStep}
+                          todayPosition={todayPosition}
+                          assignmentStyle={assignmentStyle}
+                          employeeRoleColorById={employeeRoleColorById}
+                          onDeleteAssignment={onDeleteAssignment}
+                          assignmentDragState={assignmentDragState}
+                          resolveAssignmentDragDates={resolveAssignmentDragDates}
+                          pendingAssignmentPreview={pendingAssignmentPreview}
+                          hoverAssignmentDragMode={hoverAssignmentDragMode}
+                          toUtcDay={toUtcDay}
+                          formatTooltipDate={formatTooltipDate}
+                          assignmentTooltipCacheRef={assignmentTooltipCacheRef}
+                          handleAssignmentBarHover={handleAssignmentBarHover}
+                          clearAssignmentBarHover={clearAssignmentBarHover}
+                          beginAssignmentDrag={beginAssignmentDrag}
+                          vacationsByEmployeeId={vacationsByEmployeeId}
+                          isoToInputDate={isoToInputDate}
+                        />
+                      ) : null}
+                    </ProjectTimelineItem>
                   );
                 })
               )}
