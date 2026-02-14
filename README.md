@@ -48,14 +48,19 @@ Created automatically on API startup if not found.
 
 ## UI features in this build
 - Login screen with bootstrap admin.
-- Personnel tab: employees list, `Создать работника` popup, `Добавить отпуск` popup from employee row.
-- Personnel tab: role-tag filters with counts, employee cards grouped by departments, yearly utilization indicator.
+- Team tab: employees list, `Создать работника` popup, `Добавить отпуск` popup from employee row.
+- Team tab: role/department chip filters with compact labels + tooltips, department filters on separate row.
+- Team tab: department management popup (`list/create/update/delete` departments).
+- Team tab: yearly utilization indicator and vacation dates with locale month names.
 - Roles tab: role creation and roles list.
-- Roles tab: editable role colors that are reflected in employee role badges.
+- Roles tab: role `shortName` support (used for compact labels in Team filters and Timeline bench).
+- Roles tab: editable role colors reflected in employee role badges and timeline strips.
 - Timeline tab: yearly gantt-like planning with draggable `planned` project bar (move/resize), employee strips, and company-load overview.
 - Timeline tab: project-row controls in header (`↑/↓/▾`) with manual ordering (no auto-sort jump).
 - Timeline tab: drag is clamped by year boundaries; custom tooltip appears on hover/drag (edge date or full range).
-- Project Card: expands only by dedicated toggle button and supports assignment dates/allocation editing.
+- Timeline tab: right-side `bench` column grouped by departments with drag-and-drop employee -> project row.
+- Timeline tab: bench membership uses annual utilization rule (`< 100%` for selected year).
+- Project Card: expands only by dedicated toggle button and supports assignment drag/resize/delete.
 - UI localization switch: `RU/EN`.
 - Errors are shown as toast notifications at the bottom of the screen.
 
@@ -66,6 +71,7 @@ Created automatically on API startup if not found.
 - Assignment dates outside project range are allowed for iterative planning.
 
 ## Next steps
-- Implement cost engine (planned project cost by rates).
-- Add reports/export and tests (unit + integration + e2e).
-- Add CSV import for employees.
+- Implement `ProjectMember` split from `ProjectAssignment` and complete member-level DnD flow.
+- Finish timeline UX-polish wave (bench layout density, initials, project-row localization, Cmd/Ctrl drag modifiers).
+- Refactor Roles screen flow (create/edit via popup, autosave, remove Skills block from Roles tab UI).
+- Add broader test coverage (integration + e2e) and reporting/export features.

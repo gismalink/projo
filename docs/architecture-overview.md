@@ -30,6 +30,7 @@
   - `Project` with `ProjectAssignment` rows.
   - `Vacation` for employee time off.
   - `Skill` with many-to-many bridge `EmployeeSkill`.
+  - `Role` includes visual `colorHex` and compact `shortName` (used by Team filters and Timeline bench cards).
 - Business rules (enforced in services):
   - one employee can appear only once per project (`@@unique([projectId, employeeId])` + service-level guard),
   - assignment date range must be valid (`start <= end`),
@@ -41,6 +42,7 @@
 - Page composition:
   - `apps/web/src/pages/App.tsx` is thin composition/root orchestration.
   - Presentational tabs/components in `apps/web/src/components/*`.
+  - Tabs: `Timeline`, `Team` (renamed from Employees), `Roles`.
 - State/logic split:
   - `apps/web/src/hooks/useAppState.ts`: source-of-truth local state.
   - `apps/web/src/hooks/useAppDerivedData.ts`: memoized selectors.
@@ -55,8 +57,19 @@
   - post-drop optimistic preview prevents one-frame rollback before API refresh,
   - custom tooltip for planned bar works on hover and drag (edge: single boundary date, center: range),
   - project card expand/collapse is controlled only by dedicated toggle button.
+  - right-side `bench` column shows employees with annual utilization below 100% for selected year,
+  - `bench` supports drag-and-drop employee card -> project row; drop pre-fills assignment modal with employee,
+  - bench cards show role compact label via `Role.shortName` (fallback: role `name`).
 
-## 6. Automation and quality gates
+## 6. Current UI conventions
+- Team screen:
+  - role and department filters are chip-based with compact labels and tooltip for full text,
+  - role compact labels come from backend field `Role.shortName` (not client-side auto-abbreviation),
+  - departments are managed via dedicated modal (`list/create/update/delete`).
+- Roles screen:
+  - role form supports both canonical `name` and compact `shortName`.
+
+## 7. Automation and quality gates
 - Workspace scripts:
   - `npm run lint`
   - `npm run test`
@@ -65,7 +78,7 @@
   - `npm run verify` (runs lint -> test -> build via `scripts/verify-all.sh`)
   - alias: `npm run ci:check`
 
-## 7. Suggested onboarding flow
+## 8. Suggested onboarding flow
 1. Start DB: `docker compose up -d`
 2. Install deps: `npm install`
 3. Prisma generate/migrate: `npm run prisma:generate -w @projo/api` and `npm run prisma:migrate -w @projo/api`
