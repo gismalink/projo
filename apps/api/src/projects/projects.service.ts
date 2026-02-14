@@ -9,6 +9,21 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private startOfUtcDay(value: Date): Date {
+    return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+  }
+
+  private listUtcDays(startDate: Date, endDate: Date): Date[] {
+    const days: Date[] = [];
+    const cursor = this.startOfUtcDay(startDate);
+    const end = this.startOfUtcDay(endDate);
+    while (cursor <= end) {
+      days.push(new Date(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return days;
+  }
+
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
       throw new BadRequestException(ErrorCode.PROJECT_DATE_RANGE_INVALID);
@@ -65,6 +80,8 @@ export class ProjectsService {
                 id: true,
                 fullName: true,
                 email: true,
+                roleId: true,
+                defaultCapacityHoursPerDay: true,
                 role: { select: { name: true } },
               },
             },
@@ -78,7 +95,70 @@ export class ProjectsService {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    return project;
+    const roleIds = Array.from(new Set(project.assignments.map((assignment) => assignment.employee.roleId)));
+    const employeeIds = Array.from(new Set(project.assignments.map((assignment) => assignment.employeeId)));
+
+    const rates = await this.prisma.costRate.findMany({
+      where: {
+        AND: [
+          {
+            OR: [{ employeeId: { in: employeeIds } }, { roleId: { in: roleIds } }],
+          },
+          { validFrom: { lte: project.endDate } },
+          {
+            OR: [{ validTo: null }, { validTo: { gte: project.startDate } }],
+          },
+        ],
+      },
+      orderBy: [{ validFrom: 'desc' }],
+    });
+
+    let totalPlannedHours = 0;
+    let totalPlannedCost = 0;
+    let missingRateDays = 0;
+
+    for (const assignment of project.assignments) {
+      const assignmentDays = this.listUtcDays(assignment.assignmentStartDate, assignment.assignmentEndDate);
+      const dailyHours =
+        assignment.plannedHoursPerDay !== null
+          ? Number(assignment.plannedHoursPerDay)
+          : (Number(assignment.employee.defaultCapacityHoursPerDay) * Number(assignment.allocationPercent)) / 100;
+
+      for (const day of assignmentDays) {
+        totalPlannedHours += dailyHours;
+
+        const employeeRate = rates.find(
+          (rate) =>
+            rate.employeeId === assignment.employeeId &&
+            rate.validFrom <= day &&
+            (!rate.validTo || rate.validTo >= day),
+        );
+        const roleRate = rates.find(
+          (rate) =>
+            rate.roleId === assignment.employee.roleId &&
+            rate.validFrom <= day &&
+            (!rate.validTo || rate.validTo >= day),
+        );
+
+        const rate = employeeRate ?? roleRate;
+        if (!rate) {
+          missingRateDays += 1;
+          continue;
+        }
+
+        totalPlannedCost += dailyHours * Number(rate.amountPerHour);
+      }
+    }
+
+    return {
+      ...project,
+      costSummary: {
+        totalPlannedHours: Number(totalPlannedHours.toFixed(2)),
+        totalPlannedCost: Number(totalPlannedCost.toFixed(2)),
+        currency: rates[0]?.currency ?? 'USD',
+        missingRateDays,
+      },
+    };
   }
 
   async update(id: string, dto: UpdateProjectDto) {

@@ -332,6 +332,29 @@ li > div {
   margin-bottom: 0.1rem;
 }
 
+.company-load-content {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.company-load-axis {
+  position: relative;
+  border: 1px solid #c3d4e3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.company-load-axis-label {
+  position: absolute;
+  right: 0.35rem;
+  transform: translateY(50%);
+  font-size: 0.68rem;
+  color: #4f6780;
+  line-height: 1;
+}
+
 .company-load-chart {
   position: relative;
   display: flex;
@@ -345,12 +368,30 @@ li > div {
   overflow: hidden;
 }
 
+.company-load-grid-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(127, 154, 179, 0.55);
+  z-index: 1;
+}
+
+.company-load-grid-line-limit {
+  border-top-color: #d64545;
+}
+
 .company-load-bar {
   flex: 1 1 0;
   min-width: 1px;
   background: linear-gradient(180deg, #2d7fbe 0%, #165d97 100%);
   border-radius: 2px 2px 0 0;
   opacity: 0.9;
+  position: relative;
+  z-index: 3;
+}
+
+.company-load-bar.overloaded {
+  background: linear-gradient(180deg, #eb6a6a 0%, #d64545 100%);
 }
 
 .timeline-rows {

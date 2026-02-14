@@ -159,6 +159,12 @@ export type ProjectDetail = {
   priority: number;
   startDate: string;
   endDate: string;
+  costSummary?: {
+    totalPlannedHours: number;
+    totalPlannedCost: number;
+    currency: string;
+    missingRateDays: number;
+  };
   assignments: Array<{
     id: string;
     projectId: string;

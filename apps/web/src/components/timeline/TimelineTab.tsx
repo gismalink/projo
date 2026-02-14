@@ -112,6 +112,15 @@ export function TimelineTab(props: TimelineTabProps) {
     return { totals, max };
   }, [assignments, selectedYear]);
 
+  const companyLoadScaleMax = Math.max(100, Math.ceil(companyDailyLoad.max / 25) * 25);
+  const companyLoadTicks = useMemo(() => {
+    const ticks: number[] = [];
+    for (let value = 0; value <= companyLoadScaleMax; value += 25) {
+      ticks.push(value);
+    }
+    return ticks;
+  }, [companyLoadScaleMax]);
+
   const assignmentStyle = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -153,16 +162,32 @@ export function TimelineTab(props: TimelineTabProps) {
             <h3>{t.companyLoad}</h3>
             <span className="muted">max {companyDailyLoad.max.toFixed(0)}%</span>
           </div>
-          <div className="company-load-chart">
-            {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-            {companyDailyLoad.totals.map((value, index) => (
-              <span
-                key={`${selectedYear}-load-${index}`}
-                className="company-load-bar"
-                style={{ height: `${Math.max(2, (value / companyDailyLoad.max) * 100)}%` }}
-                title={`Day ${index + 1}: ${value.toFixed(1)}%`}
-              />
-            ))}
+          <div className="company-load-content">
+            <div className="company-load-axis">
+              {companyLoadTicks.map((tick) => (
+                <span key={`${selectedYear}-axis-${tick}`} className="company-load-axis-label" style={{ bottom: `${(tick / companyLoadScaleMax) * 100}%` }}>
+                  {tick}%
+                </span>
+              ))}
+            </div>
+            <div className="company-load-chart">
+              {companyLoadTicks.map((tick) => (
+                <span
+                  key={`${selectedYear}-grid-${tick}`}
+                  className={tick === 100 ? 'company-load-grid-line company-load-grid-line-limit' : 'company-load-grid-line'}
+                  style={{ bottom: `${(tick / companyLoadScaleMax) * 100}%` }}
+                />
+              ))}
+              {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
+              {companyDailyLoad.totals.map((value, index) => (
+                <span
+                  key={`${selectedYear}-load-${index}`}
+                  className={value > 100 ? 'company-load-bar overloaded' : 'company-load-bar'}
+                  style={{ height: `${Math.max(2, (value / companyLoadScaleMax) * 100)}%` }}
+                  title={`Day ${index + 1}: ${value.toFixed(1)}%`}
+                />
+              ))}
+            </div>
           </div>
           <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
             {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
@@ -226,6 +251,24 @@ export function TimelineTab(props: TimelineTabProps) {
                           {t.assignEmployee}
                         </button>
                       </div>
+
+                      {detail.costSummary ? (
+                        <div>
+                          <strong>{t.projectCard}</strong>
+                          <div className="timeline-submeta">
+                            {t.plannedHoursLabel}: {Number(detail.costSummary.totalPlannedHours).toFixed(2)}
+                          </div>
+                          <div className="timeline-submeta">
+                            {t.plannedCostLabel}: {Number(detail.costSummary.totalPlannedCost).toFixed(2)} {detail.costSummary.currency}
+                          </div>
+                          <div className="timeline-submeta">
+                            {t.currencyLabel}: {detail.costSummary.currency}
+                          </div>
+                          <div className="timeline-submeta">
+                            {t.missingRateDaysLabel}: {detail.costSummary.missingRateDays}
+                          </div>
+                        </div>
+                      ) : null}
 
                       <div className="assignment-list">
                         {detail.assignments.length === 0 ? (
