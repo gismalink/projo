@@ -5,6 +5,7 @@ import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
 import { ProjectTimelineItem } from './ProjectTimelineItem';
 import { TimelineToolbar } from './TimelineToolbar';
+import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 type TimelineTabProps = {
   t: Record<string, string>;
@@ -66,26 +67,6 @@ export function TimelineTab(props: TimelineTabProps) {
     isoToInputDate,
   } = props;
 
-  const [dragState, setDragState] = useState<{
-    projectId: string;
-    mode: 'move' | 'resize-start' | 'resize-end';
-    startDate: Date;
-    endDate: Date;
-    startX: number;
-    trackWidth: number;
-    shiftDays: number;
-  } | null>(null);
-  const [pendingPlanPreview, setPendingPlanPreview] = useState<{
-    projectId: string;
-    mode: 'move' | 'resize-start' | 'resize-end';
-    nextStart: Date;
-    nextEnd: Date;
-    shiftDays: number;
-  } | null>(null);
-  const [hoverDragMode, setHoverDragMode] = useState<{
-    projectId: string;
-    mode: 'move' | 'resize-start' | 'resize-end';
-  } | null>(null);
   const [assignmentDragState, setAssignmentDragState] = useState<{
     projectId: string;
     assignmentId: string;
@@ -108,8 +89,6 @@ export function TimelineTab(props: TimelineTabProps) {
     nextStart: Date;
     nextEnd: Date;
   } | null>(null);
-  const suppressToggleClickRef = useRef(false);
-  const dragMovedRef = useRef(false);
   const suppressAssignmentClickRef = useRef(false);
   const assignmentDragMovedRef = useRef(false);
   const projectTooltipCacheRef = useRef(new Map<string, { mode: 'move' | 'resize-start' | 'resize-end'; text: string }>());
@@ -241,117 +220,6 @@ export function TimelineTab(props: TimelineTabProps) {
     };
   };
 
-  const beginPlanDrag = (
-    event: ReactMouseEvent,
-    row: ProjectTimelineRow,
-    mode: 'move' | 'resize-start' | 'resize-end',
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const track = (event.currentTarget as HTMLElement).closest('.track') as HTMLElement | null;
-    if (!track) return;
-    dragMovedRef.current = false;
-
-    setDragState({
-      projectId: row.id,
-      mode,
-      startDate: new Date(row.startDate),
-      endDate: new Date(row.endDate),
-      startX: event.clientX,
-      trackWidth: Math.max(1, track.getBoundingClientRect().width),
-      shiftDays: 0,
-    });
-  };
-
-  const resolveDragDates = (state: NonNullable<typeof dragState>) => {
-    let nextStart = toUtcDay(state.startDate);
-    let nextEnd = toUtcDay(state.endDate);
-    if (state.mode === 'move') {
-      const minShift = diffDays(state.startDate, yearStartDay);
-      const maxShift = diffDays(state.endDate, yearEndDay);
-      const boundedShift = Math.min(maxShift, Math.max(minShift, state.shiftDays));
-      nextStart = shiftDateByDays(state.startDate, boundedShift);
-      nextEnd = shiftDateByDays(state.endDate, boundedShift);
-    } else if (state.mode === 'resize-start') {
-      const candidateStart = shiftDateByDays(state.startDate, state.shiftDays);
-      const clampedStart = candidateStart < yearStartDay ? yearStartDay : candidateStart;
-      nextStart = clampedStart <= nextEnd ? clampedStart : nextEnd;
-    } else {
-      const candidateEnd = shiftDateByDays(state.endDate, state.shiftDays);
-      const clampedEnd = candidateEnd > yearEndDay ? yearEndDay : candidateEnd;
-      nextEnd = clampedEnd >= nextStart ? clampedEnd : nextStart;
-    }
-    return { nextStart, nextEnd };
-  };
-
-  const onPlanDragMove = (event: MouseEvent) => {
-    if (!dragState) return;
-    event.preventDefault();
-    const deltaX = event.clientX - dragState.startX;
-    const rawDays = (deltaX / dragState.trackWidth) * totalDays;
-    const shiftDays = Math.round(rawDays);
-    if (Math.abs(deltaX) >= 2) {
-      dragMovedRef.current = true;
-    }
-    if (shiftDays !== dragState.shiftDays) {
-      setDragState({ ...dragState, shiftDays });
-    }
-  };
-
-  const endPlanDrag = async (event?: MouseEvent) => {
-    if (!dragState) return;
-    event?.preventDefault();
-
-    const current = dragState;
-    setDragState(null);
-    setHoverDragMode(null);
-    suppressToggleClickRef.current = dragMovedRef.current;
-    if (current.shiftDays === 0) return;
-
-    const { nextStart, nextEnd } = resolveDragDates(current);
-    const effectiveShiftDays = diffDays(current.startDate, nextStart);
-    setPendingPlanPreview({
-      projectId: current.projectId,
-      mode: current.mode,
-      nextStart,
-      nextEnd,
-      shiftDays: current.mode === 'resize-end' ? 0 : effectiveShiftDays,
-    });
-
-    try {
-      await onAdjustProjectPlan(
-        current.projectId,
-        toApiDate(nextStart),
-        toApiDate(nextEnd),
-        current.mode === 'resize-end' ? 0 : effectiveShiftDays,
-        current.mode,
-      );
-    } finally {
-      setPendingPlanPreview((prev) => (prev && prev.projectId === current.projectId ? null : prev));
-    }
-  };
-
-  const handlePlanBarHover = (event: ReactMouseEvent<HTMLElement>, row: ProjectTimelineRow) => {
-    if (dragState) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const edgeWidth = 10;
-    let mode: 'move' | 'resize-start' | 'resize-end' = 'move';
-    if (x <= edgeWidth) {
-      mode = 'resize-start';
-    } else if (x >= rect.width - edgeWidth) {
-      mode = 'resize-end';
-    }
-    if (!hoverDragMode || hoverDragMode.projectId !== row.id || hoverDragMode.mode !== mode) {
-      setHoverDragMode({ projectId: row.id, mode });
-    }
-  };
-
-  const clearPlanBarHover = (row: ProjectTimelineRow) => {
-    if (dragState) return;
-    setHoverDragMode((prev) => (prev && prev.projectId === row.id ? null : prev));
-  };
-
   const beginAssignmentDrag = (
     event: ReactMouseEvent,
     projectId: string,
@@ -472,12 +340,7 @@ export function TimelineTab(props: TimelineTabProps) {
   };
 
   const handleToggleClick = (event: ReactMouseEvent, projectId: string) => {
-    if (suppressToggleClickRef.current) {
-      event.preventDefault();
-      event.stopPropagation();
-      suppressToggleClickRef.current = false;
-      return;
-    }
+    if (consumeSuppressedToggleClick(event)) return;
 
     void onSelectProject(projectId);
   };
@@ -592,25 +455,24 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [vacations]);
 
-  useEffect(() => {
-    if (!dragState) return;
-
-    const handleWindowMouseMove = (event: MouseEvent) => {
-      onPlanDragMove(event);
-    };
-
-    const handleWindowMouseUp = (event: MouseEvent) => {
-      void endPlanDrag(event);
-    };
-
-    window.addEventListener('mousemove', handleWindowMouseMove);
-    window.addEventListener('mouseup', handleWindowMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove);
-      window.removeEventListener('mouseup', handleWindowMouseUp);
-    };
-  }, [dragState]);
+  const {
+    dragState,
+    pendingPlanPreview,
+    hoverDragMode,
+    beginPlanDrag,
+    resolveDragDates,
+    handlePlanBarHover,
+    clearPlanBarHover,
+    consumeSuppressedToggleClick,
+  } = useTimelineProjectDrag({
+    totalDays,
+    yearStartDay,
+    yearEndDay,
+    shiftDateByDays,
+    diffDays,
+    toApiDate,
+    onAdjustProjectPlan,
+  });
 
   useEffect(() => {
     if (!assignmentDragState) return;
