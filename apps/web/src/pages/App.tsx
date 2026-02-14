@@ -10,33 +10,13 @@ import {
   SkillItem,
   VacationItem,
 } from '../api/client';
-
-type Role = {
-  id: string;
-  name: string;
-  description?: string;
-  level?: number;
-  colorHex?: string | null;
-  _count?: { employees: number };
-};
-
-type Employee = {
-  id: string;
-  fullName: string;
-  email: string;
-  status: string;
-  grade?: string | null;
-  role: { name: string };
-  department?: { id: string; name: string } | null;
-};
-
-type ActiveTab = 'timeline' | 'personnel' | 'roles';
-type Lang = 'ru' | 'en';
-
-type Toast = {
-  id: number;
-  message: string;
-};
+import { EmployeeModal } from '../components/modals/EmployeeModal';
+import { VacationModal } from '../components/modals/VacationModal';
+import { PersonnelTab } from '../components/personnel/PersonnelTab';
+import { RolesTab } from '../components/roles/RolesTab';
+import { TimelineTab } from '../components/timeline/TimelineTab';
+import { ToastStack } from '../components/ToastStack';
+import { ActiveTab, Employee, Lang, Role, Toast } from './app-types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTHS_BY_LANG: Record<Lang, string[]> = {
@@ -368,11 +348,6 @@ export function App() {
   const sortedTimeline = useMemo(
     () => [...timeline].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
     [timeline],
-  );
-
-  const selectedAssignment = useMemo(
-    () => selectedProjectDetail?.assignments.find((assignment) => assignment.id === editAssignmentId) ?? null,
-    [selectedProjectDetail, editAssignmentId],
   );
 
   const vacationsByEmployee = useMemo(() => {
@@ -816,504 +791,136 @@ export function App() {
           </div>
 
           {activeTab === 'personnel' ? (
-            <section className="grid">
-              <article className="card">
-                <div className="section-header">
-                  <h2>{t.employeesList}</h2>
-                  <button
-                    type="button"
-                    title={t.createEmployeeTooltip}
-                    aria-label={t.createEmployeeTooltip}
-                    onClick={() => setIsEmployeeModalOpen(true)}
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="role-filter-panel">
-                  {roleStats.map((tag) => {
-                    const active = selectedRoleFilters.includes(tag.roleName);
-                    return (
-                      <button
-                        type="button"
-                        key={tag.roleName}
-                        className={active ? 'role-tag active' : 'role-tag'}
-                        style={{ borderColor: tag.colorHex, background: active ? `${tag.colorHex}22` : '#fff' }}
-                        onClick={() => toggleRoleFilter(tag.roleName)}
-                      >
-                        <span className="dot" style={{ background: tag.colorHex }} />
-                        {tag.roleName} ({tag.count})
-                      </button>
-                    );
-                  })}
-                  {selectedRoleFilters.length > 0 ? (
-                    <button type="button" className="ghost-btn" onClick={() => setSelectedRoleFilters([])}>
-                      {t.clearFilter}
-                    </button>
-                  ) : null}
-                </div>
-
-                {departmentGroups.map(([department, departmentEmployees]) => (
-                  <section key={department}>
-                    <h3>{department}</h3>
-                    <div className="employee-cards">
-                      {departmentEmployees.map((employee) => {
-                        const employeeVacations = vacationsByEmployee[employee.id] ?? [];
-                        const roleColor = roleColorOrDefault(roleByName.get(employee.role?.name ?? '')?.colorHex);
-                        const util = utilizationByEmployee[employee.id] ?? 0;
-
-                        return (
-                          <article className="employee-card" key={employee.id}>
-                            <div className="employee-card-header">
-                              <strong>{employee.fullName}</strong>
-                              <button
-                                type="button"
-                                className="ghost-btn"
-                                title={t.addVacationTooltip}
-                                aria-label={t.addVacationTooltip}
-                                onClick={() => openVacationModal(employee)}
-                              >
-                                🗓
-                              </button>
-                            </div>
-                            <span>
-                              <span className="role-badge" style={{ background: `${roleColor}22`, color: roleColor }}>
-                                {employee.role?.name ?? t.noRole}
-                              </span>
-                              {' • '}
-                              {employee.grade ?? '-'}
-                              {' • '}
-                              {employee.status}
-                            </span>
-                            <span className="vacation-line">
-                              {employeeVacations.length === 0
-                                ? t.noVacations
-                                : employeeVacations
-                                    .map(
-                                      (vacation) => `${isoToInputDate(vacation.startDate)} - ${isoToInputDate(vacation.endDate)}`,
-                                    )
-                                    .join(' | ')}
-                            </span>
-                            <div className="utilization-block">
-                              <div className="utilization-label">
-                                <span>{t.utilization}</span>
-                                <strong>{util.toFixed(1)}%</strong>
-                              </div>
-                              <div className="utilization-bar-bg">
-                                <div
-                                  className="utilization-bar"
-                                  style={{
-                                    width: `${Math.min(util, 140)}%`,
-                                    background: utilizationColor(util),
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </article>
-            </section>
+            <PersonnelTab
+              t={t}
+              departmentGroups={departmentGroups}
+              roleStats={roleStats}
+              selectedRoleFilters={selectedRoleFilters}
+              vacationsByEmployee={vacationsByEmployee}
+              roleByName={roleByName}
+              utilizationByEmployee={utilizationByEmployee}
+              toggleRoleFilter={toggleRoleFilter}
+              clearRoleFilters={() => setSelectedRoleFilters([])}
+              openVacationModal={openVacationModal}
+              openEmployeeModal={() => setIsEmployeeModalOpen(true)}
+              roleColorOrDefault={roleColorOrDefault}
+              utilizationColor={utilizationColor}
+              isoToInputDate={isoToInputDate}
+            />
           ) : null}
 
           {activeTab === 'roles' ? (
-            <section className="grid">
-              <article className="card">
-                <h2>{t.roleMgmt}</h2>
-                <form className="timeline-form" onSubmit={handleCreateRole}>
-                  <label>
-                    {t.name}
-                    <input value={roleName} onChange={(e) => setRoleName(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.description}
-                    <input value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.level}
-                    <input type="number" min={1} value={roleLevel} onChange={(e) => setRoleLevel(Number(e.target.value))} />
-                  </label>
-                  <button type="submit">{t.createRole}</button>
-                </form>
-              </article>
-
-              <article className="card">
-                <h2>{t.rolesList}</h2>
-                <ul>
-                  {roles.map((role) => (
-                    <li key={role.id} className="role-row">
-                      <div>
-                        <strong>{role.name}</strong>
-                        <span>
-                          {t.levelEmployees} {role.level ?? '-'} • {role._count?.employees ?? 0} {t.employeesShort}
-                        </span>
-                      </div>
-                      <div className="role-color-editor">
-                        <input
-                          type="color"
-                          value={roleColorOrDefault(roleColorDrafts[role.id])}
-                          onChange={(e) =>
-                            setRoleColorDrafts((prev) => ({
-                              ...prev,
-                              [role.id]: e.target.value,
-                            }))
-                          }
-                        />
-                        <button type="button" className="ghost-btn" onClick={() => handleUpdateRoleColor(role)}>
-                          {t.saveColor}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-
-              <article className="card">
-                <h2>{t.skillMgmt}</h2>
-                <form className="timeline-form" onSubmit={handleCreateSkill}>
-                  <label>
-                    {t.name}
-                    <input value={skillName} onChange={(e) => setSkillName(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.description}
-                    <input value={skillDescription} onChange={(e) => setSkillDescription(e.target.value)} />
-                  </label>
-                  <button type="submit">{t.createSkill}</button>
-                </form>
-
-                <h2>{t.skillsList}</h2>
-                <ul>
-                  {skills.map((skill) => (
-                    <li key={skill.id} className="role-row">
-                      <div>
-                        <strong>{skill.name}</strong>
-                        <span>
-                          {skill._count?.employees ?? 0} {t.employeesShort}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            </section>
+            <RolesTab
+              t={t}
+              roles={roles}
+              skills={skills}
+              roleName={roleName}
+              roleDescription={roleDescription}
+              roleLevel={roleLevel}
+              skillName={skillName}
+              skillDescription={skillDescription}
+              roleColorDrafts={roleColorDrafts}
+              onCreateRole={handleCreateRole}
+              onCreateSkill={handleCreateSkill}
+              onUpdateRoleColor={handleUpdateRoleColor}
+              setRoleName={setRoleName}
+              setRoleDescription={setRoleDescription}
+              setRoleLevel={setRoleLevel}
+              setSkillName={setSkillName}
+              setSkillDescription={setSkillDescription}
+              setRoleColorDraft={(roleId, color) =>
+                setRoleColorDrafts((prev) => ({
+                  ...prev,
+                  [roleId]: color,
+                }))
+              }
+              roleColorOrDefault={roleColorOrDefault}
+            />
           ) : null}
 
           {activeTab === 'timeline' ? (
-            <section className="timeline-layout">
-              <article className="card">
-                <h2>{t.createProject}</h2>
-                <form className="timeline-form" onSubmit={handleCreateProject}>
-                  <label>
-                    {t.code}
-                    <input value={projectCode} onChange={(e) => setProjectCode(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.name}
-                    <input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.start}
-                    <input type="date" value={projectStartDate} onChange={(e) => setProjectStartDate(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.end}
-                    <input type="date" value={projectEndDate} onChange={(e) => setProjectEndDate(e.target.value)} />
-                  </label>
-                  <button type="submit">{t.createProject}</button>
-                </form>
-
-                <h2>{t.assignEmployee}</h2>
-                <form className="timeline-form" onSubmit={handleCreateAssignment}>
-                  <label>
-                    {t.role}
-                    <select value={assignmentProjectId} onChange={(e) => setAssignmentProjectId(e.target.value)}>
-                      <option value="">{t.selectProject}</option>
-                      {projects.map((project) => (
-                        <option value={project.id} key={project.id}>
-                          {project.code} · {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.tabPersonnel}
-                    <select value={assignmentEmployeeId} onChange={(e) => setAssignmentEmployeeId(e.target.value)}>
-                      <option value="">{t.selectEmployee}</option>
-                      {employees.map((employee) => (
-                        <option value={employee.id} key={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.start}
-                    <input type="date" value={assignmentStartDate} onChange={(e) => setAssignmentStartDate(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.end}
-                    <input type="date" value={assignmentEndDate} onChange={(e) => setAssignmentEndDate(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.allocationPercent}
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={assignmentPercent}
-                      onChange={(e) => setAssignmentPercent(Number(e.target.value))}
-                    />
-                  </label>
-                  <button type="submit">{t.assignEmployee}</button>
-                </form>
-              </article>
-
-              <article className="card timeline-card">
-                <div className="timeline-toolbar">
-                  <h2>{t.yearTimeline}</h2>
-                  <div className="year-switcher">
-                    <button type="button" onClick={() => handleYearChange(selectedYear - 1)}>
-                      {t.prev}
-                    </button>
-                    <strong>{selectedYear}</strong>
-                    <button type="button" onClick={() => handleYearChange(selectedYear + 1)}>
-                      {t.next}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="month-grid">
-                  {MONTHS_BY_LANG[lang].map((month) => (
-                    <span key={month}>{month}</span>
-                  ))}
-                </div>
-
-                <div className="timeline-rows">
-                  {sortedTimeline.length === 0 ? (
-                    <p className="muted">{t.noProjectsForYear}</p>
-                  ) : (
-                    sortedTimeline.map((row) => {
-                      const style = timelineStyle(row);
-                      return (
-                        <button
-                          type="button"
-                          className={row.id === selectedProjectId ? 'timeline-row selected' : 'timeline-row'}
-                          key={row.id}
-                          onClick={() => handleSelectProject(row.id)}
-                        >
-                          <div className="timeline-meta">
-                            <strong>
-                              {row.code} · {row.name}
-                            </strong>
-                            <span>
-                              {row.assignmentsCount} {t.assignmentsWord} · {row.totalPlannedHoursPerDay} h/day
-                            </span>
-                          </div>
-                          <div className="track">
-                            <div className="bar" style={style} title={`${row.startDate} - ${row.endDate}`}>
-                              {row.status}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-
-                <section className="project-card">
-                  <h3>{t.projectCard}</h3>
-                  {!selectedProjectDetail ? (
-                    <p className="muted">{t.selectProjectPrompt}</p>
-                  ) : (
-                    <>
-                      <div className="project-card-header">
-                        <strong>
-                          {selectedProjectDetail.code} · {selectedProjectDetail.name}
-                        </strong>
-                        <span>
-                          {selectedProjectDetail.status} · {t.priorityWord} {selectedProjectDetail.priority}
-                        </span>
-                      </div>
-                      <p className="muted">
-                        {isoToInputDate(selectedProjectDetail.startDate)} {t.fromTo} {isoToInputDate(selectedProjectDetail.endDate)}
-                      </p>
-
-                      <div className="assignment-list">
-                        {selectedProjectDetail.assignments.length === 0 ? (
-                          <p className="muted">{t.noAssignments}</p>
-                        ) : (
-                          selectedProjectDetail.assignments.map((assignment) => (
-                            <button
-                              type="button"
-                              key={assignment.id}
-                              className={assignment.id === editAssignmentId ? 'assignment-item active' : 'assignment-item'}
-                              onClick={() => handleEditorAssignmentChange(assignment.id)}
-                            >
-                              <strong>{assignment.employee.fullName}</strong>
-                              <span>
-                                {isoToInputDate(assignment.assignmentStartDate)} {t.fromTo}{' '}
-                                {isoToInputDate(assignment.assignmentEndDate)} · {Number(assignment.allocationPercent)}%
-                              </span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-
-                      {selectedAssignment ? (
-                        <form className="timeline-form" onSubmit={handleUpdateAssignment}>
-                          <label>
-                            {t.editAssignment}
-                            <select value={editAssignmentId} onChange={(e) => handleEditorAssignmentChange(e.target.value)}>
-                              {selectedProjectDetail.assignments.map((assignment) => (
-                                <option value={assignment.id} key={assignment.id}>
-                                  {assignment.employee.fullName}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            {t.start}
-                            <input
-                              type="date"
-                              value={editAssignmentStartDate}
-                              onChange={(e) => setEditAssignmentStartDate(e.target.value)}
-                            />
-                          </label>
-                          <label>
-                            {t.end}
-                            <input
-                              type="date"
-                              value={editAssignmentEndDate}
-                              onChange={(e) => setEditAssignmentEndDate(e.target.value)}
-                            />
-                          </label>
-                          <label>
-                            {t.allocationPercent}
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={editAssignmentPercent}
-                              onChange={(e) => setEditAssignmentPercent(Number(e.target.value))}
-                            />
-                          </label>
-                          <button type="submit">{t.saveAssignment}</button>
-                        </form>
-                      ) : null}
-                    </>
-                  )}
-                </section>
-              </article>
-            </section>
+            <TimelineTab
+              t={t}
+              months={MONTHS_BY_LANG[lang]}
+              selectedYear={selectedYear}
+              sortedTimeline={sortedTimeline}
+              selectedProjectId={selectedProjectId}
+              selectedProjectDetail={selectedProjectDetail}
+              selectedAssignmentId={editAssignmentId}
+              projects={projects}
+              employees={employees}
+              projectCode={projectCode}
+              projectName={projectName}
+              projectStartDate={projectStartDate}
+              projectEndDate={projectEndDate}
+              assignmentProjectId={assignmentProjectId}
+              assignmentEmployeeId={assignmentEmployeeId}
+              assignmentStartDate={assignmentStartDate}
+              assignmentEndDate={assignmentEndDate}
+              assignmentPercent={assignmentPercent}
+              editAssignmentStartDate={editAssignmentStartDate}
+              editAssignmentEndDate={editAssignmentEndDate}
+              editAssignmentPercent={editAssignmentPercent}
+              onCreateProject={handleCreateProject}
+              onCreateAssignment={handleCreateAssignment}
+              onSelectProject={handleSelectProject}
+              onUpdateAssignment={handleUpdateAssignment}
+              onYearChange={handleYearChange}
+              onEditorAssignmentChange={handleEditorAssignmentChange}
+              setProjectCode={setProjectCode}
+              setProjectName={setProjectName}
+              setProjectStartDate={setProjectStartDate}
+              setProjectEndDate={setProjectEndDate}
+              setAssignmentProjectId={setAssignmentProjectId}
+              setAssignmentEmployeeId={setAssignmentEmployeeId}
+              setAssignmentStartDate={setAssignmentStartDate}
+              setAssignmentEndDate={setAssignmentEndDate}
+              setAssignmentPercent={setAssignmentPercent}
+              setEditAssignmentStartDate={setEditAssignmentStartDate}
+              setEditAssignmentEndDate={setEditAssignmentEndDate}
+              setEditAssignmentPercent={setEditAssignmentPercent}
+              timelineStyle={timelineStyle}
+              isoToInputDate={isoToInputDate}
+            />
           ) : null}
 
-          {isEmployeeModalOpen ? (
-            <div className="modal-backdrop">
-              <div className="modal-card">
-                <div className="section-header">
-                  <h3>{t.addEmployee}</h3>
-                  <button type="button" className="ghost-btn" onClick={() => setIsEmployeeModalOpen(false)}>
-                    {t.close}
-                  </button>
-                </div>
-                <form className="timeline-form" onSubmit={handleCreateEmployee}>
-                  <label>
-                    {t.fullName}
-                    <input value={employeeFullName} onChange={(e) => setEmployeeFullName(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.email}
-                    <input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.role}
-                    <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
-                      <option value="">{t.selectRole}</option>
-                      {roles.map((role) => (
-                        <option key={role.id} value={role.id}>
-                          {role.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.department}
-                    <select value={employeeDepartmentId} onChange={(e) => setEmployeeDepartmentId(e.target.value)}>
-                      <option value="">{t.selectDepartment}</option>
-                      {departments.map((department) => (
-                        <option key={department.id} value={department.id}>
-                          {department.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.grade}
-                    <select value={employeeGrade} onChange={(e) => setEmployeeGrade(e.target.value)}>
-                      {GRADE_OPTIONS.map((gradeOption) => (
-                        <option key={gradeOption} value={gradeOption}>
-                          {gradeOption}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t.status}
-                    <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
-                      <option value="active">{t.statusActive}</option>
-                      <option value="inactive">{t.statusInactive}</option>
-                    </select>
-                  </label>
-                  <button type="submit">{t.createWorker}</button>
-                </form>
-              </div>
-            </div>
-          ) : null}
+          <EmployeeModal
+            t={t}
+            roles={roles}
+            departments={departments}
+            isOpen={isEmployeeModalOpen}
+            employeeFullName={employeeFullName}
+            employeeEmail={employeeEmail}
+            employeeRoleId={employeeRoleId}
+            employeeDepartmentId={employeeDepartmentId}
+            employeeGrade={employeeGrade}
+            employeeStatus={employeeStatus}
+            gradeOptions={GRADE_OPTIONS}
+            onClose={() => setIsEmployeeModalOpen(false)}
+            onSubmit={handleCreateEmployee}
+            setEmployeeFullName={setEmployeeFullName}
+            setEmployeeEmail={setEmployeeEmail}
+            setEmployeeRoleId={setEmployeeRoleId}
+            setEmployeeDepartmentId={setEmployeeDepartmentId}
+            setEmployeeGrade={setEmployeeGrade}
+            setEmployeeStatus={setEmployeeStatus}
+          />
 
-          {isVacationModalOpen ? (
-            <div className="modal-backdrop">
-              <div className="modal-card">
-                <div className="section-header">
-                  <h3>{t.addVacation}</h3>
-                  <button type="button" className="ghost-btn" onClick={() => setIsVacationModalOpen(false)}>
-                    {t.close}
-                  </button>
-                </div>
-                <p className="muted">{vacationEmployeeName}</p>
-                <form className="timeline-form" onSubmit={handleCreateVacation}>
-                  <label>
-                    {t.start}
-                    <input type="date" value={vacationStartDate} onChange={(e) => setVacationStartDate(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.end}
-                    <input type="date" value={vacationEndDate} onChange={(e) => setVacationEndDate(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.type}
-                    <select value={vacationType} onChange={(e) => setVacationType(e.target.value)}>
-                      <option value="vacation">{t.vacationTypeVacation}</option>
-                      <option value="sick">{t.vacationTypeSick}</option>
-                      <option value="day_off">{t.vacationTypeDayOff}</option>
-                    </select>
-                  </label>
-                  <button type="submit">{t.saveVacation}</button>
-                </form>
-              </div>
-            </div>
-          ) : null}
+          <VacationModal
+            t={t}
+            isOpen={isVacationModalOpen}
+            vacationEmployeeName={vacationEmployeeName}
+            vacationStartDate={vacationStartDate}
+            vacationEndDate={vacationEndDate}
+            vacationType={vacationType}
+            onClose={() => setIsVacationModalOpen(false)}
+            onSubmit={handleCreateVacation}
+            setVacationStartDate={setVacationStartDate}
+            setVacationEndDate={setVacationEndDate}
+            setVacationType={setVacationType}
+          />
 
-          <div className="toast-stack">
-            {toasts.map((toast) => (
-              <div key={toast.id} className="toast-item">
-                {toast.message}
-              </div>
-            ))}
-          </div>
+          <ToastStack toasts={toasts} />
         </>
       )}
     </main>
