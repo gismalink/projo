@@ -88,7 +88,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, calendarData, calendarHealth] =
+    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] =
       await Promise.all([
         api.getRoles(authToken),
         api.getSkills(authToken),
@@ -98,8 +98,6 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         api.getAssignments(authToken),
         api.getProjects(authToken),
         api.getTimelineYear(year, authToken),
-        api.getCalendarYear(year, authToken),
-        api.getCalendarHealth(authToken),
       ]);
 
     const nextRoles = rolesData as typeof state.roles;
@@ -118,8 +116,21 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setAssignments(nextAssignments);
     state.setProjects(nextProjects);
     state.setTimeline(timelineData);
-    state.setCalendarDays(calendarData.days);
-    state.setCalendarHealth(calendarHealth);
+
+    const [calendarYearResult, calendarHealthResult] = await Promise.allSettled([
+      api.getCalendarYear(year, authToken),
+      api.getCalendarHealth(authToken),
+    ]);
+    if (calendarYearResult.status === 'fulfilled') {
+      state.setCalendarDays(calendarYearResult.value.days);
+    } else {
+      state.setCalendarDays([]);
+    }
+    if (calendarHealthResult.status === 'fulfilled') {
+      state.setCalendarHealth(calendarHealthResult.value);
+    } else {
+      state.setCalendarHealth(null);
+    }
     state.setTimelineOrder((prev) => {
       const ids = timelineData.map((row) => row.id);
       const kept = prev.filter((id) => ids.includes(id));
@@ -571,14 +582,23 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setSelectedYear(nextYear);
     if (!state.token) return;
     try {
-      const [timelineData, calendarData, calendarHealth] = await Promise.all([
-        api.getTimelineYear(nextYear, state.token),
+      const timelineData = await api.getTimelineYear(nextYear, state.token);
+      state.setTimeline(timelineData);
+
+      const [calendarYearResult, calendarHealthResult] = await Promise.allSettled([
         api.getCalendarYear(nextYear, state.token),
         api.getCalendarHealth(state.token),
       ]);
-      state.setTimeline(timelineData);
-      state.setCalendarDays(calendarData.days);
-      state.setCalendarHealth(calendarHealth);
+      if (calendarYearResult.status === 'fulfilled') {
+        state.setCalendarDays(calendarYearResult.value.days);
+      } else {
+        state.setCalendarDays([]);
+      }
+      if (calendarHealthResult.status === 'fulfilled') {
+        state.setCalendarHealth(calendarHealthResult.value);
+      } else {
+        state.setCalendarHealth(null);
+      }
       state.setTimelineOrder((prev) => {
         const ids = timelineData.map((row) => row.id);
         const kept = prev.filter((id) => ids.includes(id));
