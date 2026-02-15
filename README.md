@@ -1,9 +1,9 @@
 # Projo MVP
 
-MVP foundation for project planning app (API + Web + Postgres).
+Monorepo for a project-planning app (API + Web + Postgres) with year-level timeline planning, team management, and RBAC.
 
 ## Stack
-- API: NestJS + Prisma + PostgreSQL + JWT RBAC
+- API: NestJS + Prisma + PostgreSQL + JWT + role guards
 - Web: React + Vite + TypeScript
 - Infra: Docker Compose (PostgreSQL)
 
@@ -12,38 +12,20 @@ MVP foundation for project planning app (API + Web + Postgres).
    - `cp .env.example .env`
    - `cp apps/api/.env.example apps/api/.env`
    - `cp apps/web/.env.example apps/web/.env`
-2. Start database:
-   - `docker compose up -d`
-3. Install dependencies:
-   - `npm install`
-4. Generate prisma client and migrate:
+2. Start database: `docker compose up -d`
+3. Install deps: `npm install`
+4. Prepare Prisma client and DB schema:
    - `npm run prisma:generate -w @projo/api`
    - `npm run prisma:migrate -w @projo/api`
 5. Start apps:
    - Both: `npm run dev:all`
    - API only: `npm run dev:api`
    - Web only: `npm run dev:web`
-6. Run full verification:
-   - `npm run verify`
-   - Optional runtime smoke-check (requires running API): `SMOKE_API=1 npm run verify`
-7. Optional performance baseline:
-   - API latency profile (requires running API): `node ./scripts/profile-api.mjs`
-8. Optional API e2e smoke-test:
-   - `npm run test:e2e:api`
 
-## Architecture
-- Quick architecture map: `docs/architecture-overview.md`
-- Delivery checklist: `docs/workflow-checklist.md`
-
-## API endpoints (MVP slice)
-- `POST /api/auth/login`
-- `GET /api/health`
-- `GET/POST/PATCH/DELETE /api/roles`
-- `GET/POST/PATCH/DELETE /api/employees`
-- `GET/POST/PATCH/DELETE /api/projects`
-- `GET/POST/PATCH/DELETE /api/assignments`
-- `GET/POST/PATCH/DELETE /api/vacations`
-- `GET /api/timeline/year?year=YYYY`
+## Verification
+- Full check: `npm run verify`
+- Full check + runtime smoke API test: `SMOKE_API=1 npm run verify`
+- API smoke test only: `npm run test:e2e:api`
 
 ## Default bootstrap admin
 - email: `admin@projo.local`
@@ -51,32 +33,16 @@ MVP foundation for project planning app (API + Web + Postgres).
 
 Created automatically on API startup if not found.
 
-## UI features in this build
-- Login screen with bootstrap admin.
-- Team tab: employees list, `Создать работника` popup, `Добавить отпуск` popup from employee row.
-- Team tab: role/department chip filters with compact labels + tooltips, department filters on separate row.
-- Team tab: department management popup (`list/create/update/delete` departments).
-- Team tab: yearly utilization indicator and vacation dates with locale month names.
-- Roles tab: role creation and roles list.
-- Roles tab: role `shortName` support (used for compact labels in Team filters and Timeline bench).
-- Roles tab: editable role colors reflected in employee role badges and timeline strips.
-- Timeline tab: yearly gantt-like planning with draggable `planned` project bar (move/resize), employee strips, and company-load overview.
-- Timeline tab: project-row controls in header (`↑/↓/▾`) with manual ordering (no auto-sort jump).
-- Timeline tab: drag is clamped by year boundaries; custom tooltip appears on hover/drag (edge date or full range).
-- Timeline tab: right-side `bench` column grouped by departments with drag-and-drop employee -> project row.
-- Timeline tab: bench membership uses annual utilization rule (`< 100%` for selected year).
-- Project Card: expands only by dedicated toggle button and supports assignment drag/resize/delete.
-- UI localization switch: `RU/EN`.
-- Errors are shown as toast notifications at the bottom of the screen.
+## Project docs
+- Architecture: `docs/architecture-overview.md`
+- API reference: `docs/api-reference.md`
+- Product specification: `docs/product-spec.md`
+- Implementation roadmap: `docs/implementation-roadmap.md`
+- Workflow checklist: `docs/workflow-checklist.md`
 
-## Business rules already enforced
-- One employee cannot be assigned twice to the same project.
-- Assignment date range must be valid (`start <= end`).
-- Overload and vacation overlap are soft warnings in timeline UI (without hard API block).
-- Assignment dates outside project range are allowed for iterative planning.
-
-## Next steps
-- Implement `ProjectMember` split from `ProjectAssignment` and complete member-level DnD flow.
-- Finish timeline UX-polish wave (bench layout density, initials, project-row localization, Cmd/Ctrl drag modifiers).
-- Refactor Roles screen flow (create/edit via popup, autosave, remove Skills block from Roles tab UI).
-- Add broader test coverage (integration + e2e) and reporting/export features.
+## Documentation ownership
+- API methods, roles and request contracts: `docs/api-reference.md`
+- Product scope, business rules and acceptance criteria: `docs/product-spec.md`
+- Technical architecture and module boundaries: `docs/architecture-overview.md`
+- Delivery status and next priorities: `docs/implementation-roadmap.md`
+- Development workflow and release checklist: `docs/workflow-checklist.md`

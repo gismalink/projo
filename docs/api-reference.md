@@ -1,0 +1,217 @@
+# API Reference
+
+Актуально для текущей реализации `apps/api`.
+
+## Base URL
+- Локально: `http://localhost:4000`
+- Глобальный префикс API: `/api`
+- Итоговый base: `http://localhost:4000/api`
+
+## Auth model
+- `POST /api/auth/login` — публичный endpoint (без JWT).
+- Остальные endpoints (кроме `GET /api/health`) защищены `JwtAuthGuard` + `RolesGuard`.
+- Роли доступа: `ADMIN`, `PM`, `VIEWER`, `FINANCE`.
+
+## Health
+
+### `GET /api/health`
+- Auth: public
+- Назначение: проверка доступности сервиса
+- Response: `{ status: "ok", timestamp: string }`
+
+## Auth
+
+### `POST /api/auth/login`
+- Auth: public
+- Body: `{ email: string, password: string }`
+- Response: JWT payload (token + user)
+
+## Roles
+
+### `POST /api/roles`
+- Roles: `ADMIN`
+- Body: `CreateRoleDto`
+
+### `GET /api/roles`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/roles/:id`
+- Roles: `ADMIN`
+- Body: `UpdateRoleDto`
+
+### `DELETE /api/roles/:id`
+- Roles: `ADMIN`
+
+## Departments
+
+### `POST /api/departments`
+- Roles: `ADMIN`
+- Body: `CreateDepartmentDto` (`name`, `description?`, `colorHex?`)
+
+### `GET /api/departments`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/departments/:id`
+- Roles: `ADMIN`
+- Body: `UpdateDepartmentDto` (`name?`, `description?`, `colorHex?`)
+
+### `DELETE /api/departments/:id`
+- Roles: `ADMIN`
+
+## Employees
+
+### `POST /api/employees`
+- Roles: `ADMIN | PM`
+- Body: `CreateEmployeeDto`
+
+### `POST /api/employees/import-csv`
+- Roles: `ADMIN | PM`
+- Body: `{ csv: string }`
+
+### `GET /api/employees`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/employees/:id`
+- Roles: `ADMIN | PM`
+- Body: `UpdateEmployeeDto`
+
+### `DELETE /api/employees/:id`
+- Roles: `ADMIN`
+
+## Skills
+
+### `POST /api/skills`
+- Roles: `ADMIN`
+- Body: `CreateSkillDto`
+
+### `GET /api/skills`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/skills/:id`
+- Roles: `ADMIN`
+- Body: `UpdateSkillDto`
+
+### `DELETE /api/skills/:id`
+- Roles: `ADMIN`
+
+### `POST /api/skills/:id/employees/:employeeId`
+- Roles: `ADMIN | PM`
+- Назначение: привязать навык сотруднику
+
+### `DELETE /api/skills/:id/employees/:employeeId`
+- Roles: `ADMIN | PM`
+- Назначение: отвязать навык от сотрудника
+
+## Vacations
+
+### `POST /api/vacations`
+- Roles: `ADMIN | PM`
+- Body: `CreateVacationDto`
+
+### `GET /api/vacations`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `GET /api/vacations/:id`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/vacations/:id`
+- Roles: `ADMIN | PM`
+- Body: `UpdateVacationDto`
+
+### `DELETE /api/vacations/:id`
+- Roles: `ADMIN`
+
+## Cost Rates
+
+### `POST /api/cost-rates`
+- Roles: `ADMIN | FINANCE`
+- Body: `CreateCostRateDto`
+
+### `GET /api/cost-rates`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `GET /api/cost-rates/:id`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/cost-rates/:id`
+- Roles: `ADMIN | FINANCE`
+- Body: `UpdateCostRateDto`
+
+### `DELETE /api/cost-rates/:id`
+- Roles: `ADMIN | FINANCE`
+
+## Projects
+
+### `POST /api/projects`
+- Roles: `ADMIN | PM`
+- Body: `CreateProjectDto`
+
+### `GET /api/projects`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `GET /api/projects/:id`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/projects/:id`
+- Roles: `ADMIN | PM`
+- Body: `UpdateProjectDto`
+
+### `DELETE /api/projects/:id`
+- Roles: `ADMIN`
+
+### `GET /api/projects/:id/members`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `POST /api/projects/:id/members`
+- Roles: `ADMIN | PM`
+- Body: `{ employeeId: string }`
+
+### `DELETE /api/projects/:id/members/:employeeId`
+- Roles: `ADMIN | PM`
+
+## Assignments
+
+### `POST /api/assignments`
+- Roles: `ADMIN | PM`
+- Body: `CreateAssignmentDto`
+
+### `GET /api/assignments`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `GET /api/assignments/:id`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/assignments/:id`
+- Roles: `ADMIN | PM`
+- Body: `UpdateAssignmentDto`
+
+### `DELETE /api/assignments/:id`
+- Roles: `ADMIN`
+
+## Timeline
+
+### `GET /api/timeline/year?year=YYYY`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Query:
+  - `year` (number, required)
+
+## Calendar
+
+### `GET /api/calendar/health/status`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `POST /api/calendar/sync`
+- Roles: `ADMIN | PM`
+- Body: `{ years?: number[], force?: boolean, includeNextYear?: boolean }`
+
+### `GET /api/calendar/:year?refresh=true|false`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Params:
+  - `year` (number, required)
+- Query:
+  - `refresh` (boolean, optional)
+
+## Notes
+- DTO-поля и валидация определяются в `apps/api/src/**/dto/*`.
+- Ошибки возвращаются в стандартизированном формате с кодами из `apps/api/src/common/error-codes.ts`.
+- Для обновления этого документа после изменений API ориентируйтесь на контроллеры `apps/api/src/**/*.controller.ts`.
