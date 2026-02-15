@@ -292,6 +292,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
             <label>
               {t.grade}
               <select value={grade} onChange={(e) => setGrade(e.target.value)}>
+                <option value="">—</option>
                 {gradeOptions.map((gradeOption) => (
                   <option key={gradeOption} value={gradeOption}>
                     {gradeOption}
