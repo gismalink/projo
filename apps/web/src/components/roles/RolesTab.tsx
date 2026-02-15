@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Icon } from '../Icon';
 import { Role } from '../../pages/app-types';
 
 type UpdateRolePayload = {
@@ -149,7 +150,7 @@ export function RolesTab(props: RolesTabProps) {
             title={t.createRole}
             aria-label={t.createRole}
           >
-            ＋
+            <Icon name="plus" />
           </button>
         </div>
         <div className="role-table-head" aria-hidden="true">

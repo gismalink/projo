@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DepartmentItem } from '../../api/client';
+import { Icon } from '../Icon';
 
 type DepartmentsModalProps = {
   t: Record<string, string>;
@@ -53,7 +54,7 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
             title={t.addDepartment}
             aria-label={t.addDepartment}
           >
-            +
+            <Icon name="plus" />
           </button>
         </div>
 
@@ -86,7 +87,7 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
                     void onUpdate(department.id, nextName);
                   }}
                 >
-                  ✓
+                  <Icon name="check" />
                 </button>
                 <button
                   type="button"
@@ -98,7 +99,7 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
                     void onDelete(department.id);
                   }}
                 >
-                  ✕
+                  <Icon name="x" />
                 </button>
               </div>
             );

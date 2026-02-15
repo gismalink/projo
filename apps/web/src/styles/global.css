@@ -136,6 +136,14 @@ button:active {
   transform: translateY(1px);
 }
 
+.ui-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  pointer-events: none;
+  flex: 0 0 auto;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;

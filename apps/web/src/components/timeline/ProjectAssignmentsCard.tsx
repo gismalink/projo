@@ -1,5 +1,6 @@
 import { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 import { ProjectDetail } from '../../api/client';
+import { Icon } from '../Icon';
 
 type AssignmentDragState = {
   projectId: string;
@@ -119,7 +120,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     }
                   }}
                 >
-                  ✕
+                    <Icon name="x" />
                 </span>
               </div>
               <div className="assignment-track">

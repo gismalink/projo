@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Employee, Role } from '../../pages/app-types';
 import { VacationItem } from '../../api/client';
+import { Icon } from '../Icon';
 
 type RoleStat = {
   roleName: string;
@@ -90,7 +91,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
               aria-label={t.departmentsList}
               onClick={openDepartmentsModal}
             >
-              🏢
+              <Icon name="building" />
             </button>
             <button
               type="button"
@@ -99,7 +100,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
               aria-label={t.importEmployeesTooltip}
               onClick={openEmployeeImportModal}
             >
-              ⬆
+              <Icon name="upload" />
             </button>
             <button
               type="button"
@@ -108,7 +109,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
               aria-label={t.createEmployeeTooltip}
               onClick={openEmployeeModal}
             >
-              +
+              <Icon name="plus" />
             </button>
           </div>
         </div>
@@ -122,7 +123,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
               title={`${t.department}: ${t.clearFilter}`}
               aria-label={`${t.department}: ${t.clearFilter}`}
             >
-              🏢
+              <Icon name="building" />
             </button>
             {departmentGroups.map(([department, departmentEmployees]) => (
               <button
@@ -165,7 +166,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
               aria-label={t.clearFilter}
               onClick={clearAllFilters}
             >
-              ⟲
+              <Icon name="refresh" />
             </button>
           ) : null}
         </div>
@@ -191,7 +192,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                           aria-label={t.department}
                           onClick={() => openEmployeeDepartmentModal(employee)}
                         >
-                          ✎
+                          <Icon name="edit" />
                         </button>
                         <button
                           type="button"
@@ -200,7 +201,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                           aria-label={t.addVacationTooltip}
                           onClick={() => openVacationModal(employee)}
                         >
-                          🗓
+                          <Icon name="calendar" />
                         </button>
                       </div>
                     </div>

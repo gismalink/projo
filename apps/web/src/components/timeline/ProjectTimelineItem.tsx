@@ -1,5 +1,6 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { Icon } from '../Icon';
 
 type ProjectTimelineItemProps = {
   t: Record<string, string>;
@@ -97,7 +98,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 aria-label="Move project up"
                 title="Move up"
               >
-                ↑
+                <Icon name="arrow-up" />
               </button>
               <button
                 type="button"
@@ -107,7 +108,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 aria-label="Move project down"
                 title="Move down"
               >
-                ↓
+                <Icon name="arrow-down" />
               </button>
               <button
                 type="button"
@@ -116,7 +117,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
                 title={isExpanded ? 'Collapse' : 'Expand'}
               >
-                {isExpanded ? '▴' : '▾'}
+                <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
               </button>
             </div>
             <strong>
@@ -143,7 +144,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
               title={t.editProjectDates}
               aria-label={t.editProjectDates}
             >
-              📅
+              <Icon name="calendar" />
             </button>
             <button
               type="button"
@@ -152,7 +153,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
               title={t.assignEmployee}
               aria-label={t.assignEmployee}
             >
-              👤+
+              <Icon name="user-plus" />
             </button>
           </div>
         </div>
