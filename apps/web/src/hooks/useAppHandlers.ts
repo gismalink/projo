@@ -444,11 +444,6 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     if (state.expandedProjectIds.includes(projectId)) {
       const nextExpanded = state.expandedProjectIds.filter((id) => id !== projectId);
       state.setExpandedProjectIds(nextExpanded);
-      state.setProjectDetails((prev) => {
-        const next = { ...prev };
-        delete next[projectId];
-        return next;
-      });
 
       if (state.selectedProjectId === projectId) {
         const fallbackProjectId = nextExpanded[0] ?? '';

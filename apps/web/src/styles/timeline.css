@@ -146,7 +146,7 @@
 .timeline-board {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 250px;
-  gap: 0.75rem;
+  gap: 1.1rem;
 }
 
 .timeline-main {
@@ -170,16 +170,17 @@
   border: 1px solid var(--ios-border);
   border-radius: 14px;
   background: var(--ios-surface-strong);
-  padding: 0.55rem;
+  padding: 0.42rem;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.3rem;
   align-content: start;
   max-height: 72vh;
   overflow: auto;
+  margin-left: 0.4rem;
 }
 
 .bench-header {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   color: var(--ios-text-secondary);
   font-weight: 700;
   text-transform: uppercase;
@@ -187,18 +188,19 @@
 
 .bench-group {
   display: grid;
-  gap: 0.3rem;
+  gap: 0.22rem;
 }
 
 .bench-group h4 {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--ios-text-secondary);
 }
 
 .bench-members {
   display: grid;
-  gap: 0.3rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem;
 }
 
 .bench-member {
@@ -206,20 +208,27 @@
   background: var(--ios-surface);
   color: var(--ios-text);
   box-shadow: none;
-  border-radius: 10px;
-  padding: 0.35rem 0.45rem;
+  border-radius: 9px;
+  padding: 0.26rem 0.34rem;
   text-align: left;
   display: grid;
-  gap: 0.1rem;
+  gap: 0.04rem;
+  min-width: 0;
 }
 
 .bench-member strong {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bench-member span {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--ios-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeline-row {
@@ -375,12 +384,12 @@
 
 .assignment-list {
   display: grid;
-  gap: 0.4rem;
+  gap: 0;
 }
 
 .assignment-item {
   width: 100%;
-  border: 1px solid var(--ios-border);
+  border: none;
   background: var(--ios-surface-strong);
   color: var(--ios-text);
   border-radius: 12px;
@@ -389,15 +398,15 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.3rem;
-  padding: 0.34rem 0.5rem;
+  gap: 0;
+  padding: 0.12rem 0.4rem;
 }
 
 .track {
   position: relative;
   width: 100%;
-  min-height: 26px;
-  height: 30px;
+  min-height: 20px;
+  height: 24px;
   border-radius: 12px;
   background:
     repeating-linear-gradient(
@@ -435,15 +444,13 @@
 }
 
 .track.project-track .track-day-grid {
-  left: var(--project-handle-size, 10px);
-  right: var(--project-handle-size, 10px);
+  left: 0;
+  right: 0;
   box-shadow: none;
   background-image: linear-gradient(to right, rgba(60, 60, 67, 0.18) 0 1px, transparent 1px);
   background-size: var(--day-step) 100%;
-  background-position: var(--day-step) 0;
+  background-position: 0 0;
   background-repeat: repeat-x;
-  border-left: 1px solid rgba(60, 60, 67, 0.18);
-  border-right: 1px solid rgba(60, 60, 67, 0.18);
   border-radius: 0;
 }
 
@@ -456,8 +463,8 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--project-handle-size, 10px);
-  right: var(--project-handle-size, 10px);
+  left: 0;
+  right: 0;
   pointer-events: none;
   z-index: 1;
 }
@@ -468,6 +475,15 @@
   bottom: 0;
   width: 1px;
   background: rgba(60, 60, 67, 0.18);
+}
+
+.project-fact-bar {
+  position: absolute;
+  top: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(60, 60, 67, 0.72);
+  z-index: 2;
 }
 
 .current-day-line {
@@ -502,7 +518,7 @@
 
 .assignment-item-header > span {
   color: var(--ios-text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 
 .assignment-item .project-plan-tooltip {
@@ -511,19 +527,18 @@
 }
 
 .assignment-item.active {
-  border-color: rgba(10, 132, 255, 0.4);
   background: rgba(10, 132, 255, 0.1);
 }
 
 .assignment-item-header {
   display: flex;
   justify-content: space-between;
-  gap: 0.65rem;
+  gap: 0.4rem;
   align-items: center;
 }
 
 .assignment-item-header strong {
-  font-size: 0.9rem;
+  font-size: 0.76rem;
   font-weight: 600;
 }
 
@@ -717,11 +732,11 @@
 }
 
 .project-plan-handle.left::after {
-  right: 0;
+  right: -1px;
 }
 
 .project-plan-handle.right::after {
-  left: 0;
+  left: -1px;
 }
 
 .bar.project-plan-bar:hover .project-plan-handle.left::after,
@@ -749,12 +764,6 @@
   cursor: grabbing;
 }
 
-.project-assignee-bar {
-  position: absolute;
-  border-radius: 0;
-  z-index: 4;
-}
-
 @media (max-width: 900px) {
   .timeline-layout {
     grid-template-columns: 1fr;
@@ -766,6 +775,11 @@
 
   .bench-column {
     max-height: none;
+    margin-left: 0;
+  }
+
+  .bench-members {
+    grid-template-columns: 1fr;
   }
 
   .timeline-meta {

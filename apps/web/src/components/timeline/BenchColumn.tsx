@@ -2,6 +2,7 @@ type BenchMember = {
   id: string;
   fullName: string;
   roleName: string;
+  annualLoadPercent: number;
 };
 
 type BenchGroup = {
@@ -19,6 +20,18 @@ type BenchColumnProps = {
 export function BenchColumn(props: BenchColumnProps) {
   const { t, benchGroups, onMemberDragStart, onMemberDragEnd } = props;
 
+  const toInitials = (fullName: string) => {
+    const parts = fullName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  };
+
   return (
     <aside className="bench-column">
       <div className="bench-header">{t.bench}</div>
@@ -35,12 +48,12 @@ export function BenchColumn(props: BenchColumnProps) {
                   key={member.id}
                   className="bench-member"
                   draggable
-                  title={`${member.fullName} · ${member.roleName}`}
+                  title={`${member.fullName} · ${member.roleName} · ${member.annualLoadPercent}%`}
                   onDragStart={() => onMemberDragStart(member.id)}
                   onDragEnd={onMemberDragEnd}
                 >
-                  <strong>{member.fullName}</strong>
-                  <span>{member.roleName}</span>
+                  <strong>{toInitials(member.fullName)}</strong>
+                  <span>{`${member.roleName} · ${member.annualLoadPercent}%`}</span>
                 </button>
               ))}
             </div>

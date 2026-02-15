@@ -242,6 +242,7 @@ export function TimelineTab(props: TimelineTabProps) {
     [locale],
   );
   const formatTooltipDate = (value: Date) => tooltipDateFormatter.format(toUtcDay(value));
+  const formatTimelineDate = (value: string) => formatTooltipDate(new Date(value));
   const formatPlannedCost = (amount: number, currency: string) => {
     try {
       return new Intl.NumberFormat(locale, {
@@ -461,6 +462,36 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignments]);
 
+  const projectFactByProjectId = useMemo(() => {
+    const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
+
+    for (const [projectId, projectAssignments] of assignmentsByProjectId.entries()) {
+      if (projectAssignments.length === 0) continue;
+
+      let minStart: Date | null = null;
+      let maxEnd: Date | null = null;
+
+      for (const assignment of projectAssignments) {
+        const start = toUtcDay(new Date(assignment.assignmentStartDate));
+        const end = toUtcDay(new Date(assignment.assignmentEndDate));
+        if (!minStart || start < minStart) minStart = start;
+        if (!maxEnd || end > maxEnd) maxEnd = end;
+      }
+
+      if (!minStart || !maxEnd) continue;
+
+      const startIso = minStart.toISOString();
+      const endIso = maxEnd.toISOString();
+      result.set(projectId, {
+        style: assignmentStyle(startIso, endIso),
+        startIso,
+        endIso,
+      });
+    }
+
+    return result;
+  }, [assignmentsByProjectId, assignmentStyle, toUtcDay]);
+
   const benchGroups = useMemo(() => {
     const annualUtilizationByEmployeeId = new Map<string, number>();
     for (const assignment of assignments) {
@@ -481,7 +512,7 @@ export function TimelineTab(props: TimelineTabProps) {
       );
     }
 
-    const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string }>>();
+    const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string; annualLoadPercent: number }>>();
     for (const employee of employees) {
       const annualUtilization = annualUtilizationByEmployeeId.get(employee.id) ?? 0;
       if (annualUtilization >= 100) continue;
@@ -490,6 +521,7 @@ export function TimelineTab(props: TimelineTabProps) {
         id: employee.id,
         fullName: employee.fullName,
         roleName: employee.role.shortName?.trim() ? employee.role.shortName : employee.role.name,
+        annualLoadPercent: Math.max(0, Math.round(annualUtilization)),
       };
       const items = groups.get(departmentName);
       if (items) {
@@ -621,13 +653,6 @@ export function TimelineTab(props: TimelineTabProps) {
                         : timelineStyle(row);
                   const isExpanded = expandedSet.has(row.id);
                   const detail = projectDetails[row.id];
-                  const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
-                  const assignmentShiftDays =
-                    dragState && dragState.projectId === row.id && dragState.mode !== 'resize-end' && dragPreview
-                      ? diffDays(dragState.startDate, dragPreview.nextStart)
-                      : pendingPreview && pendingPreview.mode !== 'resize-end'
-                        ? pendingPreview.shiftDays
-                        : 0;
                   const tooltipMode =
                     dragState && dragState.projectId === row.id
                       ? dragState.mode
@@ -665,15 +690,11 @@ export function TimelineTab(props: TimelineTabProps) {
                       dayStep={dayStep}
                       monthBoundaryPercents={projectMonthBoundaryPercents}
                       todayPosition={todayPosition}
-                      projectAssignments={projectAssignments}
-                      assignmentShiftDays={assignmentShiftDays}
-                      assignmentStyle={assignmentStyle}
-                      shiftDateByDays={shiftDateByDays}
-                      employeeRoleColorById={employeeRoleColorById}
+                      projectFact={projectFactByProjectId.get(row.id) ?? null}
                       displayTooltipMode={displayTooltipMode}
                       tooltipMode={tooltipMode}
                       displayTooltipText={displayTooltipText}
-                      isoToInputDate={isoToInputDate}
+                      formatTimelineDate={formatTimelineDate}
                       formatPlannedCost={formatPlannedCost}
                       isDropTarget={hoverProjectDropId === row.id}
                       onRowDragOver={handleProjectRowDragOver}

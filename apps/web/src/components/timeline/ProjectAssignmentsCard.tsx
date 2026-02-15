@@ -1,4 +1,4 @@
-import { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
+import { MouseEvent as ReactMouseEvent, MutableRefObject, useMemo } from 'react';
 import { ProjectDetail } from '../../api/client';
 import { Icon } from '../Icon';
 
@@ -85,13 +85,25 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     isoToInputDate,
   } = props;
 
+  const sortedAssignments = useMemo(
+    () =>
+      [...detail.assignments].sort((left, right) => {
+        const startDelta = new Date(left.assignmentStartDate).getTime() - new Date(right.assignmentStartDate).getTime();
+        if (startDelta !== 0) return startDelta;
+        const nameDelta = left.employee.fullName.localeCompare(right.employee.fullName);
+        if (nameDelta !== 0) return nameDelta;
+        return left.id.localeCompare(right.id);
+      }),
+    [detail.assignments],
+  );
+
   return (
     <section className="project-card">
       <div className="assignment-list">
-        {detail.assignments.length === 0 ? (
+        {sortedAssignments.length === 0 ? (
           <p className="muted">{t.noAssignments}</p>
         ) : (
-          detail.assignments.map((assignment) => (
+          sortedAssignments.map((assignment) => (
             <div
               key={assignment.id}
               className="assignment-item"

@@ -4,6 +4,7 @@ import { ProjectTimelineRow } from '../../api/client';
 type ProjectDragState = {
   projectId: string;
   mode: 'move' | 'resize-start' | 'resize-end';
+  keepAssignmentsInPlace: boolean;
   startDate: Date;
   endDate: Date;
   startX: number;
@@ -64,6 +65,7 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
     setDragState({
       projectId: row.id,
       mode,
+      keepAssignmentsInPlace: (event.metaKey || event.ctrlKey) && mode !== 'resize-end',
       startDate: new Date(row.startDate),
       endDate: new Date(row.endDate),
       startX: event.clientX,
@@ -138,12 +140,13 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
 
     const { nextStart, nextEnd } = resolveDragDates(current);
     const effectiveShiftDays = diffDays(current.startDate, nextStart);
+    const assignmentShiftDays = current.mode === 'resize-end' || current.keepAssignmentsInPlace ? 0 : effectiveShiftDays;
     setPendingPlanPreview({
       projectId: current.projectId,
       mode: current.mode,
       nextStart,
       nextEnd,
-      shiftDays: current.mode === 'resize-end' ? 0 : effectiveShiftDays,
+      shiftDays: assignmentShiftDays,
     });
 
     try {
@@ -151,7 +154,7 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
         current.projectId,
         toApiDate(nextStart),
         toApiDate(nextEnd),
-        current.mode === 'resize-end' ? 0 : effectiveShiftDays,
+        assignmentShiftDays,
         current.mode,
       );
     } finally {

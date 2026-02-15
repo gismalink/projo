@@ -1,5 +1,5 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { Icon } from '../Icon';
 
 type ProjectTimelineItemProps = {
@@ -14,15 +14,11 @@ type ProjectTimelineItemProps = {
   dayStep: string;
   monthBoundaryPercents: number[];
   todayPosition: string | null;
-  projectAssignments: AssignmentItem[];
-  assignmentShiftDays: number;
-  assignmentStyle: (startDate: string, endDate: string) => { left: string; width: string };
-  shiftDateByDays: (value: Date, days: number) => Date;
-  employeeRoleColorById: Map<string, string>;
+  projectFact: { style: { left: string; width: string }; startIso: string; endIso: string } | null;
   displayTooltipMode: 'move' | 'resize-start' | 'resize-end';
   tooltipMode: 'move' | 'resize-start' | 'resize-end' | null;
   displayTooltipText: string;
-  isoToInputDate: (value: string) => string;
+  formatTimelineDate: (value: string) => string;
   formatPlannedCost: (amount: number, currency: string) => string;
   isDropTarget: boolean;
   onRowDragOver: (event: ReactDragEvent<HTMLDivElement>, rowId: string) => void;
@@ -55,15 +51,11 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     dayStep,
     monthBoundaryPercents,
     todayPosition,
-    projectAssignments,
-    assignmentShiftDays,
-    assignmentStyle,
-    shiftDateByDays,
-    employeeRoleColorById,
+    projectFact,
     displayTooltipMode,
     tooltipMode,
     displayTooltipText,
-    isoToInputDate,
+    formatTimelineDate,
     formatPlannedCost,
     isDropTarget,
     onRowDragOver,
@@ -95,8 +87,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 className="timeline-row-toggle"
                 onClick={() => onMoveProject(row.id, 'up')}
                 disabled={rowIndex === 0}
-                aria-label="Move project up"
-                title="Move up"
+                aria-label={t.moveProjectUp}
+                title={t.moveUp}
               >
                 <Icon name="arrow-up" />
               </button>
@@ -105,8 +97,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 className="timeline-row-toggle"
                 onClick={() => onMoveProject(row.id, 'down')}
                 disabled={rowIndex === rowCount - 1}
-                aria-label="Move project down"
-                title="Move down"
+                aria-label={t.moveProjectDown}
+                title={t.moveDown}
               >
                 <Icon name="arrow-down" />
               </button>
@@ -114,8 +106,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 type="button"
                 className={isExpanded ? 'timeline-row-toggle active' : 'timeline-row-toggle'}
                 onClick={(event) => onToggleProject(event, row.id)}
-                aria-label={isExpanded ? 'Collapse project row' : 'Expand project row'}
-                title={isExpanded ? 'Collapse' : 'Expand'}
+                aria-label={isExpanded ? t.collapseProjectRow : t.expandProjectRow}
+                title={isExpanded ? t.collapse : t.expand}
               >
                 <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
               </button>
@@ -124,15 +116,19 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
               {row.code} · {row.name}
             </strong>
             <div className="timeline-kpi-row">
-              <span>{row.assignmentsCount} employers</span>
-              <span>{detail?.costSummary ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} hours` : '— hours'}</span>
+              <span>{row.assignmentsCount} {t.assignmentsWord}</span>
+              <span>
+                {detail?.costSummary
+                  ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} ${t.hoursWord}`
+                  : `— ${t.hoursWord}`}
+              </span>
               <span>
                 {detail?.costSummary
                   ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)
                   : '—'}
               </span>
               <span>
-                {isoToInputDate(row.startDate)} {t.fromTo} {isoToInputDate(row.endDate)}
+                {formatTimelineDate(row.startDate)} {t.fromTo} {formatTimelineDate(row.endDate)}
               </span>
             </div>
           </div>
@@ -159,6 +155,13 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
         </div>
         <div className={`track project-track step-${dragStepDays}`}>
           <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
+          {projectFact ? (
+            <span
+              className="project-fact-bar"
+              style={projectFact.style}
+              title={`${t.factLabel}: ${formatTimelineDate(projectFact.startIso)} ${t.fromTo} ${formatTimelineDate(projectFact.endIso)}`}
+            />
+          ) : null}
           {dragStepDays === 30 ? (
             <span className="project-month-grid" aria-hidden>
               {monthBoundaryPercents.map((leftPercent, index) => (
@@ -204,29 +207,6 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
               onMouseDown={(event) => onBeginPlanDrag(event, row, 'resize-end')}
             />
           </div>
-          {projectAssignments.map((assignment, index) => {
-            const allocation = Number(assignment.allocationPercent);
-            const clampedAllocation = Number.isFinite(allocation) ? Math.max(0, Math.min(100, allocation)) : 0;
-            const thickness = Math.max(1, Math.round(clampedAllocation / 10));
-            const maxTop = 26 - thickness;
-            const top = maxTop > 0 ? (index * 3) % maxTop : 0;
-
-            return (
-              <span
-                key={assignment.id}
-                className="project-assignee-bar"
-                style={{
-                  ...assignmentStyle(
-                    shiftDateByDays(new Date(assignment.assignmentStartDate), assignmentShiftDays).toISOString(),
-                    shiftDateByDays(new Date(assignment.assignmentEndDate), assignmentShiftDays).toISOString(),
-                  ),
-                  backgroundColor: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
-                  height: `${thickness}px`,
-                  top: `${top}px`,
-                }}
-              />
-            );
-          })}
         </div>
       </div>
 
