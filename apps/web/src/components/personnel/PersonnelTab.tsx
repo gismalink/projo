@@ -14,10 +14,12 @@ type PersonnelTabProps = {
   t: Record<string, string>;
   departmentGroups: [string, Employee[]][];
   roleStats: RoleStat[];
+  months: string[];
   selectedRoleFilters: string[];
   vacationsByEmployee: Record<string, VacationItem[]>;
   roleByName: Map<string, Role>;
   utilizationByEmployee: Record<string, number>;
+  monthlyUtilizationByEmployee: Record<string, number[]>;
   toggleRoleFilter: (roleName: string) => void;
   clearRoleFilters: () => void;
   openDepartmentsModal: () => void;
@@ -34,10 +36,12 @@ export function PersonnelTab(props: PersonnelTabProps) {
     t,
     departmentGroups,
     roleStats,
+    months,
     selectedRoleFilters,
     vacationsByEmployee,
     roleByName,
     utilizationByEmployee,
+    monthlyUtilizationByEmployee,
     toggleRoleFilter,
     clearRoleFilters,
     openDepartmentsModal,
@@ -179,6 +183,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 const employeeVacations = vacationsByEmployee[employee.id] ?? [];
                 const roleColor = roleColorOrDefault(roleByName.get(employee.role?.name ?? '')?.colorHex);
                 const util = utilizationByEmployee[employee.id] ?? 0;
+                const monthlyUtilization = monthlyUtilizationByEmployee[employee.id] ?? Array.from({ length: 12 }, () => 0);
 
                 return (
                   <article className="employee-card" key={employee.id}>
@@ -234,6 +239,19 @@ export function PersonnelTab(props: PersonnelTabProps) {
                             background: utilizationColor(util),
                           }}
                         />
+                      </div>
+                      <div className="employee-monthly-load" aria-label={t.monthlyLoadLabel}>
+                        {monthlyUtilization.map((value, index) => (
+                          <span
+                            key={`${employee.id}-month-load-${index}`}
+                            className="employee-monthly-load-bar"
+                            style={{
+                              height: `${Math.max(8, Math.min(100, value))}%`,
+                              background: utilizationColor(value),
+                            }}
+                            title={`${months[index] ?? String(index + 1)}: ${value.toFixed(1)}%`}
+                          />
+                        ))}
                       </div>
                     </div>
                   </article>

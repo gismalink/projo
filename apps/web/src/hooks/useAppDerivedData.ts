@@ -79,6 +79,47 @@ export function useAppDerivedData(state: AppState, t: Record<string, string>) {
     return map;
   }, [state.assignments, state.selectedYear]);
 
+  const monthlyUtilizationByEmployee = useMemo(() => {
+    const totalsByEmployee: Record<string, number[]> = {};
+    const year = state.selectedYear;
+
+    const monthRanges = Array.from({ length: 12 }, (_, monthIndex) => {
+      const start = new Date(Date.UTC(year, monthIndex, 1));
+      const end = new Date(Date.UTC(year, monthIndex + 1, 0));
+      const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+      return { start, end, days };
+    });
+
+    for (const assignment of state.assignments) {
+      const allocation = Number(assignment.allocationPercent);
+      if (!Number.isFinite(allocation) || allocation <= 0) continue;
+
+      const start = new Date(assignment.assignmentStartDate);
+      const end = new Date(assignment.assignmentEndDate);
+      if (!totalsByEmployee[assignment.employeeId]) {
+        totalsByEmployee[assignment.employeeId] = Array.from({ length: 12 }, () => 0);
+      }
+
+      for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+        const month = monthRanges[monthIndex];
+        const overlapStart = start > month.start ? start : month.start;
+        const overlapEnd = end < month.end ? end : month.end;
+        if (overlapEnd < overlapStart) continue;
+
+        const overlapDays = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / 86400000) + 1;
+        const weighted = (allocation * overlapDays) / month.days;
+        totalsByEmployee[assignment.employeeId][monthIndex] += weighted;
+      }
+    }
+
+    const normalized: Record<string, number[]> = {};
+    for (const [employeeId, monthlyTotals] of Object.entries(totalsByEmployee)) {
+      normalized[employeeId] = monthlyTotals.map((value) => Number(value.toFixed(1)));
+    }
+
+    return normalized;
+  }, [state.assignments, state.selectedYear]);
+
   return {
     sortedTimeline,
     vacationsByEmployee,
@@ -86,5 +127,6 @@ export function useAppDerivedData(state: AppState, t: Record<string, string>) {
     roleStats,
     departmentGroups,
     utilizationByEmployee,
+    monthlyUtilizationByEmployee,
   };
 }

@@ -12,7 +12,9 @@ function dayOfYear(date: Date) {
 }
 
 export function daysInYear(year: number) {
-  return new Date(Date.UTC(year + 1, 0, 0)).getUTCDate() + 365 - 365;
+  const start = new Date(Date.UTC(year, 0, 1));
+  const end = new Date(Date.UTC(year + 1, 0, 1));
+  return Math.floor((end.getTime() - start.getTime()) / 86400000);
 }
 
 export function overlapDaysInYear(start: Date, end: Date, year: number) {

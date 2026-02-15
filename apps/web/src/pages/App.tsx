@@ -73,10 +73,12 @@ export function App() {
               t={t}
               departmentGroups={app.departmentGroups}
               roleStats={app.roleStats}
+              months={MONTHS_BY_LANG[lang]}
               selectedRoleFilters={app.selectedRoleFilters}
               vacationsByEmployee={app.vacationsByEmployee}
               roleByName={app.roleByName}
               utilizationByEmployee={app.utilizationByEmployee}
+              monthlyUtilizationByEmployee={app.monthlyUtilizationByEmployee}
               toggleRoleFilter={app.toggleRoleFilter}
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
               openDepartmentsModal={() => app.setIsDepartmentsModalOpen(true)}
