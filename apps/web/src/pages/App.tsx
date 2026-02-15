@@ -53,7 +53,6 @@ export function App() {
       <div className="section-header">
         <div>
           <h1>{t.appTitle}</h1>
-          <p className="subtitle">{t.subtitle}</p>
         </div>
         <div className="lang-toggle">
           <button type="button" className={lang === 'ru' ? 'tab active' : 'tab'} onClick={() => setLang('ru')}>
@@ -265,7 +264,7 @@ export function App() {
               expandedProjectIds={app.expandedProjectIds}
               projectDetails={app.projectDetails}
               onOpenProjectModal={app.openProjectModal}
-              onOpenProjectDatesModal={app.openProjectDatesModal}
+              onAutoSaveProjectMeta={app.handleAutoSaveProjectMeta}
               onOpenAssignmentModal={(projectId, employeeId) => {
                 app.setAssignmentProjectId(projectId);
                 if (employeeId) {

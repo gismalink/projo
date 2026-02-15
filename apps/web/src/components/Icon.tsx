@@ -10,6 +10,8 @@ type IconName =
   | 'arrow-down'
   | 'chevron-up'
   | 'chevron-down'
+  | 'chevron-left'
+  | 'chevron-right'
   | 'check'
   | 'x'
   | 'copy';
@@ -104,6 +106,10 @@ export function Icon({ name, size = 16, className }: IconProps) {
       {name === 'chevron-up' ? <path {...common} d="m6 14 6-6 6 6" /> : null}
 
       {name === 'chevron-down' ? <path {...common} d="m6 10 6 6 6-6" /> : null}
+
+      {name === 'chevron-left' ? <path {...common} d="m14 6-6 6 6 6" /> : null}
+
+      {name === 'chevron-right' ? <path {...common} d="m10 6 6 6-6 6" /> : null}
 
       {name === 'check' ? <path {...common} d="m5 13 4 4 10-10" /> : null}
 

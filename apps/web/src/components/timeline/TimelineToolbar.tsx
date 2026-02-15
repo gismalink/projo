@@ -1,3 +1,5 @@
+import { Icon } from '../Icon';
+
 type TimelineToolbarProps = {
   t: Record<string, string>;
   selectedYear: number;
@@ -24,9 +26,7 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
   return (
     <div className="timeline-toolbar">
       <div className="timeline-toolbar-title-group">
-        <h2>{t.yearTimeline}</h2>
         <div className="timeline-step-switch" role="group" aria-label={t.timelineStep}>
-          <span className="timeline-step-label">{t.timelineStep}</span>
           <button
             type="button"
             className={dragStepDays === 1 ? 'tab active' : 'tab'}
@@ -49,25 +49,47 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
             {t.stepMonth}
           </button>
         </div>
-        <label className="timeline-calendar-checkbox" aria-label={t.timelineWithWeekends}>
-          <input
-            type="checkbox"
-            checked={!useProductionCalendar}
-            onChange={(event) => onUseProductionCalendarChange(!event.target.checked)}
-          />
+        <label className="timeline-calendar-toggle-row" aria-label={t.timelineWithWeekends}>
           <span>{t.timelineWithWeekends}</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!useProductionCalendar}
+            className={!useProductionCalendar ? 'timeline-switch active' : 'timeline-switch'}
+            onClick={() => onUseProductionCalendarChange(!useProductionCalendar)}
+          >
+            <span className="timeline-switch-thumb" />
+          </button>
         </label>
       </div>
       <div className="year-switcher">
-        <button type="button" onClick={onOpenProjectModal}>
-          {t.createProject}
+        <button
+          type="button"
+          className="timeline-toolbar-icon-btn"
+          onClick={onOpenProjectModal}
+          title={t.createProject}
+          aria-label={t.createProject}
+        >
+          <Icon name="plus" />
         </button>
-        <button type="button" onClick={() => onYearChange(selectedYear - 1)}>
-          {t.prev}
+        <button
+          type="button"
+          className="timeline-toolbar-icon-btn"
+          onClick={() => onYearChange(selectedYear - 1)}
+          title={t.prev}
+          aria-label={t.prev}
+        >
+          <Icon name="chevron-left" />
         </button>
         <strong>{selectedYear}</strong>
-        <button type="button" onClick={() => onYearChange(selectedYear + 1)}>
-          {t.next}
+        <button
+          type="button"
+          className="timeline-toolbar-icon-btn"
+          onClick={() => onYearChange(selectedYear + 1)}
+          title={t.next}
+          aria-label={t.next}
+        >
+          <Icon name="chevron-right" />
         </button>
       </div>
     </div>

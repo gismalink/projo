@@ -613,6 +613,29 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  async function handleAutoSaveProjectMeta(
+    projectId: string,
+    payload: { code: string; name: string; startDate: string; endDate: string },
+  ) {
+    if (!state.token) return;
+
+    try {
+      await api.updateProject(
+        projectId,
+        {
+          code: payload.code,
+          name: payload.name,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear, projectId);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
+    }
+  }
+
   async function handleSelectProject(projectId: string) {
     if (!state.token) return;
 
@@ -827,6 +850,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleCreateProject,
     handleCreateAssignment,
     handleUpdateProjectDates,
+    handleAutoSaveProjectMeta,
     handleSelectProject,
     handleYearChange,
     handleEditorAssignmentChange,

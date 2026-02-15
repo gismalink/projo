@@ -356,6 +356,9 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     </span>
                   );
                 })()}
+              </div>
+              <div className="assignment-vacation-track">
+                <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                 {(vacationsByEmployeeId.get(assignment.employeeId) ?? []).map((vacation, index) => (
                   <span
                     key={`${assignment.id}-vacation-${index}`}

@@ -1,4 +1,4 @@
-import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { Icon } from '../Icon';
 
@@ -28,7 +28,10 @@ type ProjectTimelineItemProps = {
   onRowDrop: (event: ReactDragEvent<HTMLDivElement>, rowId: string) => void;
   onMoveProject: (projectId: string, direction: 'up' | 'down') => void;
   onToggleProject: (event: ReactMouseEvent, projectId: string) => void;
-  onOpenProjectDatesModal: (projectId: string) => void;
+  onAutoSaveProjectMeta: (
+    projectId: string,
+    payload: { code: string; name: string; startDate: string; endDate: string },
+  ) => Promise<void>;
   onOpenAssignmentModal: (projectId: string, employeeId?: string) => void;
   onPlanBarHover: (event: ReactMouseEvent<HTMLElement>, row: ProjectTimelineRow) => void;
   onClearPlanBarHover: (row: ProjectTimelineRow) => void;
@@ -67,13 +70,75 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     onRowDrop,
     onMoveProject,
     onToggleProject,
-    onOpenProjectDatesModal,
+    onAutoSaveProjectMeta,
     onOpenAssignmentModal,
     onPlanBarHover,
     onClearPlanBarHover,
     onBeginPlanDrag,
     children,
   } = props;
+
+  const [isProjectEditOpen, setIsProjectEditOpen] = useState(false);
+  const [draftCode, setDraftCode] = useState(row.code);
+  const [draftName, setDraftName] = useState(row.name);
+  const [draftStartDate, setDraftStartDate] = useState(row.startDate.slice(0, 10));
+  const [draftEndDate, setDraftEndDate] = useState(row.endDate.slice(0, 10));
+  const editPopoverRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setDraftCode(row.code);
+    setDraftName(row.name);
+    setDraftStartDate(row.startDate.slice(0, 10));
+    setDraftEndDate(row.endDate.slice(0, 10));
+  }, [row.code, row.endDate, row.name, row.startDate]);
+
+  useEffect(() => {
+    if (!isProjectEditOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const root = editPopoverRef.current;
+      if (!root) return;
+      if (root.contains(event.target as Node)) return;
+      setIsProjectEditOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [isProjectEditOpen]);
+
+  useEffect(() => {
+    if (!isProjectEditOpen) return;
+
+    const nextCode = draftCode.trim();
+    const nextName = draftName.trim();
+    if (!nextCode || !nextName || !draftStartDate || !draftEndDate) return;
+
+    if (new Date(draftStartDate) > new Date(draftEndDate)) return;
+
+    const baselineCode = row.code.trim();
+    const baselineName = row.name.trim();
+    const baselineStart = row.startDate.slice(0, 10);
+    const baselineEnd = row.endDate.slice(0, 10);
+    const unchanged =
+      nextCode === baselineCode &&
+      nextName === baselineName &&
+      draftStartDate === baselineStart &&
+      draftEndDate === baselineEnd;
+
+    if (unchanged) return;
+
+    const timer = window.setTimeout(() => {
+      void onAutoSaveProjectMeta(row.id, {
+        code: nextCode,
+        name: nextName,
+        startDate: new Date(draftStartDate).toISOString(),
+        endDate: new Date(draftEndDate).toISOString(),
+      });
+    }, 420);
+
+    return () => window.clearTimeout(timer);
+  }, [draftCode, draftEndDate, draftName, draftStartDate, isProjectEditOpen, onAutoSaveProjectMeta, row.code, row.endDate, row.id, row.name, row.startDate]);
 
   return (
     <div
@@ -138,16 +203,26 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
               </span>
             </div>
           </div>
-          <div className="timeline-meta-actions">
+          <div className="timeline-meta-actions" ref={editPopoverRef}>
             <button
               type="button"
               className="timeline-meta-icon-btn"
-              onClick={() => onOpenProjectDatesModal(row.id)}
+              onClick={() => setIsProjectEditOpen((prev) => !prev)}
               title={t.editProjectDates}
               aria-label={t.editProjectDates}
             >
-              <Icon name="calendar" />
+              <Icon name="edit" />
             </button>
+            {isProjectEditOpen ? (
+              <div className="project-edit-popover">
+                <div className="project-edit-row">
+                  <input aria-label={t.code} value={draftCode} onChange={(event) => setDraftCode(event.target.value)} />
+                  <input aria-label={t.name} value={draftName} onChange={(event) => setDraftName(event.target.value)} />
+                  <input aria-label={t.start} type="date" value={draftStartDate} onChange={(event) => setDraftStartDate(event.target.value)} />
+                  <input aria-label={t.end} type="date" value={draftEndDate} onChange={(event) => setDraftEndDate(event.target.value)} />
+                </div>
+              </div>
+            ) : null}
             <button
               type="button"
               className="timeline-meta-icon-btn"
