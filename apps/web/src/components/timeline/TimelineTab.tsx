@@ -1,5 +1,6 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, CalendarDayItem, CalendarHealthResponse, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
@@ -643,7 +644,7 @@ export function TimelineTab(props: TimelineTabProps) {
         const dailyHours =
           assignment.plannedHoursPerDay !== null
             ? Number(assignment.plannedHoursPerDay)
-            : (8 * Number(assignment.allocationPercent)) / 100;
+            : (STANDARD_DAY_HOURS * Number(assignment.allocationPercent)) / 100;
         if (!Number.isFinite(dailyHours) || dailyHours <= 0) continue;
 
         const vacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];

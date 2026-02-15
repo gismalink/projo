@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { STANDARD_DAY_HOURS } from '../common/planning-config';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -103,7 +104,7 @@ export class EmployeesService {
     return this.prisma.employee.create({
       data: {
         ...dto,
-        defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay ?? 8,
+        defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay ?? STANDARD_DAY_HOURS,
       },
       include: { role: true, department: true },
     });
@@ -197,7 +198,7 @@ export class EmployeesService {
             departmentId: departmentId ?? null,
             grade: row.grade,
             status: row.status ?? 'active',
-            defaultCapacityHoursPerDay: row.defaultCapacityHoursPerDay ?? 8,
+            defaultCapacityHoursPerDay: row.defaultCapacityHoursPerDay ?? STANDARD_DAY_HOURS,
           },
         });
         updated += 1;
@@ -212,7 +213,7 @@ export class EmployeesService {
           departmentId,
           grade: row.grade,
           status: row.status ?? 'active',
-          defaultCapacityHoursPerDay: row.defaultCapacityHoursPerDay ?? 8,
+          defaultCapacityHoursPerDay: row.defaultCapacityHoursPerDay ?? STANDARD_DAY_HOURS,
         },
       });
       created += 1;

@@ -1,5 +1,10 @@
 import { ApiError, ProjectTimelineRow } from '../api/client';
 
+const parsedStandardDayHours = Number(import.meta.env.VITE_STANDARD_DAY_HOURS ?? 8);
+export const STANDARD_DAY_HOURS = Number.isFinite(parsedStandardDayHours) && parsedStandardDayHours > 0
+  ? parsedStandardDayHours
+  : 8;
+
 function dayOfYear(date: Date) {
   const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 0));
   const diff = date.getTime() - start.getTime();

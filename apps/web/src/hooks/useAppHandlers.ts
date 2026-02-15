@@ -1,7 +1,7 @@
 import { FormEvent } from 'react';
 import { api, ProjectDetail } from '../api/client';
 import { Employee, Toast } from '../pages/app-types';
-import { isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
+import { STANDARD_DAY_HOURS, isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
 import { AppState } from './useAppState';
 
 type Params = {
@@ -286,7 +286,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
           departmentId: state.employeeDepartmentId || undefined,
           status: state.employeeStatus,
           grade: state.employeeGrade,
-          defaultCapacityHoursPerDay: 8,
+          defaultCapacityHoursPerDay: STANDARD_DAY_HOURS,
         },
         state.token,
       );

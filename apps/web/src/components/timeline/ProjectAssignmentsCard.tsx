@@ -1,5 +1,6 @@
 import { MouseEvent as ReactMouseEvent, MutableRefObject, useMemo } from 'react';
 import { CalendarDayItem, ProjectDetail } from '../../api/client';
+import { STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
 import { Icon } from '../Icon';
 
 type AssignmentDragState = {
@@ -124,7 +125,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       const dailyHours =
         assignment.plannedHoursPerDay !== null
           ? Number(assignment.plannedHoursPerDay)
-          : (8 * Number(assignment.allocationPercent)) / 100;
+          : (STANDARD_DAY_HOURS * Number(assignment.allocationPercent)) / 100;
 
       if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
         result.set(assignment.id, { actualHours: 0, lostHours: 0 });
