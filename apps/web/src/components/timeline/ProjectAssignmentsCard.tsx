@@ -190,6 +190,14 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                   >
                     {employeeRoleLabelById.get(assignment.employeeId) ?? assignment.employee.role.name}
                   </span>
+                  {assignment.employee.grade ? (
+                    <span
+                      className="timeline-role-chip"
+                      style={{ background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A', marginLeft: 4 }}
+                    >
+                      {assignment.employee.grade}
+                    </span>
+                  ) : null}
                   <strong>{assignment.employee.fullName}</strong>
                 </div>
                 <span>{Number(assignment.allocationPercent)}%</span>
