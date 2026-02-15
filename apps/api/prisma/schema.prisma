@@ -171,3 +171,27 @@ model Vacation {
 
   @@index([employeeId, startDate, endDate])
 }
+
+model CalendarDay {
+  date           DateTime @id @db.Date
+  isWeekend      Boolean
+  isHoliday      Boolean
+  isWorkingDay   Boolean
+  holidayName    String?
+  sourceYear     Int
+  sourceSyncedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([sourceYear])
+  @@index([isHoliday, isWorkingDay])
+}
+
+model CalendarYearSync {
+  year          Int      @id
+  lastAttemptAt DateTime?
+  lastSuccessAt DateTime?
+  lastStatus    String   @default("idle")
+  lastError     String?
+  updatedAt     DateTime @updatedAt
+}

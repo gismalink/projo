@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { CalendarModule } from './calendar/calendar.module';
 import { CostRatesModule } from './cost-rates/cost-rates.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { EmployeesModule } from './employees/employees.module';
@@ -21,6 +22,7 @@ import { VacationsModule } from './vacations/vacations.module';
     DepartmentsModule,
     UsersModule,
     AuthModule,
+    CalendarModule,
     RolesModule,
     SkillsModule,
     CostRatesModule,

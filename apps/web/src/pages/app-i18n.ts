@@ -274,6 +274,7 @@ export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE: 'Даты назначения должны быть внутри периода проекта',
     ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED: 'Перегруз сотрудника: более 100% в выбранный период',
     ERR_ASSIGNMENT_OVERLAPS_VACATION: 'Назначение пересекается с отпуском сотрудника',
+    ERR_CALENDAR_SYNC_FAILED: 'Не удалось синхронизировать производственный календарь',
   },
   en: {
     ERR_AUTH_INVALID_CREDENTIALS: 'Invalid email or password',
@@ -294,5 +295,6 @@ export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE: 'Assignment dates must be inside project range',
     ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED: 'Employee allocation exceeds 100% in selected period',
     ERR_ASSIGNMENT_OVERLAPS_VACATION: 'Assignment overlaps with employee vacation',
+    ERR_CALENDAR_SYNC_FAILED: 'Failed to sync production calendar',
   },
 };
