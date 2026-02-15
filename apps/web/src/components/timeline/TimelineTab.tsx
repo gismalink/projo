@@ -148,11 +148,11 @@ export function TimelineTab(props: TimelineTabProps) {
       })()
     : null;
 
-  const companyDailyLoad = useMemo(() => {
+  const companyLoad = useMemo(() => {
     const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
     const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
     const days = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
-    const totals = Array.from({ length: days }, () => 0);
+    const rawTotals = Array.from({ length: days }, () => 0);
 
     for (const assignment of assignments) {
       const allocation = Number(assignment.allocationPercent);
@@ -167,15 +167,40 @@ export function TimelineTab(props: TimelineTabProps) {
       const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / 86400000));
       const endIndex = Math.min(days - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / 86400000));
       for (let i = startIndex; i <= endIndex; i += 1) {
-        totals[i] += allocation;
+        rawTotals[i] += allocation;
       }
     }
 
-    const max = Math.max(1, ...totals);
-    return { totals, max };
-  }, [assignments, selectedYear]);
+    const employeeCapacity = Math.max(1, employees.length);
+    const dailyUtilization = rawTotals.map((value) => value / employeeCapacity);
 
-  const companyLoadScaleMax = Math.max(100, Math.ceil(companyDailyLoad.max / 25) * 25);
+    const values: number[] = [];
+    if (dragStepDays === 1) {
+      values.push(...dailyUtilization);
+    } else if (dragStepDays === 7) {
+      for (let dayIndex = 0; dayIndex < days; dayIndex += 7) {
+        const slice = dailyUtilization.slice(dayIndex, Math.min(days, dayIndex + 7));
+        const avg = slice.length > 0 ? slice.reduce((sum, value) => sum + value, 0) / slice.length : 0;
+        values.push(avg);
+      }
+    } else {
+      for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+        const monthStart = new Date(Date.UTC(selectedYear, monthIndex, 1));
+        const nextMonthStart = new Date(Date.UTC(selectedYear, monthIndex + 1, 1));
+        const startIndex = Math.max(0, Math.floor((monthStart.getTime() - yearStart.getTime()) / 86400000));
+        const endIndex = Math.max(startIndex, Math.min(days, Math.floor((nextMonthStart.getTime() - yearStart.getTime()) / 86400000)));
+        const slice = dailyUtilization.slice(startIndex, endIndex);
+        const avg = slice.length > 0 ? slice.reduce((sum, value) => sum + value, 0) / slice.length : 0;
+        values.push(avg);
+      }
+    }
+
+    const max = Math.max(1, ...values);
+    return { values, max };
+  }, [assignments, selectedYear, employees.length, dragStepDays]);
+
+  const companyLoadScaleMax = Math.max(100, Math.ceil(companyLoad.max / 25) * 25);
+  const companyDayMarkers = dragStepDays === 30 ? [] : dayMarkers;
 
   const toUtcDay = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
   const yearStartDay = new Date(Date.UTC(selectedYear, 0, 1));
@@ -548,11 +573,12 @@ export function TimelineTab(props: TimelineTabProps) {
 
         <CompanyLoadCard
           t={t}
-          companyDailyLoad={companyDailyLoad}
+          companyLoad={companyLoad}
           companyLoadScaleMax={companyLoadScaleMax}
           todayPosition={todayPosition}
+          dragStepDays={dragStepDays}
           dayStep={dayStep}
-          dayMarkers={dayMarkers}
+          dayMarkers={companyDayMarkers}
           months={months}
           selectedYear={selectedYear}
         />
