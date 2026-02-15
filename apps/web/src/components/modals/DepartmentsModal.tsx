@@ -22,9 +22,11 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
 
   if (!isOpen) return null;
 
+  const nextDepartmentName = newDepartmentName.trim();
+
   return (
     <div className="modal-backdrop">
-      <div className="modal-card">
+      <div className="modal-card departments-modal">
         <div className="section-header">
           <h3>{t.departmentsList}</h3>
           <button type="button" className="ghost-btn" onClick={onClose}>
@@ -32,18 +34,20 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
           </button>
         </div>
 
-        <div className="department-manage-row">
+        <div className="department-manage-row create">
           <input
+            className="department-manage-input"
             value={newDepartmentName}
             placeholder={t.department}
             onChange={(event) => setNewDepartmentName(event.target.value)}
           />
           <button
             type="button"
+            className="department-manage-action primary"
+            disabled={!nextDepartmentName}
             onClick={() => {
-              const nextName = newDepartmentName.trim();
-              if (!nextName) return;
-              void onCreate(nextName);
+              if (!nextDepartmentName) return;
+              void onCreate(nextDepartmentName);
               setNewDepartmentName('');
             }}
             title={t.addDepartment}
@@ -56,10 +60,14 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
         <div className="department-manage-list">
           {departments.map((department) => {
             const draftName = draftNames[department.id] ?? department.name;
+            const nextName = draftName.trim();
+            const canSave = nextName.length > 0 && nextName !== department.name;
             return (
               <div className="department-manage-row" key={department.id}>
                 <input
+                  className="department-manage-input"
                   value={draftName}
+                  placeholder={t.department}
                   onChange={(event) =>
                     setDraftNames((prev) => ({
                       ...prev,
@@ -69,12 +77,12 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
                 />
                 <button
                   type="button"
-                  className="ghost-btn"
+                  className="department-manage-action"
+                  disabled={!canSave}
                   title={t.save}
                   aria-label={t.save}
                   onClick={() => {
-                    const nextName = draftName.trim();
-                    if (!nextName || nextName === department.name) return;
+                    if (!canSave) return;
                     void onUpdate(department.id, nextName);
                   }}
                 >
@@ -82,7 +90,7 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
                 </button>
                 <button
                   type="button"
-                  className="ghost-btn"
+                  className="department-manage-action"
                   title={t.deleteDepartment}
                   aria-label={t.deleteDepartment}
                   onClick={() => {
