@@ -38,6 +38,7 @@ export function useAppState() {
   const [selectedRoleFilters, setSelectedRoleFilters] = useState<string[]>([]);
 
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isEmployeeCreateModalOpen, setIsEmployeeCreateModalOpen] = useState(false);
   const [isEmployeeDepartmentModalOpen, setIsEmployeeDepartmentModalOpen] = useState(false);
   const [isEmployeeImportModalOpen, setIsEmployeeImportModalOpen] = useState(false);
   const [isDepartmentsModalOpen, setIsDepartmentsModalOpen] = useState(false);
@@ -118,6 +119,7 @@ export function useAppState() {
     vacations,
     selectedRoleFilters,
     isEmployeeModalOpen,
+    isEmployeeCreateModalOpen,
     isEmployeeDepartmentModalOpen,
     isEmployeeImportModalOpen,
     isDepartmentsModalOpen,
@@ -188,6 +190,7 @@ export function useAppState() {
     setVacations,
     setSelectedRoleFilters,
     setIsEmployeeModalOpen,
+    setIsEmployeeCreateModalOpen,
     setIsEmployeeDepartmentModalOpen,
     setIsEmployeeImportModalOpen,
     setIsDepartmentsModalOpen,

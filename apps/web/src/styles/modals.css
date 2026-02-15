@@ -122,8 +122,53 @@
   box-shadow: var(--ios-shadow);
 }
 
+.employee-meta-compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.vacation-editor-row {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0;
+}
+
+.vacation-year-track {
+  position: relative;
+  height: 26px;
+  border: 1px solid var(--ios-border);
+  background: rgba(120, 120, 128, 0.1);
+  overflow: hidden;
+}
+
+.vacation-month-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(120, 120, 128, 0.22);
+  z-index: 1;
+}
+
+.vacation-range-bar {
+  z-index: 3;
+  background: linear-gradient(90deg, #ff7a4a 0%, #ff453a 100%);
+}
+
+.modal-icon-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
 @media (max-width: 900px) {
   .settings-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-meta-compact {
     grid-template-columns: 1fr;
   }
 }

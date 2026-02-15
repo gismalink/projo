@@ -18,7 +18,13 @@ type TimelineTabProps = {
   selectedYear: number;
   assignments: AssignmentItem[];
   vacations: Array<{ employeeId: string; startDate: string; endDate: string }>;
-  employees: Array<{ id: string; fullName: string; role: { name: string; shortName?: string | null }; department?: { name: string } | null }>;
+  employees: Array<{
+    id: string;
+    fullName: string;
+    grade?: string | null;
+    role: { name: string; shortName?: string | null };
+    department?: { name: string } | null;
+  }>;
   roles: Array<{ name: string; shortName?: string | null; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
   calendarDays: CalendarDayItem[];
@@ -619,7 +625,10 @@ export function TimelineTab(props: TimelineTabProps) {
       );
     }
 
-    const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string; roleColorHex: string; annualLoadPercent: number }>>();
+    const groups = new Map<
+      string,
+      Array<{ id: string; fullName: string; grade?: string | null; roleName: string; roleColorHex: string; annualLoadPercent: number }>
+    >();
     for (const employee of employees) {
       const annualUtilization = annualUtilizationByEmployeeId.get(employee.id) ?? 0;
       if (annualUtilization >= 100) continue;
@@ -627,6 +636,7 @@ export function TimelineTab(props: TimelineTabProps) {
       const row = {
         id: employee.id,
         fullName: employee.fullName,
+        grade: employee.grade,
         roleName: employeeRoleLabelById.get(employee.id) ?? employee.role.name,
         roleColorHex: employeeRoleColorById.get(employee.id) ?? '#6E7B8A',
         annualLoadPercent: Math.max(0, Math.round(annualUtilization)),

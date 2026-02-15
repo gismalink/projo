@@ -14,6 +14,22 @@ export class VacationsService {
     }
   }
 
+  private async ensureNoOverlap(employeeId: string, startDate: Date, endDate: Date, excludeId?: string) {
+    const overlaps = await this.prisma.vacation.findFirst({
+      where: {
+        employeeId,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+        startDate: { lte: endDate },
+        endDate: { gte: startDate },
+      },
+      select: { id: true },
+    });
+
+    if (overlaps) {
+      throw new BadRequestException('VACATION_OVERLAP_NOT_ALLOWED');
+    }
+  }
+
   async create(dto: CreateVacationDto) {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
@@ -23,6 +39,8 @@ export class VacationsService {
     if (!employee) {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
+
+    await this.ensureNoOverlap(dto.employeeId, startDate, endDate);
 
     return this.prisma.vacation.create({
       data: {
@@ -72,7 +90,9 @@ export class VacationsService {
     const existing = await this.findOne(id);
     const nextStart = dto.startDate ? new Date(dto.startDate) : existing.startDate;
     const nextEnd = dto.endDate ? new Date(dto.endDate) : existing.endDate;
+    const nextEmployeeId = dto.employeeId ?? existing.employeeId;
     this.ensureDateRange(nextStart, nextEnd);
+    await this.ensureNoOverlap(nextEmployeeId, nextStart, nextEnd, id);
 
     return this.prisma.vacation.update({
       where: { id },

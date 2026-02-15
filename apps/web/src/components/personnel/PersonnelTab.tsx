@@ -23,9 +23,8 @@ type PersonnelTabProps = {
   monthlyUtilizationByEmployee: Record<string, number[]>;
   toggleRoleFilter: (roleName: string) => void;
   clearRoleFilters: () => void;
-  openVacationModal: (employee: Employee) => void;
-  openEmployeeDepartmentModal: (employee: Employee) => void;
-  openEmployeeModal: () => void;
+  openEmployeeModal: (employee: Employee) => void;
+  openEmployeeCreateModal: () => void;
   openEmployeeImportModal: () => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
   utilizationColor: (value: number) => string;
@@ -45,9 +44,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
     monthlyUtilizationByEmployee,
     toggleRoleFilter,
     clearRoleFilters,
-    openVacationModal,
-    openEmployeeDepartmentModal,
     openEmployeeModal,
+    openEmployeeCreateModal,
     openEmployeeImportModal,
     roleColorOrDefault,
     utilizationColor,
@@ -109,7 +107,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
               className="create-role-icon-btn team-icon-btn"
               title={t.createEmployeeTooltip}
               aria-label={t.createEmployeeTooltip}
-              onClick={openEmployeeModal}
+              onClick={openEmployeeCreateModal}
             >
               <Icon name="plus" />
             </button>
@@ -200,20 +198,11 @@ export function PersonnelTab(props: PersonnelTabProps) {
                         <button
                           type="button"
                           className="create-role-icon-btn team-icon-btn"
-                          title={t.department}
-                          aria-label={t.department}
-                          onClick={() => openEmployeeDepartmentModal(employee)}
+                          title={t.editProfileTooltip || 'Редактировать профиль'}
+                          aria-label={t.editProfileTooltip || 'Редактировать профиль'}
+                          onClick={() => openEmployeeModal(employee)}
                         >
                           <Icon name="edit" />
-                        </button>
-                        <button
-                          type="button"
-                          className="create-role-icon-btn team-icon-btn"
-                          title={t.addVacationTooltip}
-                          aria-label={t.addVacationTooltip}
-                          onClick={() => openVacationModal(employee)}
-                        >
-                          <Icon name="calendar" />
                         </button>
                       </div>
                     </div>

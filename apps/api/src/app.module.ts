@@ -6,6 +6,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { CostRatesModule } from './cost-rates/cost-rates.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { EmployeesModule } from './employees/employees.module';
+import { GradesModule } from './grades/grades.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './common/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -26,6 +27,7 @@ import { VacationsModule } from './vacations/vacations.module';
     RolesModule,
     SkillsModule,
     CostRatesModule,
+    GradesModule,
     EmployeesModule,
     ProjectsModule,
     AssignmentsModule,

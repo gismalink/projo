@@ -289,26 +289,157 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     event.preventDefault();
     if (!state.token || !state.employeeRoleId) return;
     try {
-      await api.createEmployee(
+      if (state.editEmployeeId) {
+        await api.updateEmployee(
+          state.editEmployeeId,
+          {
+            fullName: state.employeeFullName,
+            email: state.employeeEmail,
+            roleId: state.employeeRoleId,
+            departmentId: state.employeeDepartmentId || undefined,
+            status: state.employeeStatus,
+            grade: state.employeeGrade,
+          },
+          state.token,
+        );
+      } else {
+        await api.createEmployee(
+          {
+            fullName: state.employeeFullName,
+            email: state.employeeEmail,
+            roleId: state.employeeRoleId,
+            departmentId: state.employeeDepartmentId || undefined,
+            status: state.employeeStatus,
+            grade: state.employeeGrade,
+            defaultCapacityHoursPerDay: STANDARD_DAY_HOURS,
+          },
+          state.token,
+        );
+      }
+      await refreshData(state.token, state.selectedYear);
+      if (state.editEmployeeId) {
+        state.setIsEmployeeModalOpen(false);
+      } else {
+        state.setIsEmployeeCreateModalOpen(false);
+        state.setEmployeeEmail((prev) => {
+          const [name, domain] = prev.split('@');
+          return `${name}.2@${domain ?? 'projo.local'}`;
+        });
+      }
+      state.setEditEmployeeId('');
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
+    }
+  }
+
+  async function handleAutoSaveEmployeeProfile(payload: {
+    fullName: string;
+    email: string;
+    roleId: string;
+    departmentId?: string;
+    grade?: string;
+    status?: string;
+  }) {
+    if (!state.token || !state.editEmployeeId || !payload.roleId) return;
+    try {
+      await api.updateEmployee(state.editEmployeeId, payload, state.token);
+      state.setEmployeeFullName(payload.fullName);
+      state.setEmployeeEmail(payload.email);
+      state.setEmployeeRoleId(payload.roleId);
+      state.setEmployeeDepartmentId(payload.departmentId ?? '');
+      state.setEmployeeGrade(payload.grade ?? '');
+      state.setEmployeeStatus(payload.status ?? 'active');
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
+    }
+  }
+
+  function hasVacationOverlap(employeeId: string, startDate: string, endDate: string, excludeId?: string) {
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return true;
+    return state.vacations.some((vacation) => {
+      if (vacation.employeeId !== employeeId) return false;
+      if (excludeId && vacation.id === excludeId) return false;
+      const vacStart = new Date(vacation.startDate).getTime();
+      const vacEnd = new Date(vacation.endDate).getTime();
+      return start <= vacEnd && end >= vacStart;
+    });
+  }
+
+  async function handleCreateVacationFromEmployeeModal(payload: { startDate: string; endDate: string; type: string }) {
+    if (!state.token || !state.editEmployeeId) return;
+    if (hasVacationOverlap(state.editEmployeeId, payload.startDate, payload.endDate)) {
+      pushToast('Отпуска не должны пересекаться');
+      return;
+    }
+    try {
+      await api.createVacation(
         {
-          fullName: state.employeeFullName,
-          email: state.employeeEmail,
-          roleId: state.employeeRoleId,
-          departmentId: state.employeeDepartmentId || undefined,
-          status: state.employeeStatus,
-          grade: state.employeeGrade,
-          defaultCapacityHoursPerDay: STANDARD_DAY_HOURS,
+          employeeId: state.editEmployeeId,
+          startDate: new Date(payload.startDate).toISOString(),
+          endDate: new Date(payload.endDate).toISOString(),
+          type: payload.type,
         },
         state.token,
       );
       await refreshData(state.token, state.selectedYear);
-      state.setIsEmployeeModalOpen(false);
-      state.setEmployeeEmail((prev) => {
-        const [name, domain] = prev.split('@');
-        return `${name}.2@${domain ?? 'projo.local'}`;
-      });
     } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
+      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
+    }
+  }
+
+  async function handleUpdateVacationFromEmployeeModal(
+    vacationId: string,
+    payload: { startDate: string; endDate: string; type: string },
+  ) {
+    if (!state.token || !state.editEmployeeId) return;
+    if (hasVacationOverlap(state.editEmployeeId, payload.startDate, payload.endDate, vacationId)) {
+      pushToast('Отпуска не должны пересекаться');
+      return;
+    }
+    try {
+      await api.updateVacation(
+        vacationId,
+        {
+          startDate: new Date(payload.startDate).toISOString(),
+          endDate: new Date(payload.endDate).toISOString(),
+          type: payload.type,
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
+    }
+  }
+
+  async function handleDeleteVacationFromEmployeeModal(vacationId: string) {
+    if (!state.token) return;
+    try {
+      await api.deleteVacation(vacationId, state.token);
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
+    }
+  }
+
+  async function handleAssignVacationFromEmployeeModal() {
+    if (!state.token || !state.editEmployeeId) return;
+    try {
+      await api.createVacation(
+        {
+          employeeId: state.editEmployeeId,
+          startDate: new Date(state.vacationStartDate).toISOString(),
+          endDate: new Date(state.vacationEndDate).toISOString(),
+          type: state.vacationType,
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
     }
   }
 
@@ -688,6 +819,11 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleDeleteDepartment,
     handleImportEmployeesCsv,
     handleCreateVacation,
+    handleAssignVacationFromEmployeeModal,
+    handleAutoSaveEmployeeProfile,
+    handleCreateVacationFromEmployeeModal,
+    handleUpdateVacationFromEmployeeModal,
+    handleDeleteVacationFromEmployeeModal,
     handleCreateProject,
     handleCreateAssignment,
     handleUpdateProjectDates,

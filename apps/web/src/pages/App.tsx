@@ -1,29 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api, GradeItem } from '../api/client';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
+import { EmployeeCreateModal } from '../components/modals/EmployeeCreateModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
-import { EmployeeDepartmentModal } from '../components/modals/EmployeeDepartmentModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
-import { VacationModal } from '../components/modals/VacationModal';
 import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
 import { TimelineTab } from '../components/timeline/TimelineTab';
 import { useAppData, isoToInputDate, roleColorOrDefault, timelineStyle, utilizationColor } from '../hooks/useAppData';
-import { ERROR_TEXT, GRADE_OPTIONS, MONTHS_BY_LANG, TEXT } from './app-i18n';
+import { ERROR_TEXT, MONTHS_BY_LANG, TEXT } from './app-i18n';
 import { Lang } from './app-types';
 
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
-  const [gradeOptions, setGradeOptions] = useState<string[]>(GRADE_OPTIONS);
+  const [grades, setGrades] = useState<GradeItem[]>([]);
   const t = TEXT[lang];
+
+  const gradeOptions = grades.map((grade) => grade.name);
 
   const app = useAppData({
     t,
     errorText: ERROR_TEXT[lang],
   });
+
+  useEffect(() => {
+    if (!app.token) {
+      setGrades([]);
+      return;
+    }
+
+    let cancelled = false;
+    void api
+      .getGrades(app.token)
+      .then((items) => {
+        if (!cancelled) setGrades(items);
+      })
+      .catch(() => {
+        if (!cancelled) setGrades([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [app.token]);
 
   return (
     <main className="container">
@@ -86,14 +109,58 @@ export function App() {
               monthlyUtilizationByEmployee={app.monthlyUtilizationByEmployee}
               toggleRoleFilter={app.toggleRoleFilter}
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
-              openVacationModal={app.openVacationModal}
-              openEmployeeDepartmentModal={app.openEmployeeDepartmentModal}
-              openEmployeeModal={() => app.setIsEmployeeModalOpen(true)}
+              openEmployeeModal={(employee) => {
+                const foundRole = app.roles.find((role) => role.name === employee.role?.name);
+                app.setEditEmployeeId(employee.id);
+                app.setEmployeeFullName(employee.fullName);
+                app.setEmployeeEmail(employee.email);
+                app.setEmployeeRoleId(foundRole?.id ?? '');
+                app.setEmployeeDepartmentId(employee.department?.id ?? '');
+                app.setEmployeeGrade(employee.grade ?? '');
+                app.setEmployeeStatus(employee.status ?? 'active');
+                app.setVacationEmployeeId(employee.id);
+                app.setVacationStartDate(`${new Date().getFullYear()}-07-01`);
+                app.setVacationEndDate(`${new Date().getFullYear()}-07-14`);
+                app.setVacationType('vacation');
+                app.setIsEmployeeModalOpen(true);
+              }}
+              openEmployeeCreateModal={() => {
+                app.setEditEmployeeId('');
+                app.setEmployeeFullName('');
+                app.setEmployeeEmail('');
+                app.setEmployeeRoleId('');
+                app.setEmployeeDepartmentId('');
+                app.setEmployeeGrade('');
+                app.setEmployeeStatus('active');
+                app.setIsEmployeeCreateModalOpen(true);
+              }}
               openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
               roleColorOrDefault={roleColorOrDefault}
               utilizationColor={utilizationColor}
             />
           ) : null}
+
+          <EmployeeCreateModal
+            t={t}
+            roles={app.roles}
+            departments={app.departments}
+            isOpen={app.isEmployeeCreateModalOpen}
+            employeeFullName={app.employeeFullName}
+            employeeEmail={app.employeeEmail}
+            employeeRoleId={app.employeeRoleId}
+            employeeDepartmentId={app.employeeDepartmentId}
+            employeeGrade={app.employeeGrade}
+            employeeStatus={app.employeeStatus}
+            gradeOptions={gradeOptions}
+            onClose={() => app.setIsEmployeeCreateModalOpen(false)}
+            onSubmit={app.handleCreateEmployee}
+            setEmployeeFullName={app.setEmployeeFullName}
+            setEmployeeEmail={app.setEmployeeEmail}
+            setEmployeeRoleId={app.setEmployeeRoleId}
+            setEmployeeDepartmentId={app.setEmployeeDepartmentId}
+            setEmployeeGrade={app.setEmployeeGrade}
+            setEmployeeStatus={app.setEmployeeStatus}
+          />
 
           {app.activeTab === 'roles' ? (
             <RolesTab
@@ -115,22 +182,53 @@ export function App() {
               onCreateDepartment={app.handleCreateDepartment}
               onUpdateDepartment={app.handleUpdateDepartment}
               onDeleteDepartment={app.handleDeleteDepartment}
-              onAddGrade={(grade) =>
-                setGradeOptions((prev) => {
-                  const trimmed = grade.trim();
-                  if (!trimmed || prev.includes(trimmed)) return prev;
-                  return [...prev, trimmed];
-                })
-              }
-              onRenameGrade={(prevGrade, nextGrade) =>
-                setGradeOptions((prev) => {
-                  const trimmed = nextGrade.trim();
-                  if (!trimmed || prevGrade === trimmed) return prev;
-                  if (prev.some((item) => item !== prevGrade && item === trimmed)) return prev;
-                  return prev.map((item) => (item === prevGrade ? trimmed : item));
-                })
-              }
-              onDeleteGrade={(grade) => setGradeOptions((prev) => prev.filter((item) => item !== grade))}
+              onAddGrade={(grade) => {
+                if (!app.token) return;
+                const trimmed = grade.trim();
+                if (!trimmed) return;
+                if (grades.some((item) => item.name === trimmed)) return;
+                void api.createGrade({ name: trimmed }, app.token).then((created) => {
+                  setGrades((prev) => [...prev, created]);
+                });
+              }}
+              onRenameGrade={(prevGrade, nextGrade) => {
+                if (!app.token) return;
+                const trimmed = nextGrade.trim();
+                if (!trimmed || prevGrade === trimmed) return;
+                const currentGrade = grades.find((item) => item.name === prevGrade);
+                if (!currentGrade) return;
+                void api.updateGrade(currentGrade.id, { name: trimmed }, app.token).then((updated) => {
+                  setGrades((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+                  app.setEmployees((prev) =>
+                    prev.map((employee) =>
+                      employee.grade === prevGrade
+                        ? {
+                            ...employee,
+                            grade: trimmed,
+                          }
+                        : employee,
+                    ),
+                  );
+                });
+              }}
+              onDeleteGrade={(grade) => {
+                if (!app.token) return;
+                const currentGrade = grades.find((item) => item.name === grade);
+                if (!currentGrade) return;
+                void api.deleteGrade(currentGrade.id, app.token).then(() => {
+                  setGrades((prev) => prev.filter((item) => item.id !== currentGrade.id));
+                  app.setEmployees((prev) =>
+                    prev.map((employee) =>
+                      employee.grade === grade
+                        ? {
+                            ...employee,
+                            grade: null,
+                          }
+                        : employee,
+                    ),
+                  );
+                });
+              }}
             />
           ) : null}
 
@@ -227,27 +325,17 @@ export function App() {
             employeeDepartmentId={app.employeeDepartmentId}
             employeeGrade={app.employeeGrade}
             employeeStatus={app.employeeStatus}
+            selectedYear={app.selectedYear}
             gradeOptions={gradeOptions}
-            onClose={() => app.setIsEmployeeModalOpen(false)}
-            onSubmit={app.handleCreateEmployee}
-            setEmployeeFullName={app.setEmployeeFullName}
-            setEmployeeEmail={app.setEmployeeEmail}
-            setEmployeeRoleId={app.setEmployeeRoleId}
-            setEmployeeDepartmentId={app.setEmployeeDepartmentId}
-            setEmployeeGrade={app.setEmployeeGrade}
-            setEmployeeStatus={app.setEmployeeStatus}
-          />
-
-          <EmployeeDepartmentModal
-            t={t}
-            isOpen={app.isEmployeeDepartmentModalOpen}
-            employeeName={app.editEmployeeName}
-            employeeRoleName={app.editEmployeeRoleName}
-            departments={app.departments}
-            employeeDepartmentId={app.editEmployeeDepartmentId}
-            onClose={() => app.setIsEmployeeDepartmentModalOpen(false)}
-            onSubmit={app.handleUpdateEmployeeDepartment}
-            setEmployeeDepartmentId={app.setEditEmployeeDepartmentId}
+            onClose={() => {
+              app.setEditEmployeeId('');
+              app.setIsEmployeeModalOpen(false);
+            }}
+            vacations={app.vacations.filter((vacation) => vacation.employeeId === app.editEmployeeId)}
+            onProfileAutoSave={app.handleAutoSaveEmployeeProfile}
+            onCreateVacation={app.handleCreateVacationFromEmployeeModal}
+            onUpdateVacation={app.handleUpdateVacationFromEmployeeModal}
+            onDeleteVacation={app.handleDeleteVacationFromEmployeeModal}
           />
 
           <EmployeeImportModal
@@ -257,20 +345,6 @@ export function App() {
             onClose={() => app.setIsEmployeeImportModalOpen(false)}
             onSubmit={app.handleImportEmployeesCsv}
             setCsv={app.setEmployeeCsv}
-          />
-
-          <VacationModal
-            t={t}
-            isOpen={app.isVacationModalOpen}
-            vacationEmployeeName={app.vacationEmployeeName}
-            vacationStartDate={app.vacationStartDate}
-            vacationEndDate={app.vacationEndDate}
-            vacationType={app.vacationType}
-            onClose={() => app.setIsVacationModalOpen(false)}
-            onSubmit={app.handleCreateVacation}
-            setVacationStartDate={app.setVacationStartDate}
-            setVacationEndDate={app.setVacationEndDate}
-            setVacationType={app.setVacationType}
           />
 
           <ToastStack toasts={app.toasts} />

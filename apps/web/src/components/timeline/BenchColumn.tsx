@@ -1,6 +1,7 @@
 type BenchMember = {
   id: string;
   fullName: string;
+  grade?: string | null;
   roleName: string;
   roleColorHex: string;
   annualLoadPercent: number;
@@ -50,7 +51,7 @@ export function BenchColumn(props: BenchColumnProps) {
                   key={member.id}
                   className="bench-member"
                   draggable={canDragMembers}
-                  title={`${member.fullName} · ${member.roleName} · ${member.annualLoadPercent}%`}
+                  title={`${member.fullName}${member.grade ? ` · ${member.grade}` : ''} · ${member.roleName} · ${member.annualLoadPercent}%`}
                   onDragStart={() => {
                     if (!canDragMembers) return;
                     onMemberDragStart(member.id);
@@ -59,6 +60,7 @@ export function BenchColumn(props: BenchColumnProps) {
                 >
                   <strong>{toInitials(member.fullName)}</strong>
                   <span className="bench-member-meta">
+                    {member.grade ? <span>{member.grade}</span> : null}
                     <span className="timeline-role-chip" style={{ background: member.roleColorHex }}>
                       {member.roleName}
                     </span>

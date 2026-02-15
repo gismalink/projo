@@ -47,6 +47,13 @@ model Department {
   updatedAt   DateTime   @updatedAt
 }
 
+model Grade {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Employee {
   id                         String   @id @default(cuid())
   fullName                   String

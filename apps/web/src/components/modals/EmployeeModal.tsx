@@ -1,6 +1,7 @@
-import { FormEvent } from 'react';
-import { DepartmentItem } from '../../api/client';
+import { MouseEvent, useEffect, useMemo, useState } from 'react';
+import { DepartmentItem, VacationItem } from '../../api/client';
 import { Role } from '../../pages/app-types';
+import { Icon } from '../Icon';
 
 type EmployeeModalProps = {
   t: Record<string, string>;
@@ -13,15 +14,21 @@ type EmployeeModalProps = {
   employeeDepartmentId: string;
   employeeGrade: string;
   employeeStatus: string;
+  selectedYear: number;
   gradeOptions: string[];
   onClose: () => void;
-  onSubmit: (event: FormEvent) => Promise<void>;
-  setEmployeeFullName: (value: string) => void;
-  setEmployeeEmail: (value: string) => void;
-  setEmployeeRoleId: (value: string) => void;
-  setEmployeeDepartmentId: (value: string) => void;
-  setEmployeeGrade: (value: string) => void;
-  setEmployeeStatus: (value: string) => void;
+  vacations: VacationItem[];
+  onProfileAutoSave: (payload: {
+    fullName: string;
+    email: string;
+    roleId: string;
+    departmentId?: string;
+    grade?: string;
+    status?: string;
+  }) => Promise<void>;
+  onCreateVacation: (payload: { startDate: string; endDate: string; type: string }) => Promise<void>;
+  onUpdateVacation: (vacationId: string, payload: { startDate: string; endDate: string; type: string }) => Promise<void>;
+  onDeleteVacation: (vacationId: string) => Promise<void>;
 };
 
 export function EmployeeModal(props: EmployeeModalProps) {
@@ -36,16 +43,202 @@ export function EmployeeModal(props: EmployeeModalProps) {
     employeeDepartmentId,
     employeeGrade,
     employeeStatus,
+    selectedYear,
     gradeOptions,
     onClose,
-    onSubmit,
-    setEmployeeFullName,
-    setEmployeeEmail,
-    setEmployeeRoleId,
-    setEmployeeDepartmentId,
-    setEmployeeGrade,
-    setEmployeeStatus,
+    vacations,
+    onProfileAutoSave,
+    onCreateVacation,
+    onUpdateVacation,
+    onDeleteVacation,
   } = props;
+
+  const [fullName, setFullName] = useState(employeeFullName);
+  const [email, setEmail] = useState(employeeEmail);
+  const [roleId, setRoleId] = useState(employeeRoleId);
+  const [departmentId, setDepartmentId] = useState(employeeDepartmentId);
+  const [grade, setGrade] = useState(employeeGrade);
+  const [status, setStatus] = useState(employeeStatus);
+  const [newVacationStart, setNewVacationStart] = useState(`${new Date().getFullYear()}-07-01`);
+  const [newVacationEnd, setNewVacationEnd] = useState(`${new Date().getFullYear()}-07-14`);
+  const [newVacationType, setNewVacationType] = useState('vacation');
+
+  const shiftDate = (dateValue: string, days: number) => {
+    const date = new Date(dateValue);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  };
+
+  const [vacationDragState, setVacationDragState] = useState<{
+    vacationId: string;
+    mode: 'move' | 'resize-start' | 'resize-end';
+    startX: number;
+    trackWidth: number;
+    initialStartDate: string;
+    initialEndDate: string;
+  } | null>(null);
+  const [vacationDragPreview, setVacationDragPreview] = useState<{
+    vacationId: string;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+
+  const yearStart = useMemo(() => new Date(Date.UTC(selectedYear, 0, 1)), [selectedYear]);
+  const yearEnd = useMemo(() => new Date(Date.UTC(selectedYear + 1, 0, 1)), [selectedYear]);
+  const totalDays = useMemo(() => Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000)), [yearEnd, yearStart]);
+
+  const toUtcDay = (value: string) => {
+    const date = new Date(value);
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  };
+
+  const clampUtcDay = (value: Date) => {
+    if (value < yearStart) return new Date(yearStart);
+    const max = new Date(yearEnd);
+    max.setUTCDate(max.getUTCDate() - 1);
+    if (value > max) return max;
+    return value;
+  };
+
+  const toInputDate = (value: Date) => value.toISOString().slice(0, 10);
+
+  const vacationStyle = (startDate: string, endDate: string) => {
+    const start = toUtcDay(startDate);
+    const end = toUtcDay(endDate);
+    const startOffset = Math.max(0, Math.floor((start.getTime() - yearStart.getTime()) / 86400000));
+    const endOffset = Math.min(totalDays, Math.floor((end.getTime() - yearStart.getTime()) / 86400000) + 1);
+    const safeEnd = Math.max(startOffset + 1, endOffset);
+    return {
+      left: `${(startOffset / totalDays) * 100}%`,
+      width: `${((safeEnd - startOffset) / totalDays) * 100}%`,
+    };
+  };
+
+  const beginVacationDrag = (
+    event: MouseEvent<HTMLSpanElement>,
+    vacation: VacationItem,
+    mode: 'move' | 'resize-start' | 'resize-end',
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const track = (event.currentTarget.closest('.vacation-year-track') as HTMLElement | null);
+    if (!track) return;
+    const startDate = vacation.startDate.slice(0, 10);
+    const endDate = vacation.endDate.slice(0, 10);
+    setVacationDragState({
+      vacationId: vacation.id,
+      mode,
+      startX: event.clientX,
+      trackWidth: track.clientWidth,
+      initialStartDate: startDate,
+      initialEndDate: endDate,
+    });
+    setVacationDragPreview({ vacationId: vacation.id, startDate, endDate });
+  };
+
+  useEffect(() => {
+    if (!vacationDragState) return;
+
+    const onMouseMove = (event: globalThis.MouseEvent) => {
+      const dayWidth = Math.max(1, vacationDragState.trackWidth / totalDays);
+      const deltaDays = Math.round((event.clientX - vacationDragState.startX) / dayWidth);
+
+      const initialStart = toUtcDay(vacationDragState.initialStartDate);
+      const initialEnd = toUtcDay(vacationDragState.initialEndDate);
+      let nextStart = new Date(initialStart);
+      let nextEnd = new Date(initialEnd);
+
+      if (vacationDragState.mode === 'move') {
+        nextStart = toUtcDay(shiftDate(vacationDragState.initialStartDate, deltaDays));
+        nextEnd = toUtcDay(shiftDate(vacationDragState.initialEndDate, deltaDays));
+        const rangeDays = Math.floor((nextEnd.getTime() - nextStart.getTime()) / 86400000);
+        if (nextStart < yearStart) {
+          nextStart = new Date(yearStart);
+          nextEnd = new Date(nextStart);
+          nextEnd.setUTCDate(nextEnd.getUTCDate() + rangeDays);
+        }
+        const yearEndInclusive = new Date(yearEnd);
+        yearEndInclusive.setUTCDate(yearEndInclusive.getUTCDate() - 1);
+        if (nextEnd > yearEndInclusive) {
+          nextEnd = yearEndInclusive;
+          nextStart = new Date(nextEnd);
+          nextStart.setUTCDate(nextStart.getUTCDate() - rangeDays);
+        }
+      } else if (vacationDragState.mode === 'resize-start') {
+        nextStart = clampUtcDay(toUtcDay(shiftDate(vacationDragState.initialStartDate, deltaDays)));
+        if (nextStart > nextEnd) nextStart = nextEnd;
+      } else {
+        nextEnd = clampUtcDay(toUtcDay(shiftDate(vacationDragState.initialEndDate, deltaDays)));
+        if (nextEnd < nextStart) nextEnd = nextStart;
+      }
+
+      setVacationDragPreview({
+        vacationId: vacationDragState.vacationId,
+        startDate: toInputDate(nextStart),
+        endDate: toInputDate(nextEnd),
+      });
+    };
+
+    const onMouseUp = () => {
+      if (vacationDragPreview && vacationDragPreview.vacationId === vacationDragState.vacationId) {
+        const vacation = vacations.find((item) => item.id === vacationDragState.vacationId);
+        if (vacation) {
+          void onUpdateVacation(vacation.id, {
+            startDate: vacationDragPreview.startDate,
+            endDate: vacationDragPreview.endDate,
+            type: vacation.type,
+          });
+        }
+      }
+      setVacationDragState(null);
+      setVacationDragPreview(null);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [onUpdateVacation, totalDays, vacationDragPreview, vacationDragState, vacations, yearEnd, yearStart]);
+
+  const monthMarkers = useMemo(() => {
+    const items: Array<{ key: string; left: string; label: string }> = [];
+    for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+      const monthDate = new Date(Date.UTC(selectedYear, monthIndex, 1));
+      const offsetDays = Math.floor((monthDate.getTime() - yearStart.getTime()) / 86400000);
+      const left = `${(offsetDays / totalDays) * 100}%`;
+      const label = monthDate.toLocaleString(t.prev === 'Назад' ? 'ru-RU' : 'en-US', { month: 'short' });
+      items.push({ key: `${selectedYear}-${monthIndex}`, left, label });
+    }
+    return items;
+  }, [selectedYear, t.prev, totalDays, yearStart]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setFullName(employeeFullName);
+    setEmail(employeeEmail);
+    setRoleId(employeeRoleId);
+    setDepartmentId(employeeDepartmentId);
+    setGrade(employeeGrade);
+    setStatus(employeeStatus);
+  }, [isOpen, employeeFullName, employeeEmail, employeeRoleId, employeeDepartmentId, employeeGrade, employeeStatus]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = window.setTimeout(() => {
+      void onProfileAutoSave({
+        fullName,
+        email,
+        roleId,
+        departmentId: departmentId || undefined,
+        grade: grade || undefined,
+        status,
+      });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [isOpen, fullName, email, roleId, departmentId, grade, status, onProfileAutoSave]);
 
   if (!isOpen) return null;
 
@@ -53,61 +246,161 @@ export function EmployeeModal(props: EmployeeModalProps) {
     <div className="modal-backdrop">
       <div className="modal-card">
         <div className="section-header">
-          <h3>{t.addEmployee}</h3>
-          <button type="button" className="ghost-btn" onClick={onClose}>
-            {t.close}
+          <h3>{t.editProfile || 'Редактировать профиль'}</h3>
+          <button
+            type="button"
+            className="create-role-icon-btn team-icon-btn modal-icon-btn"
+            onClick={onClose}
+            title={t.close}
+            aria-label={t.close}
+          >
+            <Icon name="x" />
           </button>
         </div>
-        <form className="timeline-form" onSubmit={onSubmit}>
+        <div className="timeline-form">
           <label>
             {t.fullName}
-            <input value={employeeFullName} onChange={(e) => setEmployeeFullName(e.target.value)} />
+            <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </label>
           <label>
             {t.email}
-            <input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
-          <label>
-            {t.role}
-            <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
-              <option value="">{t.selectRole}</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.department}
-            <select value={employeeDepartmentId} onChange={(e) => setEmployeeDepartmentId(e.target.value)}>
-              <option value="">{t.selectDepartment}</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.grade}
-            <select value={employeeGrade} onChange={(e) => setEmployeeGrade(e.target.value)}>
-              {gradeOptions.map((gradeOption) => (
-                <option key={gradeOption} value={gradeOption}>
-                  {gradeOption}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="employee-meta-compact">
+            <label>
+              {t.department}
+              <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                <option value="">{t.selectDepartment}</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.role}
+              <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+                <option value="">{t.selectRole}</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.grade}
+              <select value={grade} onChange={(e) => setGrade(e.target.value)}>
+                {gradeOptions.map((gradeOption) => (
+                  <option key={gradeOption} value={gradeOption}>
+                    {gradeOption}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <label>
             {t.status}
-            <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="active">{t.statusActive}</option>
               <option value="inactive">{t.statusInactive}</option>
             </select>
           </label>
-          <button type="submit">{t.createWorker}</button>
-        </form>
+
+          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+            <strong>{t.vacations || 'Отпуска'}</strong>
+            {vacations.map((vacation) => (
+              <div key={vacation.id} className="vacation-editor-row">
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    type="date"
+                    value={vacation.startDate.slice(0, 10)}
+                    onChange={(e) => void onUpdateVacation(vacation.id, { startDate: e.target.value, endDate: vacation.endDate.slice(0, 10), type: vacation.type })}
+                  />
+                  <span>—</span>
+                  <input
+                    type="date"
+                    value={vacation.endDate.slice(0, 10)}
+                    onChange={(e) => void onUpdateVacation(vacation.id, { startDate: vacation.startDate.slice(0, 10), endDate: e.target.value, type: vacation.type })}
+                  />
+                  <select
+                    value={vacation.type}
+                    onChange={(e) => void onUpdateVacation(vacation.id, { startDate: vacation.startDate.slice(0, 10), endDate: vacation.endDate.slice(0, 10), type: e.target.value })}
+                  >
+                    <option value="vacation">{t.vacationTypeVacation}</option>
+                    <option value="sick">{t.vacationTypeSick}</option>
+                    <option value="day_off">{t.vacationTypeDayOff}</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="create-role-icon-btn team-icon-btn modal-icon-btn"
+                    title={t.delete || 'Удалить отпуск'}
+                    aria-label={t.delete || 'Удалить отпуск'}
+                    onClick={() => void onDeleteVacation(vacation.id)}
+                  >
+                    <Icon name="x" />
+                  </button>
+                </div>
+
+                <div className="vacation-year-track" aria-label={`${selectedYear} vacation timeline`}>
+                  <span className="track-day-grid" style={{ ['--day-step' as string]: `${(1 / totalDays) * 100}%` }} />
+                  {monthMarkers.map((marker) => (
+                    <span key={marker.key} className="vacation-month-marker" style={{ left: marker.left }} title={marker.label} />
+                  ))}
+                  {(() => {
+                    const preview = vacationDragPreview && vacationDragPreview.vacationId === vacation.id ? vacationDragPreview : null;
+                    const startDate = preview?.startDate ?? vacation.startDate;
+                    const endDate = preview?.endDate ?? vacation.endDate;
+                    return (
+                      <span
+                        className="assignment-bar vacation-range-bar"
+                        style={vacationStyle(startDate, endDate)}
+                        title={`${startDate.slice(0, 10)} — ${endDate.slice(0, 10)}`}
+                      >
+                        <span
+                          className="assignment-plan-handle left"
+                          title="Сдвиг начала"
+                          onMouseDown={(event) => beginVacationDrag(event, vacation, 'resize-start')}
+                        />
+                        <span
+                          className="assignment-plan-handle center"
+                          title="Перемещение диапазона"
+                          onMouseDown={(event) => beginVacationDrag(event, vacation, 'move')}
+                        />
+                        <span
+                          className="assignment-plan-handle right"
+                          title="Сдвиг конца"
+                          onMouseDown={(event) => beginVacationDrag(event, vacation, 'resize-end')}
+                        />
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input type="date" value={newVacationStart} onChange={(e) => setNewVacationStart(e.target.value)} />
+              <span>—</span>
+              <input type="date" value={newVacationEnd} onChange={(e) => setNewVacationEnd(e.target.value)} />
+              <select value={newVacationType} onChange={(e) => setNewVacationType(e.target.value)}>
+                <option value="vacation">{t.vacationTypeVacation}</option>
+                <option value="sick">{t.vacationTypeSick}</option>
+                <option value="day_off">{t.vacationTypeDayOff}</option>
+              </select>
+              <button
+                type="button"
+                className="create-role-icon-btn team-icon-btn modal-icon-btn"
+                title={t.addVacation || 'Добавить отпуск'}
+                aria-label={t.addVacation || 'Добавить отпуск'}
+                onClick={() => void onCreateVacation({ startDate: newVacationStart, endDate: newVacationEnd, type: newVacationType })}
+              >
+                <Icon name="plus" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

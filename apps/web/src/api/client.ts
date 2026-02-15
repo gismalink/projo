@@ -103,6 +103,19 @@ export type CreateDepartmentPayload = {
 
 export type UpdateDepartmentPayload = Partial<CreateDepartmentPayload>;
 
+export type GradeItem = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateGradePayload = {
+  name: string;
+};
+
+export type UpdateGradePayload = Partial<CreateGradePayload>;
+
 export type SkillItem = {
   id: string;
   name: string;
@@ -138,6 +151,8 @@ export type CreateVacationPayload = {
   type?: string;
   note?: string;
 };
+
+export type UpdateVacationPayload = Partial<CreateVacationPayload>;
 
 export type CreateAssignmentPayload = {
   projectId: string;
@@ -270,6 +285,7 @@ export const api = {
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
   getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),
+  getGrades: (token: string) => request<GradeItem[]>('/grades', {}, token),
   getSkills: (token: string) => request<SkillItem[]>('/skills', {}, token),
   createRole: (payload: CreateRolePayload, token: string) =>
     request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
@@ -288,11 +304,19 @@ export const api = {
   updateDepartment: (departmentId: string, payload: UpdateDepartmentPayload, token: string) =>
     request(`/departments/${departmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   deleteDepartment: (departmentId: string, token: string) => request(`/departments/${departmentId}`, { method: 'DELETE' }, token),
+  createGrade: (payload: CreateGradePayload, token: string) =>
+    request<GradeItem>('/grades', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateGrade: (gradeId: string, payload: UpdateGradePayload, token: string) =>
+    request<GradeItem>(`/grades/${gradeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  deleteGrade: (gradeId: string, token: string) => request(`/grades/${gradeId}`, { method: 'DELETE' }, token),
   importEmployeesCsv: (payload: ImportEmployeesCsvPayload, token: string) =>
     request<ImportEmployeesCsvResult>('/employees/import-csv', { method: 'POST', body: JSON.stringify(payload) }, token),
   getVacations: (token: string) => request<VacationItem[]>('/vacations', {}, token),
   createVacation: (payload: CreateVacationPayload, token: string) =>
     request('/vacations', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateVacation: (vacationId: string, payload: UpdateVacationPayload, token: string) =>
+    request(`/vacations/${vacationId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  deleteVacation: (vacationId: string, token: string) => request(`/vacations/${vacationId}`, { method: 'DELETE' }, token),
   getAssignments: (token: string) => request<AssignmentItem[]>('/assignments', {}, token),
   getProjects: (token: string) => request('/projects', {}, token),
   getProject: (projectId: string, token: string) => request<ProjectDetail>(`/projects/${projectId}`, {}, token),
