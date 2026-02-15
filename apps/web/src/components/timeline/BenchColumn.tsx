@@ -13,12 +13,13 @@ type BenchGroup = {
 type BenchColumnProps = {
   t: Record<string, string>;
   benchGroups: BenchGroup[];
+  canDragMembers: boolean;
   onMemberDragStart: (employeeId: string) => void;
   onMemberDragEnd: () => void;
 };
 
 export function BenchColumn(props: BenchColumnProps) {
-  const { t, benchGroups, onMemberDragStart, onMemberDragEnd } = props;
+  const { t, benchGroups, canDragMembers, onMemberDragStart, onMemberDragEnd } = props;
 
   const toInitials = (fullName: string) => {
     const parts = fullName
@@ -47,9 +48,12 @@ export function BenchColumn(props: BenchColumnProps) {
                   type="button"
                   key={member.id}
                   className="bench-member"
-                  draggable
+                  draggable={canDragMembers}
                   title={`${member.fullName} · ${member.roleName} · ${member.annualLoadPercent}%`}
-                  onDragStart={() => onMemberDragStart(member.id)}
+                  onDragStart={() => {
+                    if (!canDragMembers) return;
+                    onMemberDragStart(member.id);
+                  }}
                   onDragEnd={onMemberDragEnd}
                 >
                   <strong>{toInitials(member.fullName)}</strong>

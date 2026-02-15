@@ -138,14 +138,23 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     if (!state.assignmentEmployeeId && nextEmployees[0]) state.setAssignmentEmployeeId(nextEmployees[0].id);
 
     const knownProjectIds = new Set(nextProjects.map((project) => project.id));
+    const timelineProjectIds = timelineData.map((row) => row.id).filter((id) => knownProjectIds.has(id));
     const expandedIds = state.expandedProjectIds.filter((id) => knownProjectIds.has(id));
-    const idsToLoad = preferredProjectId
+    const shouldLoadPreferred =
+      Boolean(preferredProjectId) &&
+      Boolean(
+        (preferredProjectId && expandedIds.includes(preferredProjectId)) ||
+          (preferredProjectId && state.projectDetails[preferredProjectId]) ||
+          preferredProjectId === state.selectedProjectId,
+      );
+    const expandedAndPreferredIds = shouldLoadPreferred && preferredProjectId
       ? Array.from(new Set([...expandedIds, preferredProjectId]))
       : expandedIds;
+    const kpiIdsToLoad = timelineProjectIds.filter((id) => !state.projectDetails[id]);
+    const idsToLoad = Array.from(new Set([...expandedAndPreferredIds, ...kpiIdsToLoad]));
 
     if (idsToLoad.length === 0) {
-      state.setExpandedProjectIds([]);
-      state.setProjectDetails({});
+      state.setExpandedProjectIds(expandedIds);
       state.setSelectedProjectId('');
       state.setSelectedProjectDetail(null);
       state.setEditAssignmentId('');
@@ -156,11 +165,30 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     const detailsMap: Record<string, ProjectDetail> = {};
     for (const detail of details) detailsMap[detail.id] = detail;
 
-    state.setExpandedProjectIds(idsToLoad);
-    state.setProjectDetails(detailsMap);
+    state.setExpandedProjectIds(expandedIds);
+    state.setProjectDetails((prev) => {
+      const retained: Record<string, ProjectDetail> = {};
+      for (const [projectId, detail] of Object.entries(prev)) {
+        if (knownProjectIds.has(projectId)) {
+          retained[projectId] = detail;
+        }
+      }
+      return {
+        ...retained,
+        ...detailsMap,
+      };
+    });
 
-    const nextActive = preferredProjectId ?? (state.selectedProjectId && detailsMap[state.selectedProjectId] ? state.selectedProjectId : idsToLoad[0]);
-    const nextDetail = detailsMap[nextActive] ?? null;
+    const preferredActive =
+      preferredProjectId && (detailsMap[preferredProjectId] || state.projectDetails[preferredProjectId])
+        ? preferredProjectId
+        : undefined;
+    const nextActive =
+      preferredActive ??
+      (state.selectedProjectId && (detailsMap[state.selectedProjectId] || state.projectDetails[state.selectedProjectId])
+        ? state.selectedProjectId
+        : expandedAndPreferredIds[0] ?? '');
+    const nextDetail = nextActive ? (detailsMap[nextActive] ?? state.projectDetails[nextActive] ?? null) : null;
     state.setSelectedProjectId(nextActive);
     state.setSelectedProjectDetail(nextDetail);
     if (nextDetail) {
@@ -181,6 +209,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     try {
       const result = await api.login(state.email, state.password);
       state.setToken(result.accessToken);
+      state.setCurrentUserRole(result.user.role);
       await refreshData(result.accessToken, state.selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiLoginFailed, errorText));
@@ -606,7 +635,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         );
       }
 
-      await refreshData(state.token, state.selectedYear);
+      await refreshData(state.token, state.selectedYear, projectId);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
     }

@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@n
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AppRoleValue, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { AddProjectMemberDto } from './dto/add-project-member.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectsService } from './projects.service';
@@ -27,6 +28,24 @@ export class ProjectsController {
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findOne(@Param('id') id: string) {
     return this.projectsService.findOne(id);
+  }
+
+  @Get(':id/members')
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  listMembers(@Param('id') id: string) {
+    return this.projectsService.listMembers(id);
+  }
+
+  @Post(':id/members')
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  addMember(@Param('id') id: string, @Body() dto: AddProjectMemberDto) {
+    return this.projectsService.addMember(id, dto.employeeId);
+  }
+
+  @Delete(':id/members/:employeeId')
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  removeMember(@Param('id') id: string, @Param('employeeId') employeeId: string) {
+    return this.projectsService.removeMember(id, employeeId);
   }
 
   @Patch(':id')

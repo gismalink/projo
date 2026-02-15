@@ -58,6 +58,7 @@ model Employee {
   departmentId               String?
   department                 Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   assignments                ProjectAssignment[]
+  projectMembers             ProjectMember[]
   vacations                  Vacation[]
   skills                     EmployeeSkill[]
   costRates                  CostRate[]
@@ -116,8 +117,24 @@ model Project {
   endDate     DateTime
   links       Json?
   assignments ProjectAssignment[]
+  members     ProjectMember[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+}
+
+model ProjectMember {
+  id          String   @id @default(cuid())
+  projectId   String
+  employeeId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, employeeId])
+  @@index([projectId])
+  @@index([employeeId])
 }
 
 model ProjectAssignment {

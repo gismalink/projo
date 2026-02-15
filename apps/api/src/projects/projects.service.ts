@@ -58,6 +58,99 @@ export class ProjectsService {
       .catch((error) => this.handlePrismaError(error));
   }
 
+  private async ensureProjectExists(projectId: string) {
+    const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
+    if (!project) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+  }
+
+  private async ensureEmployeeExists(employeeId: string) {
+    const employee = await this.prisma.employee.findUnique({ where: { id: employeeId }, select: { id: true } });
+    if (!employee) {
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
+    }
+  }
+
+  async listMembers(projectId: string) {
+    await this.ensureProjectExists(projectId);
+
+    return this.prisma.projectMember.findMany({
+      where: { projectId },
+      include: {
+        employee: {
+          include: {
+            role: true,
+            department: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+  }
+
+  async addMember(projectId: string, employeeId: string) {
+    await Promise.all([this.ensureProjectExists(projectId), this.ensureEmployeeExists(employeeId)]);
+
+    const existing = await this.prisma.projectMember.findUnique({
+      where: {
+        projectId_employeeId: {
+          projectId,
+          employeeId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new ConflictException(ErrorCode.PROJECT_MEMBER_ALREADY_EXISTS);
+    }
+
+    return this.prisma.projectMember.create({
+      data: {
+        projectId,
+        employeeId,
+      },
+      include: {
+        employee: {
+          include: {
+            role: true,
+            department: true,
+          },
+        },
+      },
+    });
+  }
+
+  async removeMember(projectId: string, employeeId: string) {
+    await this.ensureProjectExists(projectId);
+
+    const existing = await this.prisma.projectMember.findUnique({
+      where: {
+        projectId_employeeId: {
+          projectId,
+          employeeId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(ErrorCode.PROJECT_MEMBER_NOT_FOUND);
+    }
+
+    await this.prisma.projectMember.delete({
+      where: {
+        projectId_employeeId: {
+          projectId,
+          employeeId,
+        },
+      },
+    });
+
+    return { success: true };
+  }
+
   findAll() {
     return this.prisma.project.findMany({
       include: {
@@ -73,6 +166,21 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
+        members: {
+          include: {
+            employee: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                roleId: true,
+                defaultCapacityHoursPerDay: true,
+                role: { select: { name: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
         assignments: {
           include: {
             employee: {

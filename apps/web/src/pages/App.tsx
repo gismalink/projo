@@ -111,6 +111,7 @@ export function App() {
             <TimelineTab
               t={t}
               months={MONTHS_BY_LANG[lang]}
+              canManageTimeline={app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM'}
               selectedYear={app.selectedYear}
               assignments={app.assignments}
               vacations={app.vacations}

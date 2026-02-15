@@ -8,6 +8,27 @@ import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 export class AssignmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureProjectMember(projectId: string, employeeId: string) {
+    const existing = await this.prisma.projectMember.findUnique({
+      where: {
+        projectId_employeeId: {
+          projectId,
+          employeeId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing) return;
+
+    await this.prisma.projectMember.create({
+      data: {
+        projectId,
+        employeeId,
+      },
+    });
+  }
+
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
       throw new BadRequestException(ErrorCode.ASSIGNMENT_DATE_RANGE_INVALID);
@@ -56,6 +77,8 @@ export class AssignmentsService {
       projectId: dto.projectId,
       employeeId: dto.employeeId,
     });
+
+    await this.ensureProjectMember(dto.projectId, dto.employeeId);
 
     return this.prisma.projectAssignment.create({
       data: {
@@ -115,9 +138,17 @@ export class AssignmentsService {
 
     const projectId = dto.projectId ?? existing.projectId;
     const employeeId = dto.employeeId ?? existing.employeeId;
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const [project, employee] = await Promise.all([
+      this.prisma.project.findUnique({ where: { id: projectId } }),
+      this.prisma.employee.findUnique({ where: { id: employeeId } }),
+    ]);
+
     if (!project) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    if (!employee) {
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
     await this.ensureUniqueEmployeeInProject({
@@ -125,6 +156,8 @@ export class AssignmentsService {
       employeeId,
       excludeAssignmentId: id,
     });
+
+    await this.ensureProjectMember(projectId, employeeId);
 
     return this.prisma.projectAssignment.update({
       where: { id },

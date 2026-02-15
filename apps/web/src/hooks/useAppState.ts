@@ -14,6 +14,7 @@ export function useAppState() {
   const [email, setEmail] = useState('admin@projo.local');
   const [password, setPassword] = useState('ProjoAdmin!2026');
   const [token, setToken] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -95,6 +96,7 @@ export function useAppState() {
     email,
     password,
     token,
+    currentUserRole,
     activeTab,
     selectedYear,
     toasts,
@@ -162,6 +164,7 @@ export function useAppState() {
     setEmail,
     setPassword,
     setToken,
+    setCurrentUserRole,
     setActiveTab,
     setSelectedYear,
     setToasts,

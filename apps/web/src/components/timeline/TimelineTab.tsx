@@ -12,6 +12,7 @@ const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
 type TimelineTabProps = {
   t: Record<string, string>;
   months: string[];
+  canManageTimeline: boolean;
   selectedYear: number;
   assignments: AssignmentItem[];
   vacations: Array<{ employeeId: string; startDate: string; endDate: string }>;
@@ -48,6 +49,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const {
     t,
     months,
+    canManageTimeline,
     selectedYear,
     assignments,
     vacations,
@@ -412,7 +414,7 @@ export function TimelineTab(props: TimelineTabProps) {
   };
 
   const handleProjectRowDragOver = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
-    if (!draggedBenchEmployeeId) return;
+    if (!canManageTimeline || !draggedBenchEmployeeId) return;
     event.preventDefault();
     setHoverProjectDropId(projectId);
   };
@@ -424,7 +426,7 @@ export function TimelineTab(props: TimelineTabProps) {
   };
 
   const handleProjectRowDrop = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
-    if (!draggedBenchEmployeeId) return;
+    if (!canManageTimeline || !draggedBenchEmployeeId) return;
     event.preventDefault();
     setHoverProjectDropId(null);
     onOpenAssignmentModal(projectId, draggedBenchEmployeeId);
@@ -741,6 +743,7 @@ export function TimelineTab(props: TimelineTabProps) {
           <BenchColumn
             t={t}
             benchGroups={benchGroups}
+            canDragMembers={canManageTimeline}
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {
               setDraggedBenchEmployeeId(null);
