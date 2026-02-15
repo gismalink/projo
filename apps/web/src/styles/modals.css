@@ -31,7 +31,7 @@
 }
 
 .department-manage-row-color {
-  grid-template-columns: 1fr 40px auto auto;
+  grid-template-columns: 1fr 40px auto;
 }
 
 .department-manage-row-grade {
@@ -39,7 +39,7 @@
 }
 
 .department-manage-row-grade-edit {
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
 }
 
 .department-manage-row.create {

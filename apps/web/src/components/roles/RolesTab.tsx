@@ -77,6 +77,7 @@ export function RolesTab(props: RolesTabProps) {
   const [newGradeName, setNewGradeName] = useState('');
   const [gradeDrafts, setGradeDrafts] = useState<Record<string, string>>({});
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const departmentSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const roleById = useMemo(() => {
     const map = new Map<string, Role>();
@@ -122,6 +123,9 @@ export function RolesTab(props: RolesTabProps) {
   useEffect(() => {
     return () => {
       for (const timer of Object.values(saveTimersRef.current)) {
+        clearTimeout(timer);
+      }
+      for (const timer of Object.values(departmentSaveTimersRef.current)) {
         clearTimeout(timer);
       }
     };
@@ -175,6 +179,56 @@ export function RolesTab(props: RolesTabProps) {
         [roleId]: next,
       };
     });
+  };
+
+  const scheduleDepartmentAutosave = (departmentId: string, draft: { name: string; colorHex: string }) => {
+    const existing = departmentSaveTimersRef.current[departmentId];
+    if (existing) clearTimeout(existing);
+
+    departmentSaveTimersRef.current[departmentId] = setTimeout(() => {
+      const department = departments.find((item) => item.id === departmentId);
+      if (!department) return;
+
+      const trimmedName = draft.name.trim();
+      const normalizedColor = normalizeHex(draft.colorHex);
+      if (!trimmedName || !normalizedColor) return;
+
+      const baseColor = roleColorOrDefault(department.colorHex);
+      const unchanged = trimmedName === department.name && normalizedColor === baseColor;
+      if (unchanged) return;
+
+      void onUpdateDepartment(departmentId, trimmedName, normalizedColor);
+    }, 420);
+  };
+
+  const updateDepartmentDraft = (departmentId: string, patch: Partial<{ name: string; colorHex: string }>) => {
+    setDepartmentDrafts((prev) => {
+      const fallbackDepartment = departments.find((item) => item.id === departmentId);
+      const current = prev[departmentId] ?? {
+        name: fallbackDepartment?.name ?? '',
+        colorHex: roleColorOrDefault(fallbackDepartment?.colorHex),
+      };
+      const next = { ...current, ...patch };
+      scheduleDepartmentAutosave(departmentId, next);
+      return {
+        ...prev,
+        [departmentId]: next,
+      };
+    });
+  };
+
+  const commitGradeRename = (grade: string) => {
+    const draft = gradeDrafts[grade] ?? grade;
+    const trimmedName = draft.trim();
+    const duplicateExists = gradeOptions.some((item) => item !== grade && item === trimmedName);
+    if (!trimmedName || duplicateExists || trimmedName === grade) {
+      setGradeDrafts((prev) => ({
+        ...prev,
+        [grade]: grade,
+      }));
+      return;
+    }
+    onRenameGrade(grade, trimmedName);
   };
 
   const handleCreateRoleSubmit = async (event: FormEvent) => {
@@ -300,11 +354,6 @@ export function RolesTab(props: RolesTabProps) {
                   name: department.name,
                   colorHex: roleColorOrDefault(department.colorHex),
                 };
-                const trimmedName = draft.name.trim();
-                const canSave =
-                  trimmedName.length > 0 &&
-                  Boolean(normalizeHex(draft.colorHex)) &&
-                  (trimmedName !== department.name || draft.colorHex !== roleColorOrDefault(department.colorHex));
 
                 return (
                   <div className="department-manage-row department-manage-row-color" key={department.id}>
@@ -312,15 +361,7 @@ export function RolesTab(props: RolesTabProps) {
                       className="department-manage-input"
                       value={draft.name}
                       placeholder={t.department}
-                      onChange={(event) =>
-                        setDepartmentDrafts((prev) => ({
-                          ...prev,
-                          [department.id]: {
-                            ...draft,
-                            name: event.target.value,
-                          },
-                        }))
-                      }
+                      onChange={(event) => updateDepartmentDraft(department.id, { name: event.target.value })}
                     />
                     <div className="role-color-editor">
                       <CustomColorPicker
@@ -328,34 +369,9 @@ export function RolesTab(props: RolesTabProps) {
                         label={t.color}
                         copyLabel={t.copyHex}
                         fallbackHex={roleColorOrDefault(department.colorHex)}
-                        onChange={(nextHex) =>
-                          setDepartmentDrafts((prev) => ({
-                            ...prev,
-                            [department.id]: {
-                              ...draft,
-                              colorHex: nextHex,
-                            },
-                          }))
-                        }
+                        onChange={(nextHex) => updateDepartmentDraft(department.id, { colorHex: nextHex })}
                       />
                     </div>
-                    <button
-                      type="button"
-                      className="department-manage-action"
-                      disabled={!canSave}
-                      title={t.save}
-                      aria-label={t.save}
-                      onClick={() => {
-                        if (!canSave) return;
-                        void onUpdateDepartment(
-                          department.id,
-                          trimmedName,
-                          normalizeHex(draft.colorHex) ?? roleColorOrDefault(department.colorHex),
-                        );
-                      }}
-                    >
-                      <Icon name="check" />
-                    </button>
                     <button
                       type="button"
                       className="department-manage-action"
@@ -403,9 +419,6 @@ export function RolesTab(props: RolesTabProps) {
             <div className="department-manage-list">
               {gradeOptions.map((grade) => {
                 const draft = gradeDrafts[grade] ?? grade;
-                const trimmedName = draft.trim();
-                const duplicateExists = gradeOptions.some((item) => item !== grade && item === trimmedName);
-                const canSave = trimmedName.length > 0 && trimmedName !== grade && !duplicateExists;
 
                 return (
                   <div className="department-manage-row department-manage-row-grade-edit" key={grade}>
@@ -418,20 +431,13 @@ export function RolesTab(props: RolesTabProps) {
                           [grade]: event.target.value,
                         }))
                       }
-                    />
-                    <button
-                      type="button"
-                      className="department-manage-action"
-                      disabled={!canSave}
-                      title={t.save}
-                      aria-label={t.save}
-                      onClick={() => {
-                        if (!canSave) return;
-                        onRenameGrade(grade, trimmedName);
+                      onBlur={() => commitGradeRename(grade)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return;
+                        event.preventDefault();
+                        commitGradeRename(grade);
                       }}
-                    >
-                      <Icon name="check" />
-                    </button>
+                    />
                     <button
                       type="button"
                       className="department-manage-action"
