@@ -178,10 +178,24 @@ export function TimelineTab(props: TimelineTabProps) {
     if (dragStepDays === 1) {
       values.push(...dailyUtilization);
     } else if (dragStepDays === 7) {
-      for (let dayIndex = 0; dayIndex < days; dayIndex += 7) {
-        const slice = dailyUtilization.slice(dayIndex, Math.min(days, dayIndex + 7));
-        const avg = slice.length > 0 ? slice.reduce((sum, value) => sum + value, 0) / slice.length : 0;
-        values.push(avg);
+      const weekBuckets = new Map<string, { start: Date; sum: number; count: number }>();
+      for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
+        const currentDate = new Date(yearStart);
+        currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
+        const weekStart = new Date(currentDate);
+        const weekDay = weekStart.getUTCDay();
+        const offsetToMonday = (weekDay + 6) % 7;
+        weekStart.setUTCDate(weekStart.getUTCDate() - offsetToMonday);
+        const key = weekStart.toISOString().slice(0, 10);
+        const bucket = weekBuckets.get(key) ?? { start: weekStart, sum: 0, count: 0 };
+        bucket.sum += dailyUtilization[dayIndex] ?? 0;
+        bucket.count += 1;
+        weekBuckets.set(key, bucket);
+      }
+
+      const sortedBuckets = Array.from(weekBuckets.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
+      for (const bucket of sortedBuckets) {
+        values.push(bucket.count > 0 ? bucket.sum / bucket.count : 0);
       }
     } else {
       for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
@@ -224,7 +238,6 @@ export function TimelineTab(props: TimelineTabProps) {
       new Intl.DateTimeFormat(locale, {
         day: '2-digit',
         month: 'long',
-        year: 'numeric',
       }),
     [locale],
   );
