@@ -26,6 +26,8 @@ MVP foundation for project planning app (API + Web + Postgres).
 6. Run full verification:
    - `npm run verify`
    - Optional runtime smoke-check (requires running API): `SMOKE_API=1 npm run verify`
+7. Optional performance baseline:
+   - API latency profile (requires running API): `node ./scripts/profile-api.mjs`
 
 ## Architecture
 - Quick architecture map: `docs/architecture-overview.md`
