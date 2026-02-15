@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 
@@ -11,11 +11,49 @@ type ExternalHolidaysResponse = {
 };
 
 @Injectable()
-export class CalendarService {
+export class CalendarService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(CalendarService.name);
   private readonly apiBaseUrl = process.env.CALENDAR_API_URL ?? 'https://calendar.kuzyak.in';
   private readonly ttlMs = 24 * 60 * 60 * 1000;
+  private readonly syncEnabled = process.env.CALENDAR_SYNC_ENABLED !== 'false';
+  private readonly syncIntervalMs = Number(process.env.CALENDAR_SYNC_INTERVAL_MS ?? this.ttlMs);
+  private syncTimer: NodeJS.Timeout | null = null;
+  private isBackgroundSyncRunning = false;
 
   constructor(private readonly prisma: PrismaService) {}
+
+  onModuleInit() {
+    if (!this.syncEnabled) {
+      this.logger.log('Background calendar sync is disabled');
+      return;
+    }
+
+    void this.runBackgroundSync();
+    this.syncTimer = setInterval(() => {
+      void this.runBackgroundSync();
+    }, this.syncIntervalMs);
+  }
+
+  onModuleDestroy() {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+      this.syncTimer = null;
+    }
+  }
+
+  private async runBackgroundSync() {
+    if (this.isBackgroundSyncRunning) return;
+    this.isBackgroundSyncRunning = true;
+
+    try {
+      await this.syncYears([], false, true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Background calendar sync failed: ${message}`);
+    } finally {
+      this.isBackgroundSyncRunning = false;
+    }
+  }
 
   private toUtcDateOnly(value: Date) {
     return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));

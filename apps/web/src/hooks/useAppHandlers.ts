@@ -88,7 +88,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] =
+    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, calendarData] =
       await Promise.all([
         api.getRoles(authToken),
         api.getSkills(authToken),
@@ -98,6 +98,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         api.getAssignments(authToken),
         api.getProjects(authToken),
         api.getTimelineYear(year, authToken),
+        api.getCalendarYear(year, authToken),
       ]);
 
     const nextRoles = rolesData as typeof state.roles;
@@ -116,6 +117,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setAssignments(nextAssignments);
     state.setProjects(nextProjects);
     state.setTimeline(timelineData);
+    state.setCalendarDays(calendarData.days);
     state.setTimelineOrder((prev) => {
       const ids = timelineData.map((row) => row.id);
       const kept = prev.filter((id) => ids.includes(id));
@@ -567,8 +569,12 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setSelectedYear(nextYear);
     if (!state.token) return;
     try {
-      const timelineData = await api.getTimelineYear(nextYear, state.token);
+      const [timelineData, calendarData] = await Promise.all([
+        api.getTimelineYear(nextYear, state.token),
+        api.getCalendarYear(nextYear, state.token),
+      ]);
       state.setTimeline(timelineData);
+      state.setCalendarDays(calendarData.days);
       state.setTimelineOrder((prev) => {
         const ids = timelineData.map((row) => row.id);
         const kept = prev.filter((id) => ids.includes(id));

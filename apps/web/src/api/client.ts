@@ -193,6 +193,19 @@ export type ProjectDetail = {
   }>;
 };
 
+export type CalendarDayItem = {
+  date: string;
+  isWeekend: boolean;
+  isHoliday: boolean;
+  isWorkingDay: boolean;
+  holidayName: string | null;
+};
+
+export type CalendarYearResponse = {
+  year: number;
+  days: CalendarDayItem[];
+};
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -269,6 +282,7 @@ export const api = {
   getProject: (projectId: string, token: string) => request<ProjectDetail>(`/projects/${projectId}`, {}, token),
   getTimelineYear: (year: number, token: string) =>
     request<ProjectTimelineRow[]>(`/timeline/year?year=${year}`, {}, token),
+  getCalendarYear: (year: number, token: string) => request<CalendarYearResponse>(`/calendar/${year}`, {}, token),
   createProject: (payload: CreateProjectPayload, token: string) =>
     request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateProject: (projectId: string, payload: UpdateProjectPayload, token: string) =>

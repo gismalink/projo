@@ -5,13 +5,14 @@ type CompanyLoadCardProps = {
   todayPosition: string | null;
   dragStepDays: 1 | 7 | 30;
   dayStep: string;
-  dayMarkers: Array<{ key: string; left: string; label: string }>;
+  dayMarkers: Array<{ key: string; left: string; label: string; title?: string }>;
+  calendarSegments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }>;
   months: string[];
   selectedYear: number;
 };
 
 export function CompanyLoadCard(props: CompanyLoadCardProps) {
-  const { t, companyLoad, companyLoadScaleMax, todayPosition, dragStepDays, dayStep, dayMarkers, months, selectedYear } = props;
+  const { t, companyLoad, companyLoadScaleMax, todayPosition, dragStepDays, dayStep, dayMarkers, calendarSegments, months, selectedYear } = props;
 
   return (
     <section className="company-load-card">
@@ -20,6 +21,13 @@ export function CompanyLoadCard(props: CompanyLoadCardProps) {
         <span className="muted">max {companyLoad.max.toFixed(0)}%</span>
       </div>
       <div className="company-load-chart">
+        {calendarSegments.map((segment) => (
+          <span
+            key={`chart-${segment.key}`}
+            className={`calendar-day-segment ${segment.kind === 'holiday' ? 'holiday' : 'weekend'}`}
+            style={{ left: segment.left, width: segment.width }}
+          />
+        ))}
         <span className="company-load-grid-line company-load-grid-line-limit" style={{ bottom: `${(100 / companyLoadScaleMax) * 100}%` }} />
         {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
         {companyLoad.values.map((value, index) => {
@@ -36,9 +44,16 @@ export function CompanyLoadCard(props: CompanyLoadCardProps) {
         })}
       </div>
       <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
+        {calendarSegments.map((segment) => (
+          <span
+            key={`day-${segment.key}`}
+            className={`calendar-day-segment ${segment.kind === 'holiday' ? 'holiday' : 'weekend'}`}
+            style={{ left: segment.left, width: segment.width }}
+          />
+        ))}
         {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
         {dayMarkers.map((marker) => (
-          <span key={marker.key} className="day-marker" style={{ left: marker.left }}>
+          <span key={marker.key} className="day-marker" style={{ left: marker.left }} title={marker.title}>
             {marker.label}
           </span>
         ))}

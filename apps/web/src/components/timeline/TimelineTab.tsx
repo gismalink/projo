@@ -1,5 +1,5 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { AssignmentItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { AssignmentItem, CalendarDayItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
@@ -19,6 +19,7 @@ type TimelineTabProps = {
   employees: Array<{ id: string; fullName: string; role: { name: string; shortName?: string | null }; department?: { name: string } | null }>;
   roles: Array<{ name: string; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
+  calendarDays: CalendarDayItem[];
   expandedProjectIds: string[];
   projectDetails: Record<string, ProjectDetail>;
   onOpenProjectModal: () => void;
@@ -56,6 +57,7 @@ export function TimelineTab(props: TimelineTabProps) {
     employees,
     roles,
     sortedTimeline,
+    calendarDays,
     expandedProjectIds,
     projectDetails,
     onOpenProjectModal,
@@ -126,16 +128,66 @@ export function TimelineTab(props: TimelineTabProps) {
     return boundaries;
   }, [dragStepDays, selectedYear, totalDays, yearStart]);
   const dayMarkerStep = dragStepDays === 1 ? 7 : dragStepDays;
+  const calendarDayByIso = useMemo(() => {
+    const map = new Map<string, CalendarDayItem>();
+    for (const day of calendarDays) {
+      map.set(day.date, day);
+    }
+    return map;
+  }, [calendarDays]);
+
+  const dayKindLabel = (day: CalendarDayItem | undefined) => {
+    if (!day) return t.dayTypeWorking;
+    if (day.isHoliday) return day.holidayName ? `${t.dayTypeHoliday}: ${day.holidayName}` : t.dayTypeHoliday;
+    if (day.isWeekend) return t.dayTypeWeekend;
+    return t.dayTypeWorking;
+  };
+
   const dayMarkers = [];
   for (let dayOffset = 0; dayOffset < totalDays; dayOffset += dayMarkerStep) {
     const date = new Date(yearStart);
     date.setUTCDate(date.getUTCDate() + dayOffset);
+    const isoDate = date.toISOString().slice(0, 10);
+    const dayInfo = calendarDayByIso.get(isoDate);
     dayMarkers.push({
       key: `${selectedYear}-${dayOffset}`,
       left: `${((dayOffset / totalDays) * 100).toFixed(2)}%`,
       label: String(date.getUTCDate()),
+      title: `${isoDate} · ${dayKindLabel(dayInfo)}`,
     });
   }
+
+  const calendarSegments = useMemo(() => {
+    const segments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }> = [];
+    const widthPercent = 100 / totalDays;
+
+    for (let dayOffset = 0; dayOffset < totalDays; dayOffset += 1) {
+      const date = new Date(yearStart);
+      date.setUTCDate(date.getUTCDate() + dayOffset);
+      const isoDate = date.toISOString().slice(0, 10);
+      const dayInfo = calendarDayByIso.get(isoDate);
+      if (!dayInfo) continue;
+      const kind: 'weekend' | 'holiday' | null = dayInfo.isHoliday ? 'holiday' : dayInfo.isWeekend ? 'weekend' : null;
+      if (!kind) continue;
+
+      const leftPercent = (dayOffset / totalDays) * 100;
+      const prev = segments[segments.length - 1];
+      if (!prev || prev.kind !== kind) {
+        segments.push({
+          key: `${isoDate}-${kind}`,
+          left: `${leftPercent.toFixed(6)}%`,
+          width: `${widthPercent.toFixed(6)}%`,
+          kind,
+        });
+        continue;
+      }
+
+      const prevWidth = Number(prev.width.replace('%', ''));
+      prev.width = `${(prevWidth + widthPercent).toFixed(6)}%`;
+    }
+
+    return segments;
+  }, [calendarDayByIso, totalDays, yearStart]);
 
   const now = new Date();
   const isCurrentYear = now.getFullYear() === selectedYear;
@@ -626,6 +678,7 @@ export function TimelineTab(props: TimelineTabProps) {
           dragStepDays={dragStepDays}
           dayStep={dayStep}
           dayMarkers={companyDayMarkers}
+          calendarSegments={calendarSegments}
           months={months}
           selectedYear={selectedYear}
         />
@@ -690,6 +743,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       style={style}
                       dragStepDays={dragStepDays}
                       dayStep={dayStep}
+                      calendarSegments={calendarSegments}
                       monthBoundaryPercents={projectMonthBoundaryPercents}
                       todayPosition={todayPosition}
                       projectFact={projectFactByProjectId.get(row.id) ?? null}
@@ -715,6 +769,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           t={t}
                           detail={detail}
                           dayStep={dayStep}
+                          calendarSegments={calendarSegments}
                           todayPosition={todayPosition}
                           assignmentStyle={assignmentStyle}
                           employeeRoleColorById={employeeRoleColorById}

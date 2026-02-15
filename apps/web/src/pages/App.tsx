@@ -118,6 +118,7 @@ export function App() {
               employees={app.employees}
               roles={app.roles}
               sortedTimeline={app.sortedTimeline}
+              calendarDays={app.calendarDays}
               expandedProjectIds={app.expandedProjectIds}
               projectDetails={app.projectDetails}
               onOpenProjectModal={app.openProjectModal}

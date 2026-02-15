@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   AssignmentItem,
+  CalendarDayItem,
   DepartmentItem,
   ProjectDetail,
   ProjectListItem,
@@ -67,6 +68,7 @@ export function useAppState() {
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
+  const [calendarDays, setCalendarDays] = useState<CalendarDayItem[]>([]);
   const [timelineOrder, setTimelineOrder] = useState<string[]>([]);
   const [expandedProjectIds, setExpandedProjectIds] = useState<string[]>([]);
   const [projectDetails, setProjectDetails] = useState<Record<string, ProjectDetail>>({});
@@ -140,6 +142,7 @@ export function useAppState() {
     assignments,
     projects,
     timeline,
+    calendarDays,
     timelineOrder,
     expandedProjectIds,
     projectDetails,
@@ -208,6 +211,7 @@ export function useAppState() {
     setAssignments,
     setProjects,
     setTimeline,
+    setCalendarDays,
     setTimelineOrder,
     setExpandedProjectIds,
     setProjectDetails,

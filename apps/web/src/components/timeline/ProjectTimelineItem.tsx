@@ -12,6 +12,7 @@ type ProjectTimelineItemProps = {
   style: { left: string; width: string };
   dragStepDays: 1 | 7 | 30;
   dayStep: string;
+  calendarSegments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }>;
   monthBoundaryPercents: number[];
   todayPosition: string | null;
   projectFact: { style: { left: string; width: string }; startIso: string; endIso: string } | null;
@@ -49,6 +50,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     style,
     dragStepDays,
     dayStep,
+    calendarSegments,
     monthBoundaryPercents,
     todayPosition,
     projectFact,
@@ -154,6 +156,13 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
           </div>
         </div>
         <div className={`track project-track step-${dragStepDays}`}>
+          {calendarSegments.map((segment) => (
+            <span
+              key={`${row.id}-project-segment-${segment.key}`}
+              className={`calendar-day-segment ${segment.kind === 'holiday' ? 'holiday' : 'weekend'}`}
+              style={{ left: segment.left, width: segment.width }}
+            />
+          ))}
           <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
           {projectFact ? (
             <span

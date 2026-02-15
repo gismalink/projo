@@ -68,6 +68,10 @@
   box-shadow: inset 1px 0 0 rgba(60, 60, 67, 0.22), inset -1px 0 0 rgba(60, 60, 67, 0.22);
 }
 
+.day-grid .calendar-day-segment {
+  z-index: 0;
+}
+
 .day-marker {
   position: absolute;
   top: 2px;
@@ -135,6 +139,22 @@
 
 .company-load-bar.overloaded {
   background: linear-gradient(180deg, #ff7b72 0%, var(--ios-danger) 100%);
+}
+
+.calendar-day-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.calendar-day-segment.weekend {
+  background: rgba(120, 120, 128, 0.1);
+}
+
+.calendar-day-segment.holiday {
+  background: rgba(255, 69, 58, 0.12);
 }
 
 .timeline-rows {

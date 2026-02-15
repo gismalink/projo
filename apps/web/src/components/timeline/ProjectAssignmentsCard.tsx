@@ -31,6 +31,7 @@ type ProjectAssignmentsCardProps = {
   t: Record<string, string>;
   detail: ProjectDetail;
   dayStep: string;
+  calendarSegments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }>;
   todayPosition: string | null;
   assignmentStyle: (startDate: string, endDate: string) => { left: string; width: string };
   employeeRoleColorById: Map<string, string>;
@@ -67,6 +68,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     t,
     detail,
     dayStep,
+    calendarSegments,
     todayPosition,
     assignmentStyle,
     employeeRoleColorById,
@@ -136,6 +138,13 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                 </span>
               </div>
               <div className="assignment-track">
+                {calendarSegments.map((segment) => (
+                  <span
+                    key={`${assignment.id}-segment-${segment.key}`}
+                    className={`calendar-day-segment ${segment.kind === 'holiday' ? 'holiday' : 'weekend'}`}
+                    style={{ left: segment.left, width: segment.width }}
+                  />
+                ))}
                 <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
                 {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
                 {(() => {
