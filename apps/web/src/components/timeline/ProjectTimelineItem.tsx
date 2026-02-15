@@ -9,7 +9,9 @@ type ProjectTimelineItemProps = {
   isExpanded: boolean;
   detail?: ProjectDetail;
   style: { left: string; width: string };
+  dragStepDays: 1 | 7 | 30;
   dayStep: string;
+  monthBoundaryPercents: number[];
   todayPosition: string | null;
   projectAssignments: AssignmentItem[];
   assignmentShiftDays: number;
@@ -48,7 +50,9 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     isExpanded,
     detail,
     style,
+    dragStepDays,
     dayStep,
+    monthBoundaryPercents,
     todayPosition,
     projectAssignments,
     assignmentShiftDays,
@@ -152,8 +156,19 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
             </button>
           </div>
         </div>
-        <div className="track project-track">
+        <div className={`track project-track step-${dragStepDays}`}>
           <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
+          {dragStepDays === 30 ? (
+            <span className="project-month-grid" aria-hidden>
+              {monthBoundaryPercents.map((leftPercent, index) => (
+                <span
+                  key={`${row.id}-month-boundary-${index}`}
+                  className="project-month-grid-line"
+                  style={{ left: `${leftPercent.toFixed(6)}%` }}
+                />
+              ))}
+            </span>
+          ) : null}
           {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
           <div
             className="bar project-plan-bar"

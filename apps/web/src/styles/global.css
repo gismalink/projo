@@ -174,6 +174,7 @@ button:active {
   padding: 0.4rem 0.55rem;
   font-size: 0.82rem;
   border-radius: 999px;
+  background: rgba(120, 120, 128, 0.28);
 }
 
 .role-tag.active {
@@ -200,20 +201,24 @@ ul {
 li {
   display: flex;
   justify-content: space-between;
-  gap: 0.8rem;
-  border-bottom: 1px solid rgba(60, 60, 67, 0.12);
   padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ios-border);
 }
 
 li span {
-  color: var(--ios-text-secondary);
   font-size: 0.9rem;
+  color: var(--ios-text-secondary);
 }
 
-li > div {
+li div {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+}
+
+li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .employee-row {
@@ -468,6 +473,7 @@ li > div {
       rgba(60, 60, 67, 0.22) calc(var(--day-step) - 1px),
       rgba(60, 60, 67, 0.22) var(--day-step)
     );
+  box-shadow: inset 1px 0 0 rgba(60, 60, 67, 0.22), inset -1px 0 0 rgba(60, 60, 67, 0.22);
 }
 
 .day-marker {
@@ -813,8 +819,45 @@ li > div {
       rgba(60, 60, 67, 0.18) calc(var(--day-step) - 1px),
       rgba(60, 60, 67, 0.18) var(--day-step)
     );
+  box-shadow: inset 1px 0 0 rgba(60, 60, 67, 0.18), inset -1px 0 0 rgba(60, 60, 67, 0.18);
   pointer-events: none;
   z-index: 1;
+}
+
+.track.project-track .track-day-grid {
+  left: var(--project-handle-size, 10px);
+  right: var(--project-handle-size, 10px);
+  box-shadow: none;
+  background-image: linear-gradient(to right, rgba(60, 60, 67, 0.18) 0 1px, transparent 1px);
+  background-size: var(--day-step) 100%;
+  background-position: var(--day-step) 0;
+  background-repeat: repeat-x;
+  border-left: 1px solid rgba(60, 60, 67, 0.18);
+  border-right: 1px solid rgba(60, 60, 67, 0.18);
+  border-radius: 0;
+}
+
+.track.project-track.step-30 .track-day-grid {
+  background: none;
+  border: 0;
+}
+
+.project-month-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--project-handle-size, 10px);
+  right: var(--project-handle-size, 10px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.project-month-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(60, 60, 67, 0.18);
 }
 
 .current-day-line {
@@ -1024,7 +1067,9 @@ li > div {
 }
 
 .track.project-track {
+  --project-handle-size: 8px;
   border-radius: 0;
+  background: transparent;
   overflow: visible;
 }
 
@@ -1032,6 +1077,7 @@ li > div {
   top: 0;
   bottom: 0;
   height: auto;
+  position: absolute;
   border-radius: 0;
   overflow: visible;
   background: rgba(120, 120, 128, 0.28);
@@ -1085,23 +1131,49 @@ li > div {
 
 .project-plan-handle.left,
 .project-plan-handle.right {
-  width: 10px;
-  background: rgba(60, 60, 67, 0.2);
+  width: var(--project-handle-size, 10px);
+  background: transparent;
+}
+
+.project-plan-handle.left::after,
+.project-plan-handle.right::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 999px;
+  background: rgba(60, 60, 67, 0.42);
+  opacity: 0.5;
+  transition: opacity 0.12s ease;
+}
+
+.project-plan-handle.left::after {
+  right: 0;
+}
+
+.project-plan-handle.right::after {
+  left: 0;
+}
+
+.bar.project-plan-bar:hover .project-plan-handle.left::after,
+.bar.project-plan-bar:hover .project-plan-handle.right::after {
+  opacity: 0.78;
 }
 
 .project-plan-handle.left {
-  left: 0;
+  left: calc(-1 * var(--project-handle-size, 10px));
   cursor: ew-resize;
 }
 
 .project-plan-handle.right {
-  right: 0;
+  right: calc(-1 * var(--project-handle-size, 10px));
   cursor: ew-resize;
 }
 
 .project-plan-handle.center {
-  left: 10px;
-  right: 10px;
+  left: 0;
+  right: 0;
   cursor: grab;
 }
 

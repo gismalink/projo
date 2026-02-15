@@ -98,7 +98,26 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
     event.preventDefault();
     const deltaX = event.clientX - dragState.startX;
     const rawDays = (deltaX / dragState.trackWidth) * totalDays;
-    const shiftDays = Math.round(rawDays / quantizationDays) * quantizationDays;
+    const baseDate = dragState.mode === 'resize-end' ? dragState.endDate : dragState.startDate;
+    const candidateDate = shiftDateByDays(baseDate, Math.round(rawDays));
+
+    const toUtcDay = (value: Date) =>
+      new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+    const snapToBoundary = (value: Date) => {
+      const next = toUtcDay(value);
+      if (quantizationDays === 1) return next;
+      if (quantizationDays === 7) {
+        const weekDay = next.getUTCDay();
+        const offsetToMonday = (weekDay + 6) % 7;
+        next.setUTCDate(next.getUTCDate() - offsetToMonday);
+        return next;
+      }
+      next.setUTCDate(1);
+      return next;
+    };
+
+    const snappedDate = snapToBoundary(candidateDate);
+    const shiftDays = diffDays(baseDate, snappedDate);
     if (Math.abs(deltaX) >= 2) {
       dragMovedRef.current = true;
     }

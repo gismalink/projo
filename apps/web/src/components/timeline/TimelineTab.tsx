@@ -110,9 +110,22 @@ export function TimelineTab(props: TimelineTabProps) {
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
   const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
   const totalDays = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
-  const dayStep = `${(100 / totalDays).toFixed(5)}%`;
+  const dayStep =
+    dragStepDays === 30 ? `${(100 / 12).toFixed(8)}%` : `${((dragStepDays / totalDays) * 100).toFixed(5)}%`;
+  const projectMonthBoundaryPercents = useMemo(() => {
+    if (dragStepDays !== 30) return [] as number[];
+
+    const boundaries: number[] = [];
+    for (let monthIndex = 0; monthIndex <= 12; monthIndex += 1) {
+      const monthStart = new Date(Date.UTC(selectedYear, monthIndex, 1));
+      const offsetDays = Math.max(0, Math.min(totalDays, (monthStart.getTime() - yearStart.getTime()) / 86400000));
+      boundaries.push((offsetDays / totalDays) * 100);
+    }
+    return boundaries;
+  }, [dragStepDays, selectedYear, totalDays, yearStart]);
+  const dayMarkerStep = dragStepDays === 1 ? 7 : dragStepDays;
   const dayMarkers = [];
-  for (let dayOffset = 0; dayOffset < totalDays; dayOffset += 7) {
+  for (let dayOffset = 0; dayOffset < totalDays; dayOffset += dayMarkerStep) {
     const date = new Date(yearStart);
     date.setUTCDate(date.getUTCDate() + dayOffset);
     dayMarkers.push({
@@ -271,7 +284,21 @@ export function TimelineTab(props: TimelineTabProps) {
     event.preventDefault();
     const deltaX = event.clientX - assignmentDragState.startX;
     const rawDays = (deltaX / assignmentDragState.trackWidth) * totalDays;
-    const shiftDays = Math.round(rawDays / dragStepDays) * dragStepDays;
+    const baseDate = assignmentDragState.mode === 'resize-end' ? assignmentDragState.endDate : assignmentDragState.startDate;
+    const candidateDate = shiftDateByDays(baseDate, Math.round(rawDays));
+    const snapToBoundary = (value: Date) => {
+      const next = toUtcDay(value);
+      if (dragStepDays === 1) return next;
+      if (dragStepDays === 7) {
+        const weekDay = next.getUTCDay();
+        const offsetToMonday = (weekDay + 6) % 7;
+        next.setUTCDate(next.getUTCDate() - offsetToMonday);
+        return next;
+      }
+      next.setUTCDate(1);
+      return next;
+    };
+    const shiftDays = diffDays(baseDate, snapToBoundary(candidateDate));
     if (Math.abs(deltaX) >= 2) {
       assignmentDragMovedRef.current = true;
     }
@@ -595,7 +622,9 @@ export function TimelineTab(props: TimelineTabProps) {
                       isExpanded={isExpanded}
                       detail={detail}
                       style={style}
+                      dragStepDays={dragStepDays}
                       dayStep={dayStep}
+                      monthBoundaryPercents={projectMonthBoundaryPercents}
                       todayPosition={todayPosition}
                       projectAssignments={projectAssignments}
                       assignmentShiftDays={assignmentShiftDays}

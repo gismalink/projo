@@ -210,6 +210,7 @@ export function App() {
             t={t}
             isOpen={app.isEmployeeDepartmentModalOpen}
             employeeName={app.editEmployeeName}
+            employeeRoleName={app.editEmployeeRoleName}
             departments={app.departments}
             employeeDepartmentId={app.editEmployeeDepartmentId}
             onClose={() => app.setIsEmployeeDepartmentModalOpen(false)}

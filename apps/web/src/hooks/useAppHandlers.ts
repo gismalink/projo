@@ -271,6 +271,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   function openEmployeeDepartmentModal(employee: Employee) {
     state.setEditEmployeeId(employee.id);
     state.setEditEmployeeName(employee.fullName);
+    state.setEditEmployeeRoleName(employee.role?.name ?? t.noRole);
     state.setEditEmployeeDepartmentId(employee.department?.id ?? '');
     state.setIsEmployeeDepartmentModalOpen(true);
   }

@@ -5,6 +5,7 @@ type EmployeeDepartmentModalProps = {
   t: Record<string, string>;
   isOpen: boolean;
   employeeName: string;
+  employeeRoleName: string;
   departments: DepartmentItem[];
   employeeDepartmentId: string;
   onClose: () => void;
@@ -17,6 +18,7 @@ export function EmployeeDepartmentModal(props: EmployeeDepartmentModalProps) {
     t,
     isOpen,
     employeeName,
+    employeeRoleName,
     departments,
     employeeDepartmentId,
     onClose,
@@ -36,6 +38,10 @@ export function EmployeeDepartmentModal(props: EmployeeDepartmentModalProps) {
           </button>
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
+          <label>
+            {t.role}
+            <input value={employeeRoleName} readOnly />
+          </label>
           <label>
             {t.department}
             <select value={employeeDepartmentId} onChange={(event) => setEmployeeDepartmentId(event.target.value)}>
