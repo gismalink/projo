@@ -1,0 +1,91 @@
+.timeline-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.department-manage-list {
+  display: grid;
+  gap: 0.38rem;
+  max-height: min(48vh, 420px);
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.department-manage-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.department-manage-row.create {
+  grid-template-columns: 1fr auto;
+  margin-bottom: 0.08rem;
+}
+
+.departments-modal {
+  width: min(640px, 100%);
+}
+
+.department-manage-input {
+  min-height: 34px;
+  padding: 0.45rem 0.7rem;
+}
+
+.department-manage-action {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.department-manage-action:hover:not(:disabled) {
+  background: rgba(10, 132, 255, 0.12);
+}
+
+.department-manage-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.department-manage-action.primary {
+  background: var(--ios-accent);
+  color: #fff;
+  border-color: var(--ios-accent);
+}
+
+.department-manage-action.primary:hover:not(:disabled) {
+  background: var(--ios-accent-pressed);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(29, 29, 31, 0.28);
+  backdrop-filter: blur(14px);
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: var(--ios-surface-strong);
+  border: 1px solid var(--ios-border);
+  border-radius: 18px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+  box-shadow: var(--ios-shadow);
+}
