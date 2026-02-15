@@ -88,7 +88,9 @@ export class CalendarService implements OnModuleInit, OnModuleDestroy {
   }
 
   private buildYearDays(year: number, holidays: ExternalHolidayItem[]) {
-    const holidayByDate = new Map(holidays.map((item) => [item.date, item.name]));
+    const holidayByDate = new Map(
+      holidays.map((item) => [new Date(item.date).toISOString().slice(0, 10), item.name]),
+    );
     const daysInYear = this.getDaysInYear(year);
     const sourceSyncedAt = new Date();
 

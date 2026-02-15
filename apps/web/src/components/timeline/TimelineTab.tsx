@@ -178,30 +178,39 @@ export function TimelineTab(props: TimelineTabProps) {
   const calendarSegments = useMemo(() => {
     const segments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }> = [];
     const widthPercent = 100 / totalDays;
+    let lastSegmentEndDayOffset = -2;
 
     for (let dayOffset = 0; dayOffset < totalDays; dayOffset += 1) {
       const date = new Date(yearStart);
       date.setUTCDate(date.getUTCDate() + dayOffset);
       const isoDate = date.toISOString().slice(0, 10);
       const dayInfo = calendarDayByIso.get(isoDate);
-      if (!dayInfo) continue;
+      if (!dayInfo) {
+        lastSegmentEndDayOffset = -2;
+        continue;
+      }
       const kind: 'weekend' | 'holiday' | null = dayInfo.isHoliday ? 'holiday' : dayInfo.isWeekend ? 'weekend' : null;
-      if (!kind) continue;
+      if (!kind) {
+        lastSegmentEndDayOffset = -2;
+        continue;
+      }
 
       const leftPercent = (dayOffset / totalDays) * 100;
       const prev = segments[segments.length - 1];
-      if (!prev || prev.kind !== kind) {
+      if (!prev || prev.kind !== kind || lastSegmentEndDayOffset !== dayOffset - 1) {
         segments.push({
           key: `${isoDate}-${kind}`,
           left: `${leftPercent.toFixed(6)}%`,
           width: `${widthPercent.toFixed(6)}%`,
           kind,
         });
+        lastSegmentEndDayOffset = dayOffset;
         continue;
       }
 
       const prevWidth = Number(prev.width.replace('%', ''));
       prev.width = `${(prevWidth + widthPercent).toFixed(6)}%`;
+      lastSegmentEndDayOffset = dayOffset;
     }
 
     return segments;
@@ -399,14 +408,22 @@ export function TimelineTab(props: TimelineTabProps) {
     const candidateDate = shiftDateByDays(baseDate, Math.round(rawDays));
     const snapToBoundary = (value: Date) => {
       const next = toUtcDay(value);
+      const alignToPeriodEnd = assignmentDragState.mode === 'resize-end';
       if (dragStepDays === 1) return next;
       if (dragStepDays === 7) {
         const weekDay = next.getUTCDay();
         const offsetToMonday = (weekDay + 6) % 7;
         next.setUTCDate(next.getUTCDate() - offsetToMonday);
+        if (alignToPeriodEnd) {
+          next.setUTCDate(next.getUTCDate() + 6);
+        }
         return next;
       }
-      next.setUTCDate(1);
+      if (alignToPeriodEnd) {
+        next.setUTCMonth(next.getUTCMonth() + 1, 0);
+      } else {
+        next.setUTCDate(1);
+      }
       return next;
     };
     const shiftDays = diffDays(baseDate, snapToBoundary(candidateDate));
@@ -761,12 +778,20 @@ export function TimelineTab(props: TimelineTabProps) {
         <div className="timeline-calendar-legend" aria-label={t.calendarLegendLabel}>
           <span className="timeline-calendar-legend-title">{t.calendarLegendLabel}</span>
           <span className="timeline-calendar-legend-item">
+            <span className="timeline-calendar-swatch working" />
+            {t.dayTypeWorking}
+          </span>
+          <span className="timeline-calendar-legend-item">
             <span className="timeline-calendar-swatch holiday" />
             {t.dayTypeHoliday}
           </span>
           <span className="timeline-calendar-legend-item">
             <span className="timeline-calendar-swatch weekend" />
             {t.dayTypeWeekend}
+          </span>
+          <span className="timeline-calendar-legend-item">
+            <span className="timeline-calendar-swatch vacation" />
+            {t.dayTypeVacation}
           </span>
           {calendarHealth ? (
             <span className="timeline-calendar-health">

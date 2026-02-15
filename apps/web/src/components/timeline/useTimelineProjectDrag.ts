@@ -107,14 +107,22 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
       new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
     const snapToBoundary = (value: Date) => {
       const next = toUtcDay(value);
+      const alignToPeriodEnd = dragState.mode === 'resize-end';
       if (quantizationDays === 1) return next;
       if (quantizationDays === 7) {
         const weekDay = next.getUTCDay();
         const offsetToMonday = (weekDay + 6) % 7;
         next.setUTCDate(next.getUTCDate() - offsetToMonday);
+        if (alignToPeriodEnd) {
+          next.setUTCDate(next.getUTCDate() + 6);
+        }
         return next;
       }
-      next.setUTCDate(1);
+      if (alignToPeriodEnd) {
+        next.setUTCMonth(next.getUTCMonth() + 1, 0);
+      } else {
+        next.setUTCDate(1);
+      }
       return next;
     };
 
