@@ -309,6 +309,18 @@
   text-overflow: ellipsis;
 }
 
+.bench-member-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.bench-member-load {
+  font-size: 0.62rem;
+  color: var(--ios-text-secondary);
+}
+
 .bench-member-meta {
   display: inline-flex;
   align-items: center;

@@ -8,23 +8,12 @@ import { UpdateGradeDto } from './dto/update-grade.dto';
 export class GradesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async ensureDefaultGrades() {
-    const defaults = ['джу', 'джун+', 'мидл', 'мидл+', 'синьйор', 'синьйор+', 'лид', 'рук-отдела'];
-    await Promise.all(
-      defaults.map((name) =>
-        this.prisma.grade.upsert({
-          where: { name },
-          update: {},
-          create: { name },
-        }),
-      ),
-    );
-  }
-
   create(dto: CreateGradeDto) {
+    const trimmedName = dto.name.trim();
     return this.prisma.grade.create({
       data: {
-        name: dto.name.trim(),
+        name: trimmedName,
+        colorHex: dto.colorHex,
       },
     });
   }
@@ -46,19 +35,26 @@ export class GradesService {
   async update(id: string, dto: UpdateGradeDto) {
     const grade = await this.findOne(id);
     const nextName = dto.name?.trim();
-    if (!nextName || nextName === grade.name) {
+    const resolvedName = nextName || grade.name;
+    const resolvedColor = dto.colorHex ?? grade.colorHex;
+    if (resolvedName === grade.name && resolvedColor === grade.colorHex) {
       return grade;
     }
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.employee.updateMany({
-        where: { grade: grade.name },
-        data: { grade: nextName },
-      });
+      if (resolvedName !== grade.name) {
+        await tx.employee.updateMany({
+          where: { grade: grade.name },
+          data: { grade: resolvedName },
+        });
+      }
 
       return tx.grade.update({
         where: { id },
-        data: { name: nextName },
+        data: {
+          name: resolvedName,
+          colorHex: resolvedColor,
+        },
       });
     });
   }

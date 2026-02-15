@@ -105,6 +105,14 @@
   font-weight: 700;
 }
 
+.grade-badge {
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-left: 0.3rem;
+}
+
 .vacation-line {
   color: var(--ios-text-secondary);
   font-size: 0.82rem;

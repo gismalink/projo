@@ -106,12 +106,14 @@ export type UpdateDepartmentPayload = Partial<CreateDepartmentPayload>;
 export type GradeItem = {
   id: string;
   name: string;
+  colorHex?: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
 export type CreateGradePayload = {
   name: string;
+  colorHex?: string;
 };
 
 export type UpdateGradePayload = Partial<CreateGradePayload>;
@@ -205,6 +207,7 @@ export type ProjectDetail = {
       id: string;
       fullName: string;
       email: string;
+      grade?: string | null;
       role: { name: string };
     };
   }>;

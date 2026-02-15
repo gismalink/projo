@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { GradesController } from './grades.controller';
 import { GradesService } from './grades.service';
 
@@ -7,10 +7,4 @@ import { GradesService } from './grades.service';
   providers: [GradesService],
   exports: [GradesService],
 })
-export class GradesModule implements OnModuleInit {
-  constructor(private readonly gradesService: GradesService) {}
-
-  async onModuleInit() {
-    await this.gradesService.ensureDefaultGrades();
-  }
-}
+export class GradesModule {}

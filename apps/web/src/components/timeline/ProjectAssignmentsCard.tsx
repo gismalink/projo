@@ -39,6 +39,7 @@ type ProjectAssignmentsCardProps = {
   assignmentStyle: (startDate: string, endDate: string) => { left: string; width: string };
   employeeRoleColorById: Map<string, string>;
   employeeRoleLabelById: Map<string, string>;
+  employeeGradeColorByName: Map<string, string>;
   onDeleteAssignment: (projectId: string, assignmentId: string) => Promise<void>;
   assignmentDragState: AssignmentDragState | null;
   resolveAssignmentDragDates: (state: AssignmentDragState) => { nextStart: Date; nextEnd: Date };
@@ -79,6 +80,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     assignmentStyle,
     employeeRoleColorById,
     employeeRoleLabelById,
+    employeeGradeColorByName,
     onDeleteAssignment,
     assignmentDragState,
     resolveAssignmentDragDates,
@@ -193,7 +195,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                   {assignment.employee.grade ? (
                     <span
                       className="timeline-role-chip"
-                      style={{ background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A', marginLeft: 4 }}
+                      style={{ background: employeeGradeColorByName.get(assignment.employee.grade) ?? '#6E7B8A' }}
                     >
                       {assignment.employee.grade}
                     </span>

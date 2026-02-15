@@ -1,5 +1,5 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { AssignmentItem, CalendarDayItem, CalendarHealthResponse, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { AssignmentItem, CalendarDayItem, CalendarHealthResponse, GradeItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
@@ -26,6 +26,7 @@ type TimelineTabProps = {
     department?: { name: string } | null;
   }>;
   roles: Array<{ name: string; shortName?: string | null; colorHex?: string | null }>;
+  grades: GradeItem[];
   sortedTimeline: ProjectTimelineRow[];
   calendarDays: CalendarDayItem[];
   calendarHealth: CalendarHealthResponse | null;
@@ -65,6 +66,7 @@ export function TimelineTab(props: TimelineTabProps) {
     vacations,
     employees,
     roles,
+    grades,
     sortedTimeline,
     calendarDays,
     calendarHealth,
@@ -545,6 +547,16 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [roles]);
 
+  const gradeColorByName = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const grade of grades) {
+      if (grade.colorHex && /^#[0-9A-Fa-f]{6}$/.test(grade.colorHex)) {
+        result.set(grade.name, grade.colorHex);
+      }
+    }
+    return result;
+  }, [grades]);
+
   const employeeRoleColorById = useMemo(() => {
     const result = new Map<string, string>();
     for (const employee of employees) {
@@ -627,7 +639,15 @@ export function TimelineTab(props: TimelineTabProps) {
 
     const groups = new Map<
       string,
-      Array<{ id: string; fullName: string; grade?: string | null; roleName: string; roleColorHex: string; annualLoadPercent: number }>
+      Array<{
+        id: string;
+        fullName: string;
+        grade?: string | null;
+        gradeColorHex?: string;
+        roleName: string;
+        roleColorHex: string;
+        annualLoadPercent: number;
+      }>
     >();
     for (const employee of employees) {
       const annualUtilization = annualUtilizationByEmployeeId.get(employee.id) ?? 0;
@@ -637,6 +657,7 @@ export function TimelineTab(props: TimelineTabProps) {
         id: employee.id,
         fullName: employee.fullName,
         grade: employee.grade,
+        gradeColorHex: employee.grade ? (gradeColorByName.get(employee.grade) ?? '#6E7B8A') : undefined,
         roleName: employeeRoleLabelById.get(employee.id) ?? employee.role.name,
         roleColorHex: employeeRoleColorById.get(employee.id) ?? '#6E7B8A',
         annualLoadPercent: Math.max(0, Math.round(annualUtilization)),
@@ -657,6 +678,7 @@ export function TimelineTab(props: TimelineTabProps) {
       }));
   }, [
     assignments,
+    gradeColorByName,
     employeeRoleColorById,
     employeeRoleLabelById,
     employees,
@@ -947,6 +969,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           assignmentStyle={assignmentStyle}
                           employeeRoleColorById={employeeRoleColorById}
                           employeeRoleLabelById={employeeRoleLabelById}
+                          employeeGradeColorByName={gradeColorByName}
                           onDeleteAssignment={onDeleteAssignment}
                           assignmentDragState={assignmentDragState}
                           resolveAssignmentDragDates={resolveAssignmentDragDates}

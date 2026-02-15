@@ -35,11 +35,11 @@
 }
 
 .department-manage-row-grade {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 40px auto;
 }
 
 .department-manage-row-grade-edit {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 40px auto;
 }
 
 .department-manage-row.create {
@@ -52,7 +52,7 @@
 }
 
 .department-manage-row.create.department-manage-row-grade {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 40px auto;
 }
 
 .departments-modal {

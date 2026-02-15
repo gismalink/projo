@@ -5,4 +5,9 @@ export class UpdateGradeDto {
   @IsString()
   @MaxLength(100)
   name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  colorHex?: string;
 }

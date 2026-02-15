@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Employee, Role } from '../../pages/app-types';
-import { DepartmentItem, VacationItem } from '../../api/client';
+import { DepartmentItem, GradeItem, VacationItem } from '../../api/client';
 import { Icon } from '../Icon';
 
 type RoleStat = {
@@ -13,6 +13,7 @@ type RoleStat = {
 type PersonnelTabProps = {
   t: Record<string, string>;
   departments: DepartmentItem[];
+  grades: GradeItem[];
   departmentGroups: [string, Employee[]][];
   roleStats: RoleStat[];
   months: string[];
@@ -34,6 +35,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
   const {
     t,
     departments,
+    grades,
     departmentGroups,
     roleStats,
     months,
@@ -65,6 +67,12 @@ export function PersonnelTab(props: PersonnelTabProps) {
   for (const department of departments) {
     if (department.colorHex && /^#[0-9A-Fa-f]{6}$/.test(department.colorHex)) {
       departmentColorByName.set(department.name, department.colorHex);
+    }
+  }
+  const gradeColorByName = new Map<string, string>();
+  for (const grade of grades) {
+    if (grade.colorHex && /^#[0-9A-Fa-f]{6}$/.test(grade.colorHex)) {
+      gradeColorByName.set(grade.name, grade.colorHex);
     }
   }
 
@@ -210,8 +218,17 @@ export function PersonnelTab(props: PersonnelTabProps) {
                       <span className="role-badge" style={{ background: `${roleColor}22`, color: roleColor }}>
                         {employee.role?.name ?? t.noRole}
                       </span>
-                      {' • '}
-                      {employee.grade ?? '-'}
+                      {employee.grade ? (
+                        <span
+                          className="grade-badge"
+                          style={{
+                            background: `${gradeColorByName.get(employee.grade) ?? '#6E7B8A'}22`,
+                            color: gradeColorByName.get(employee.grade) ?? '#6E7B8A',
+                          }}
+                        >
+                          {employee.grade}
+                        </span>
+                      ) : null}
                       {' • '}
                       {employee.status}
                     </span>

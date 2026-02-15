@@ -137,6 +137,7 @@ export function App() {
               openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
               roleColorOrDefault={roleColorOrDefault}
               utilizationColor={utilizationColor}
+              grades={grades}
             />
           ) : null}
 
@@ -167,7 +168,7 @@ export function App() {
               t={t}
               roles={app.roles}
               departments={app.departments}
-              gradeOptions={gradeOptions}
+              grades={grades}
               roleName={app.roleName}
               roleShortName={app.roleShortName}
               roleDescription={app.roleDescription}
@@ -182,44 +183,57 @@ export function App() {
               onCreateDepartment={app.handleCreateDepartment}
               onUpdateDepartment={app.handleUpdateDepartment}
               onDeleteDepartment={app.handleDeleteDepartment}
-              onAddGrade={(grade) => {
+              onAddGrade={(name, colorHex) => {
                 if (!app.token) return;
-                const trimmed = grade.trim();
+                const trimmed = name.trim();
                 if (!trimmed) return;
                 if (grades.some((item) => item.name === trimmed)) return;
-                void api.createGrade({ name: trimmed }, app.token).then((created) => {
+                void api.createGrade({ name: trimmed, colorHex }, app.token).then((created) => {
                   setGrades((prev) => [...prev, created]);
                 });
               }}
-              onRenameGrade={(prevGrade, nextGrade) => {
+              onUpdateGrade={(gradeId, payload) => {
                 if (!app.token) return;
-                const trimmed = nextGrade.trim();
-                if (!trimmed || prevGrade === trimmed) return;
-                const currentGrade = grades.find((item) => item.name === prevGrade);
+                const currentGrade = grades.find((item) => item.id === gradeId);
                 if (!currentGrade) return;
-                void api.updateGrade(currentGrade.id, { name: trimmed }, app.token).then((updated) => {
+
+                const nextName = payload.name?.trim();
+                if (nextName && grades.some((item) => item.id !== gradeId && item.name === nextName)) return;
+
+                void api
+                  .updateGrade(
+                    gradeId,
+                    {
+                      ...(nextName ? { name: nextName } : {}),
+                      ...(payload.colorHex ? { colorHex: payload.colorHex } : {}),
+                    },
+                    app.token,
+                  )
+                  .then((updated) => {
                   setGrades((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-                  app.setEmployees((prev) =>
-                    prev.map((employee) =>
-                      employee.grade === prevGrade
-                        ? {
-                            ...employee,
-                            grade: trimmed,
-                          }
-                        : employee,
-                    ),
-                  );
+                  if (updated.name !== currentGrade.name) {
+                    app.setEmployees((prev) =>
+                      prev.map((employee) =>
+                        employee.grade === currentGrade.name
+                          ? {
+                              ...employee,
+                              grade: updated.name,
+                            }
+                          : employee,
+                      ),
+                    );
+                  }
                 });
               }}
-              onDeleteGrade={(grade) => {
+              onDeleteGrade={(gradeId) => {
                 if (!app.token) return;
-                const currentGrade = grades.find((item) => item.name === grade);
+                const currentGrade = grades.find((item) => item.id === gradeId);
                 if (!currentGrade) return;
                 void api.deleteGrade(currentGrade.id, app.token).then(() => {
-                  setGrades((prev) => prev.filter((item) => item.id !== currentGrade.id));
+                  setGrades((prev) => prev.filter((item) => item.id !== gradeId));
                   app.setEmployees((prev) =>
                     prev.map((employee) =>
-                      employee.grade === grade
+                      employee.grade === currentGrade.name
                         ? {
                             ...employee,
                             grade: null,
@@ -244,6 +258,7 @@ export function App() {
               vacations={app.vacations}
               employees={app.employees}
               roles={app.roles}
+              grades={grades}
               sortedTimeline={app.sortedTimeline}
               calendarDays={app.calendarDays}
               calendarHealth={app.calendarHealth}
