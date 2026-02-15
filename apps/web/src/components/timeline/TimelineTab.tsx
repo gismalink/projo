@@ -7,6 +7,8 @@ import { ProjectTimelineItem } from './ProjectTimelineItem';
 import { TimelineToolbar } from './TimelineToolbar';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
+const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
+
 type TimelineTabProps = {
   t: Record<string, string>;
   months: string[];
@@ -66,6 +68,12 @@ export function TimelineTab(props: TimelineTabProps) {
     timelineStyle,
     isoToInputDate,
   } = props;
+
+  const [dragStepDays, setDragStepDays] = useState<1 | 7 | 30>(() => {
+    if (typeof window === 'undefined') return 7;
+    const saved = Number(window.localStorage.getItem(TIMELINE_DRAG_STEP_STORAGE_KEY));
+    return saved === 1 || saved === 7 || saved === 30 ? saved : 7;
+  });
 
   const [assignmentDragState, setAssignmentDragState] = useState<{
     projectId: string;
@@ -263,7 +271,7 @@ export function TimelineTab(props: TimelineTabProps) {
     event.preventDefault();
     const deltaX = event.clientX - assignmentDragState.startX;
     const rawDays = (deltaX / assignmentDragState.trackWidth) * totalDays;
-    const shiftDays = Math.round(rawDays);
+    const shiftDays = Math.round(rawDays / dragStepDays) * dragStepDays;
     if (Math.abs(deltaX) >= 2) {
       assignmentDragMovedRef.current = true;
     }
@@ -458,6 +466,7 @@ export function TimelineTab(props: TimelineTabProps) {
     consumeSuppressedToggleClick,
   } = useTimelineProjectDrag({
     totalDays,
+    quantizationDays: dragStepDays,
     yearStartDay,
     yearEndDay,
     shiftDateByDays,
@@ -465,6 +474,10 @@ export function TimelineTab(props: TimelineTabProps) {
     toApiDate,
     onAdjustProjectPlan,
   });
+
+  useEffect(() => {
+    window.localStorage.setItem(TIMELINE_DRAG_STEP_STORAGE_KEY, String(dragStepDays));
+  }, [dragStepDays]);
 
   useEffect(() => {
     if (!dragState && !assignmentDragState) return;
@@ -500,8 +513,10 @@ export function TimelineTab(props: TimelineTabProps) {
         <TimelineToolbar
           t={t}
           selectedYear={selectedYear}
+          dragStepDays={dragStepDays}
           onOpenProjectModal={onOpenProjectModal}
           onYearChange={onYearChange}
+          onDragStepDaysChange={setDragStepDays}
         />
 
         <CompanyLoadCard

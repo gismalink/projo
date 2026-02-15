@@ -26,6 +26,7 @@ type HoverProjectDragMode = {
 
 type UseTimelineProjectDragParams = {
   totalDays: number;
+  quantizationDays: 1 | 7 | 30;
   yearStartDay: Date;
   yearEndDay: Date;
   shiftDateByDays: (value: Date, days: number) => Date;
@@ -41,7 +42,7 @@ type UseTimelineProjectDragParams = {
 };
 
 export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
-  const { totalDays, yearStartDay, yearEndDay, shiftDateByDays, diffDays, toApiDate, onAdjustProjectPlan } = params;
+  const { totalDays, quantizationDays, yearStartDay, yearEndDay, shiftDateByDays, diffDays, toApiDate, onAdjustProjectPlan } = params;
 
   const [dragState, setDragState] = useState<ProjectDragState | null>(null);
   const [pendingPlanPreview, setPendingPlanPreview] = useState<PendingPlanPreview | null>(null);
@@ -97,7 +98,7 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
     event.preventDefault();
     const deltaX = event.clientX - dragState.startX;
     const rawDays = (deltaX / dragState.trackWidth) * totalDays;
-    const shiftDays = Math.round(rawDays);
+    const shiftDays = Math.round(rawDays / quantizationDays) * quantizationDays;
     if (Math.abs(deltaX) >= 2) {
       dragMovedRef.current = true;
     }
@@ -188,7 +189,7 @@ export function useTimelineProjectDrag(params: UseTimelineProjectDragParams) {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [dragState]);
+  }, [dragState, quantizationDays]);
 
   return {
     dragState,

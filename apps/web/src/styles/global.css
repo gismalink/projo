@@ -414,6 +414,29 @@ li > div {
   gap: 1rem;
 }
 
+.timeline-toolbar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.timeline-step-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.timeline-step-switch .tab {
+  padding: 0.35rem 0.55rem;
+  min-width: 38px;
+}
+
+.timeline-step-label {
+  font-size: 0.78rem;
+  color: var(--ios-text-secondary);
+  margin-right: 0.2rem;
+}
+
 .year-switcher {
   display: inline-flex;
   align-items: center;
