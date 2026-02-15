@@ -339,20 +339,20 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
-  async function handleCreateDepartment(name: string) {
+  async function handleCreateDepartment(name: string, colorHex?: string) {
     if (!state.token || !name.trim()) return;
     try {
-      await api.createDepartment({ name: name.trim() }, state.token);
+      await api.createDepartment({ name: name.trim(), colorHex }, state.token);
       await refreshData(state.token, state.selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateDepartmentFailed, errorText));
     }
   }
 
-  async function handleUpdateDepartment(departmentId: string, name: string) {
+  async function handleUpdateDepartment(departmentId: string, name: string, colorHex?: string) {
     if (!state.token || !name.trim()) return;
     try {
-      await api.updateDepartment(departmentId, { name: name.trim() }, state.token);
+      await api.updateDepartment(departmentId, { name: name.trim(), colorHex }, state.token);
       await refreshData(state.token, state.selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiUpdateDepartmentFailed, errorText));

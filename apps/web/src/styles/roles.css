@@ -1,0 +1,177 @@
+.role-row {
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding-bottom: 0.19rem;
+  border-bottom: 0;
+}
+
+.roles-list-header h2 {
+  margin: 0;
+}
+
+.role-table-head {
+  display: grid;
+  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px 40px;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: var(--ios-text-secondary);
+  font-weight: 600;
+  padding: 0 0 0.1rem;
+}
+
+.roles-list {
+  gap: 0.3rem;
+}
+
+.create-role-icon-btn {
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  padding: 0;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.role-fields {
+  display: grid;
+  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px;
+  gap: 0.4rem;
+  width: 100%;
+  align-items: end;
+}
+
+.role-fields input {
+  padding: 0.45rem 0.55rem;
+  min-height: 34px;
+}
+
+.role-level-input {
+  text-align: center;
+}
+
+.role-color-editor {
+  display: flex;
+  width: 40px;
+  flex: 0 0 40px;
+  position: relative;
+}
+
+.color-picker-popover {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: start;
+  width: 240px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.3rem);
+  min-width: 240px;
+  padding: 0.4rem;
+  border: 1px solid var(--ios-border);
+  border-radius: 12px;
+  background: var(--ios-surface-strong);
+  box-shadow: var(--ios-shadow-soft);
+  z-index: 8;
+}
+
+.color-hex-input {
+  min-height: 34px;
+  padding: 0.45rem 0.55rem;
+  text-transform: uppercase;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+}
+
+.custom-color-sv {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ios-border);
+  cursor: crosshair;
+}
+
+.custom-color-sv::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0));
+}
+
+.custom-color-sv::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #000, rgba(0, 0, 0, 0));
+}
+
+.custom-color-sv-pointer {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.custom-color-hue {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--ios-border);
+  position: relative;
+  cursor: ew-resize;
+  background: linear-gradient(
+    to right,
+    #ff0000 0%,
+    #ffff00 17%,
+    #00ff00 33%,
+    #00ffff 50%,
+    #0000ff 67%,
+    #ff00ff 83%,
+    #ff0000 100%
+  );
+}
+
+.custom-color-hue-pointer {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #1d1d1f;
+  box-shadow: 0 0 0 1px rgba(60, 60, 67, 0.45);
+  pointer-events: none;
+}
+
+.color-picker-dropdown {
+  position: relative;
+}
+
+.color-picker-trigger {
+  cursor: pointer;
+  width: 40px;
+  height: 34px;
+  border: 1px solid var(--ios-border);
+  border-radius: 12px;
+  padding: 0.2rem;
+  background: var(--ios-surface-strong);
+  color: inherit;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-picker-trigger-swatch {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--ios-border);
+}

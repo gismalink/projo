@@ -49,23 +49,14 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
             {t.stepMonth}
           </button>
         </div>
-        <div className="timeline-step-switch" role="group" aria-label={t.calendarScenarioLabel}>
-          <span className="timeline-step-label">{t.calendarScenarioLabel}</span>
-          <button
-            type="button"
-            className={useProductionCalendar ? 'tab active' : 'tab'}
-            onClick={() => onUseProductionCalendarChange(true)}
-          >
-            {t.calendarScenarioOn}
-          </button>
-          <button
-            type="button"
-            className={!useProductionCalendar ? 'tab active' : 'tab'}
-            onClick={() => onUseProductionCalendarChange(false)}
-          >
-            {t.calendarScenarioOff}
-          </button>
-        </div>
+        <label className="timeline-calendar-checkbox" aria-label={t.timelineWithWeekends}>
+          <input
+            type="checkbox"
+            checked={!useProductionCalendar}
+            onChange={(event) => onUseProductionCalendarChange(!event.target.checked)}
+          />
+          <span>{t.timelineWithWeekends}</span>
+        </label>
       </div>
       <div className="year-switcher">
         <button type="button" onClick={onOpenProjectModal}>

@@ -19,7 +19,7 @@ type TimelineTabProps = {
   assignments: AssignmentItem[];
   vacations: Array<{ employeeId: string; startDate: string; endDate: string }>;
   employees: Array<{ id: string; fullName: string; role: { name: string; shortName?: string | null }; department?: { name: string } | null }>;
-  roles: Array<{ name: string; colorHex?: string | null }>;
+  roles: Array<{ name: string; shortName?: string | null; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
   calendarDays: CalendarDayItem[];
   calendarHealth: CalendarHealthResponse | null;
@@ -530,6 +530,15 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [roles]);
 
+  const roleLabelByName = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const role of roles) {
+      const shortName = role.shortName?.trim();
+      result.set(role.name, shortName && shortName.length > 0 ? shortName : role.name);
+    }
+    return result;
+  }, [roles]);
+
   const employeeRoleColorById = useMemo(() => {
     const result = new Map<string, string>();
     for (const employee of employees) {
@@ -537,6 +546,15 @@ export function TimelineTab(props: TimelineTabProps) {
     }
     return result;
   }, [employees, roleColorByName]);
+
+  const employeeRoleLabelById = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const employee of employees) {
+      const shortName = employee.role.shortName?.trim();
+      result.set(employee.id, shortName && shortName.length > 0 ? shortName : (roleLabelByName.get(employee.role.name) ?? employee.role.name));
+    }
+    return result;
+  }, [employees, roleLabelByName]);
 
   const assignmentsByProjectId = useMemo(() => {
     const result = new Map<string, AssignmentItem[]>();
@@ -601,7 +619,7 @@ export function TimelineTab(props: TimelineTabProps) {
       );
     }
 
-    const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string; annualLoadPercent: number }>>();
+    const groups = new Map<string, Array<{ id: string; fullName: string; roleName: string; roleColorHex: string; annualLoadPercent: number }>>();
     for (const employee of employees) {
       const annualUtilization = annualUtilizationByEmployeeId.get(employee.id) ?? 0;
       if (annualUtilization >= 100) continue;
@@ -609,7 +627,8 @@ export function TimelineTab(props: TimelineTabProps) {
       const row = {
         id: employee.id,
         fullName: employee.fullName,
-        roleName: employee.role.shortName?.trim() ? employee.role.shortName : employee.role.name,
+        roleName: employeeRoleLabelById.get(employee.id) ?? employee.role.name,
+        roleColorHex: employeeRoleColorById.get(employee.id) ?? '#6E7B8A',
         annualLoadPercent: Math.max(0, Math.round(annualUtilization)),
       };
       const items = groups.get(departmentName);
@@ -626,7 +645,17 @@ export function TimelineTab(props: TimelineTabProps) {
         departmentName,
         members: members.sort((a, b) => a.fullName.localeCompare(b.fullName)),
       }));
-  }, [assignments, employees, t.unassignedDepartment, toUtcDay, totalDays, yearEndDay, yearStart]);
+  }, [
+    assignments,
+    employeeRoleColorById,
+    employeeRoleLabelById,
+    employees,
+    t.unassignedDepartment,
+    toUtcDay,
+    totalDays,
+    yearEndDay,
+    yearStart,
+  ]);
 
   const vacationsByEmployeeId = useMemo(() => {
     const result = new Map<string, Array<{ startDate: string; endDate: string }>>();
@@ -907,6 +936,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           todayPosition={todayPosition}
                           assignmentStyle={assignmentStyle}
                           employeeRoleColorById={employeeRoleColorById}
+                          employeeRoleLabelById={employeeRoleLabelById}
                           onDeleteAssignment={onDeleteAssignment}
                           assignmentDragState={assignmentDragState}
                           resolveAssignmentDragDates={resolveAssignmentDragDates}

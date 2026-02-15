@@ -28,6 +28,18 @@
   min-width: 38px;
 }
 
+.timeline-calendar-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--ios-text-secondary);
+}
+
+.timeline-calendar-checkbox input {
+  margin: 0;
+}
+
 .timeline-step-label {
   font-size: 0.78rem;
   color: var(--ios-text-secondary);
@@ -289,12 +301,18 @@
   text-overflow: ellipsis;
 }
 
-.bench-member span {
+.bench-member > span {
   font-size: 0.62rem;
   color: var(--ios-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.bench-member-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .timeline-row {
@@ -601,6 +619,25 @@
   justify-content: space-between;
   gap: 0.4rem;
   align-items: center;
+}
+
+.assignment-employee-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.timeline-role-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.08rem 0.4rem;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 .assignment-item-header strong {

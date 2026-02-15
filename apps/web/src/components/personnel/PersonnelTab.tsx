@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Employee, Role } from '../../pages/app-types';
-import { VacationItem } from '../../api/client';
+import { DepartmentItem, VacationItem } from '../../api/client';
 import { Icon } from '../Icon';
 
 type RoleStat = {
@@ -12,6 +12,7 @@ type RoleStat = {
 
 type PersonnelTabProps = {
   t: Record<string, string>;
+  departments: DepartmentItem[];
   departmentGroups: [string, Employee[]][];
   roleStats: RoleStat[];
   months: string[];
@@ -22,7 +23,6 @@ type PersonnelTabProps = {
   monthlyUtilizationByEmployee: Record<string, number[]>;
   toggleRoleFilter: (roleName: string) => void;
   clearRoleFilters: () => void;
-  openDepartmentsModal: () => void;
   openVacationModal: (employee: Employee) => void;
   openEmployeeDepartmentModal: (employee: Employee) => void;
   openEmployeeModal: () => void;
@@ -34,6 +34,7 @@ type PersonnelTabProps = {
 export function PersonnelTab(props: PersonnelTabProps) {
   const {
     t,
+    departments,
     departmentGroups,
     roleStats,
     months,
@@ -44,7 +45,6 @@ export function PersonnelTab(props: PersonnelTabProps) {
     monthlyUtilizationByEmployee,
     toggleRoleFilter,
     clearRoleFilters,
-    openDepartmentsModal,
     openVacationModal,
     openEmployeeDepartmentModal,
     openEmployeeModal,
@@ -62,6 +62,13 @@ export function PersonnelTab(props: PersonnelTabProps) {
   const formatVacationDate = (value: string) => vacationDateFormatter.format(new Date(value));
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const departmentOptions = departmentGroups.map(([department]) => department);
+  const totalEmployeesCount = departmentGroups.reduce((sum, [, employees]) => sum + employees.length, 0);
+  const departmentColorByName = new Map<string, string>();
+  for (const department of departments) {
+    if (department.colorHex && /^#[0-9A-Fa-f]{6}$/.test(department.colorHex)) {
+      departmentColorByName.set(department.name, department.colorHex);
+    }
+  }
 
   useEffect(() => {
     if (selectedDepartment === 'all') return;
@@ -86,17 +93,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
     <section className="grid">
       <article className="card">
         <div className="section-header">
-          <h2>{t.employeesList}</h2>
+          <h2>{t.employeesList} ({totalEmployeesCount})</h2>
           <div className="team-actions">
-            <button
-              type="button"
-              className="create-role-icon-btn team-icon-btn"
-              title={t.departmentsList}
-              aria-label={t.departmentsList}
-              onClick={openDepartmentsModal}
-            >
-              <Icon name="building" />
-            </button>
             <button
               type="button"
               className="create-role-icon-btn team-icon-btn"
@@ -134,6 +132,11 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 type="button"
                 key={department}
                 className={selectedDepartment === department ? 'role-tag active' : 'role-tag'}
+                style={{
+                  borderColor: departmentColorByName.get(department) ?? '#B6BDC6',
+                  background: selectedDepartment === department ? (departmentColorByName.get(department) ?? '#B6BDC6') : '#fff',
+                  color: selectedDepartment === department ? '#fff' : (departmentColorByName.get(department) ?? '#6E7B8A'),
+                }}
                 onClick={() => setSelectedDepartment(department)}
                 title={`${department} (${departmentEmployees.length})`}
                 aria-label={`${department} (${departmentEmployees.length})`}
@@ -152,12 +155,16 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 type="button"
                 key={tag.roleName}
                 className={active ? 'role-tag active' : 'role-tag'}
-                style={{ borderColor: tag.colorHex, background: active ? `${tag.colorHex}22` : '#fff' }}
+                style={{
+                  borderColor: tag.colorHex,
+                  background: active ? tag.colorHex : '#fff',
+                  color: active ? '#fff' : tag.colorHex,
+                }}
                 onClick={() => toggleRoleFilter(tag.roleName)}
                 title={`${tag.roleName} (${tag.count})`}
                 aria-label={`${tag.roleName} (${tag.count})`}
               >
-                <span className="dot" style={{ background: tag.colorHex }} />
+                <span className="dot" style={{ background: active ? '#fff' : tag.colorHex }} />
                 {tag.roleShortName} ({tag.count})
               </button>
             );

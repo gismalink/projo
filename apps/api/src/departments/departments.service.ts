@@ -10,18 +10,20 @@ export class DepartmentsService {
 
   async ensureDefaultDepartments() {
     const defaults = [
-      { name: 'Production', description: 'Development and art production' },
-      { name: 'Design', description: 'UI/UX design' },
-      { name: 'QA', description: 'Testing and quality assurance' },
-      { name: 'Analytics', description: 'Business and product analytics' },
-      { name: 'Management', description: 'PM and operational management' },
+      { name: 'Production', description: 'Development and art production', colorHex: '#7A8A9A' },
+      { name: 'Design', description: 'UI/UX design', colorHex: '#9B7BFF' },
+      { name: 'QA', description: 'Testing and quality assurance', colorHex: '#38A169' },
+      { name: 'Analytics', description: 'Business and product analytics', colorHex: '#D69E2E' },
+      { name: 'Management', description: 'PM and operational management', colorHex: '#E76F51' },
     ];
 
     await Promise.all(
       defaults.map((department) =>
         this.prisma.department.upsert({
           where: { name: department.name },
-          update: {},
+          update: {
+            colorHex: department.colorHex,
+          },
           create: department,
         }),
       ),

@@ -38,6 +38,7 @@ type ProjectAssignmentsCardProps = {
   todayPosition: string | null;
   assignmentStyle: (startDate: string, endDate: string) => { left: string; width: string };
   employeeRoleColorById: Map<string, string>;
+  employeeRoleLabelById: Map<string, string>;
   onDeleteAssignment: (projectId: string, assignmentId: string) => Promise<void>;
   assignmentDragState: AssignmentDragState | null;
   resolveAssignmentDragDates: (state: AssignmentDragState) => { nextStart: Date; nextEnd: Date };
@@ -77,6 +78,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     todayPosition,
     assignmentStyle,
     employeeRoleColorById,
+    employeeRoleLabelById,
     onDeleteAssignment,
     assignmentDragState,
     resolveAssignmentDragDates,
@@ -181,7 +183,15 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
               className="assignment-item"
             >
               <div className="assignment-item-header">
-                <strong>{assignment.employee.fullName}</strong>
+                <div className="assignment-employee-name">
+                  <span
+                    className="timeline-role-chip"
+                    style={{ background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A' }}
+                  >
+                    {employeeRoleLabelById.get(assignment.employeeId) ?? assignment.employee.role.name}
+                  </span>
+                  <strong>{assignment.employee.fullName}</strong>
+                </div>
                 <span>{Number(assignment.allocationPercent)}%</span>
                 <span>{t.factHoursShort}: {(actualHoursByAssignmentId.get(assignment.id)?.actualHours ?? 0).toFixed(1)}</span>
                 <span>{t.lostHoursShort}: {(actualHoursByAssignmentId.get(assignment.id)?.lostHours ?? 0).toFixed(1)}</span>

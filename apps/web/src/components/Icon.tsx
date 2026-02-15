@@ -11,7 +11,8 @@ type IconName =
   | 'chevron-up'
   | 'chevron-down'
   | 'check'
-  | 'x';
+  | 'x'
+  | 'copy';
 
 type IconProps = {
   name: IconName;
@@ -107,6 +108,13 @@ export function Icon({ name, size = 16, className }: IconProps) {
       {name === 'check' ? <path {...common} d="m5 13 4 4 10-10" /> : null}
 
       {name === 'x' ? <path {...common} d="m6 6 12 12M18 6 6 18" /> : null}
+
+      {name === 'copy' ? (
+        <>
+          <rect {...common} x="9" y="9" width="10" height="10" rx="2" />
+          <path {...common} d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1" />
+        </>
+      ) : null}
     </svg>
   );
 }

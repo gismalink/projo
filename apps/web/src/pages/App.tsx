@@ -3,11 +3,11 @@ import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeDepartmentModal } from '../components/modals/EmployeeDepartmentModal';
-import { DepartmentsModal } from '../components/modals/DepartmentsModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { VacationModal } from '../components/modals/VacationModal';
+import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
 import { TimelineTab } from '../components/timeline/TimelineTab';
@@ -17,6 +17,7 @@ import { Lang } from './app-types';
 
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
+  const [gradeOptions, setGradeOptions] = useState<string[]>(GRADE_OPTIONS);
   const t = TEXT[lang];
 
   const app = useAppData({
@@ -66,11 +67,15 @@ export function App() {
             <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
               {t.tabRoles}
             </button>
+            <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
+              {t.tabInstruction}
+            </button>
           </div>
 
           {app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
+              departments={app.departments}
               departmentGroups={app.departmentGroups}
               roleStats={app.roleStats}
               months={MONTHS_BY_LANG[lang]}
@@ -81,7 +86,6 @@ export function App() {
               monthlyUtilizationByEmployee={app.monthlyUtilizationByEmployee}
               toggleRoleFilter={app.toggleRoleFilter}
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
-              openDepartmentsModal={() => app.setIsDepartmentsModalOpen(true)}
               openVacationModal={app.openVacationModal}
               openEmployeeDepartmentModal={app.openEmployeeDepartmentModal}
               openEmployeeModal={() => app.setIsEmployeeModalOpen(true)}
@@ -95,6 +99,8 @@ export function App() {
             <RolesTab
               t={t}
               roles={app.roles}
+              departments={app.departments}
+              gradeOptions={gradeOptions}
               roleName={app.roleName}
               roleShortName={app.roleShortName}
               roleDescription={app.roleDescription}
@@ -106,8 +112,29 @@ export function App() {
               setRoleDescription={app.setRoleDescription}
               setRoleLevel={app.setRoleLevel}
               roleColorOrDefault={roleColorOrDefault}
+              onCreateDepartment={app.handleCreateDepartment}
+              onUpdateDepartment={app.handleUpdateDepartment}
+              onDeleteDepartment={app.handleDeleteDepartment}
+              onAddGrade={(grade) =>
+                setGradeOptions((prev) => {
+                  const trimmed = grade.trim();
+                  if (!trimmed || prev.includes(trimmed)) return prev;
+                  return [...prev, trimmed];
+                })
+              }
+              onRenameGrade={(prevGrade, nextGrade) =>
+                setGradeOptions((prev) => {
+                  const trimmed = nextGrade.trim();
+                  if (!trimmed || prevGrade === trimmed) return prev;
+                  if (prev.some((item) => item !== prevGrade && item === trimmed)) return prev;
+                  return prev.map((item) => (item === prevGrade ? trimmed : item));
+                })
+              }
+              onDeleteGrade={(grade) => setGradeOptions((prev) => prev.filter((item) => item !== grade))}
             />
           ) : null}
+
+          {app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
 
           {app.activeTab === 'timeline' ? (
             <TimelineTab
@@ -200,7 +227,7 @@ export function App() {
             employeeDepartmentId={app.employeeDepartmentId}
             employeeGrade={app.employeeGrade}
             employeeStatus={app.employeeStatus}
-            gradeOptions={GRADE_OPTIONS}
+            gradeOptions={gradeOptions}
             onClose={() => app.setIsEmployeeModalOpen(false)}
             onSubmit={app.handleCreateEmployee}
             setEmployeeFullName={app.setEmployeeFullName}
@@ -230,16 +257,6 @@ export function App() {
             onClose={() => app.setIsEmployeeImportModalOpen(false)}
             onSubmit={app.handleImportEmployeesCsv}
             setCsv={app.setEmployeeCsv}
-          />
-
-          <DepartmentsModal
-            t={t}
-            isOpen={app.isDepartmentsModalOpen}
-            departments={app.departments}
-            onClose={() => app.setIsDepartmentsModalOpen(false)}
-            onCreate={app.handleCreateDepartment}
-            onUpdate={app.handleUpdateDepartment}
-            onDelete={app.handleDeleteDepartment}
           />
 
           <VacationModal

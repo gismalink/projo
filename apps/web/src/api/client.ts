@@ -91,12 +91,14 @@ export type DepartmentItem = {
   id: string;
   name: string;
   description?: string | null;
+  colorHex?: string | null;
   _count?: { employees: number };
 };
 
 export type CreateDepartmentPayload = {
   name: string;
   description?: string;
+  colorHex?: string;
 };
 
 export type UpdateDepartmentPayload = Partial<CreateDepartmentPayload>;

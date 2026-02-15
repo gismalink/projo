@@ -8,4 +8,9 @@ export class CreateDepartmentDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  colorHex?: string;
 }

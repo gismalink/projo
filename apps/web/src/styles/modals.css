@@ -11,6 +11,18 @@
   padding-right: 0.1rem;
 }
 
+.settings-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.settings-column {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+}
+
 .department-manage-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -18,9 +30,29 @@
   align-items: center;
 }
 
+.department-manage-row-color {
+  grid-template-columns: 1fr 40px auto auto;
+}
+
+.department-manage-row-grade {
+  grid-template-columns: 1fr auto;
+}
+
+.department-manage-row-grade-edit {
+  grid-template-columns: 1fr auto auto;
+}
+
 .department-manage-row.create {
   grid-template-columns: 1fr auto;
   margin-bottom: 0.08rem;
+}
+
+.department-manage-row.create.department-manage-row-color {
+  grid-template-columns: 1fr 40px auto;
+}
+
+.department-manage-row.create.department-manage-row-grade {
+  grid-template-columns: 1fr auto;
 }
 
 .departments-modal {
@@ -88,4 +120,10 @@
   display: grid;
   gap: 0.7rem;
   box-shadow: var(--ios-shadow);
+}
+
+@media (max-width: 900px) {
+  .settings-columns {
+    grid-template-columns: 1fr;
+  }
 }

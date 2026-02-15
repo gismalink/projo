@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { Role } from '../../pages/app-types';
+import { DepartmentItem } from '../../api/client';
+import { CustomColorPicker, normalizeHex } from './CustomColorPicker';
 
 type UpdateRolePayload = {
   name?: string;
@@ -13,6 +15,8 @@ type UpdateRolePayload = {
 type RolesTabProps = {
   t: Record<string, string>;
   roles: Role[];
+  departments: DepartmentItem[];
+  gradeOptions: string[];
   roleName: string;
   roleShortName: string;
   roleDescription: string;
@@ -24,6 +28,12 @@ type RolesTabProps = {
   setRoleDescription: (value: string) => void;
   setRoleLevel: (value: number) => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
+  onCreateDepartment: (name: string, colorHex: string) => Promise<void>;
+  onUpdateDepartment: (departmentId: string, name: string, colorHex: string) => Promise<void>;
+  onDeleteDepartment: (departmentId: string) => Promise<void>;
+  onAddGrade: (grade: string) => void;
+  onRenameGrade: (prevGrade: string, nextGrade: string) => void;
+  onDeleteGrade: (grade: string) => void;
 };
 
 type RoleDraft = {
@@ -38,6 +48,8 @@ export function RolesTab(props: RolesTabProps) {
   const {
     t,
     roles,
+    departments,
+    gradeOptions,
     roleName,
     roleShortName,
     roleDescription,
@@ -49,10 +61,21 @@ export function RolesTab(props: RolesTabProps) {
     setRoleDescription,
     setRoleLevel,
     roleColorOrDefault,
+    onCreateDepartment,
+    onUpdateDepartment,
+    onDeleteDepartment,
+    onAddGrade,
+    onRenameGrade,
+    onDeleteGrade,
   } = props;
 
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [roleDrafts, setRoleDrafts] = useState<Record<string, RoleDraft>>({});
+  const [newDepartmentName, setNewDepartmentName] = useState('');
+  const [newDepartmentColor, setNewDepartmentColor] = useState('#7A8A9A');
+  const [departmentDrafts, setDepartmentDrafts] = useState<Record<string, { name: string; colorHex: string }>>({});
+  const [newGradeName, setNewGradeName] = useState('');
+  const [gradeDrafts, setGradeDrafts] = useState<Record<string, string>>({});
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const roleById = useMemo(() => {
@@ -79,6 +102,24 @@ export function RolesTab(props: RolesTabProps) {
   }, [roles, roleColorOrDefault]);
 
   useEffect(() => {
+    setDepartmentDrafts(
+      Object.fromEntries(
+        departments.map((department) => [
+          department.id,
+          {
+            name: department.name,
+            colorHex: roleColorOrDefault(department.colorHex),
+          },
+        ]),
+      ),
+    );
+  }, [departments, roleColorOrDefault]);
+
+  useEffect(() => {
+    setGradeDrafts(Object.fromEntries(gradeOptions.map((grade) => [grade, grade])));
+  }, [gradeOptions]);
+
+  useEffect(() => {
     return () => {
       for (const timer of Object.values(saveTimersRef.current)) {
         clearTimeout(timer);
@@ -95,20 +136,23 @@ export function RolesTab(props: RolesTabProps) {
       if (!role) return;
 
       const normalizedShortName = draft.shortName.trim();
+      const normalizedColorHex = normalizeHex(draft.colorHex);
       const payload: UpdateRolePayload = {
         name: draft.name,
         shortName: normalizedShortName,
         description: draft.description,
         level: draft.level,
-        colorHex: draft.colorHex,
       };
+      if (normalizedColorHex) {
+        payload.colorHex = normalizedColorHex;
+      }
 
       const unchanged =
         role.name === payload.name &&
         (role.shortName ?? '') === payload.shortName &&
         role.description === payload.description &&
         role.level === payload.level &&
-        roleColorOrDefault(role.colorHex) === payload.colorHex;
+        roleColorOrDefault(role.colorHex) === (payload.colorHex ?? roleColorOrDefault(role.colorHex));
 
       if (unchanged) return;
       void onUpdateRole(roleId, payload);
@@ -137,6 +181,9 @@ export function RolesTab(props: RolesTabProps) {
     await onCreateRole(event);
     setIsCreateRoleOpen(false);
   };
+
+  const nextDepartmentName = newDepartmentName.trim();
+  const nextGradeName = newGradeName.trim();
 
   return (
     <section className="grid">
@@ -192,15 +239,214 @@ export function RolesTab(props: RolesTabProps) {
                 />
               </div>
               <div className="role-color-editor">
-                <input
-                  type="color"
-                  value={roleDrafts[role.id]?.colorHex ?? roleColorOrDefault(role.colorHex)}
-                  onChange={(event) => updateRoleDraft(role.id, { colorHex: event.target.value })}
-                />
+                {(() => {
+                  const draftColor = roleDrafts[role.id]?.colorHex ?? roleColorOrDefault(role.colorHex);
+                  return (
+                    <CustomColorPicker
+                      value={draftColor}
+                      label={t.color}
+                      copyLabel={t.copyHex}
+                      fallbackHex={roleColorOrDefault(role.colorHex)}
+                      onChange={(nextHex) => updateRoleDraft(role.id, { colorHex: nextHex })}
+                    />
+                  );
+                })()}
               </div>
             </li>
           ))}
         </ul>
+
+        <hr className="separator" />
+
+        <div className="settings-columns">
+          <section className="settings-column">
+            <div className="section-header roles-list-header">
+              <h3>{t.departmentsList}</h3>
+            </div>
+            <div className="department-manage-row create department-manage-row-color">
+              <input
+                className="department-manage-input"
+                value={newDepartmentName}
+                placeholder={t.department}
+                onChange={(event) => setNewDepartmentName(event.target.value)}
+              />
+              <div className="role-color-editor">
+                <CustomColorPicker
+                  value={newDepartmentColor}
+                  label={t.color}
+                  copyLabel={t.copyHex}
+                  fallbackHex="#7A8A9A"
+                  onChange={setNewDepartmentColor}
+                />
+              </div>
+              <button
+                type="button"
+                className="department-manage-action primary"
+                disabled={!nextDepartmentName}
+                onClick={() => {
+                  if (!nextDepartmentName) return;
+                  void onCreateDepartment(nextDepartmentName, newDepartmentColor);
+                  setNewDepartmentName('');
+                }}
+                title={t.addDepartment}
+                aria-label={t.addDepartment}
+              >
+                <Icon name="plus" />
+              </button>
+            </div>
+            <div className="department-manage-list">
+              {departments.map((department) => {
+                const draft = departmentDrafts[department.id] ?? {
+                  name: department.name,
+                  colorHex: roleColorOrDefault(department.colorHex),
+                };
+                const trimmedName = draft.name.trim();
+                const canSave =
+                  trimmedName.length > 0 &&
+                  Boolean(normalizeHex(draft.colorHex)) &&
+                  (trimmedName !== department.name || draft.colorHex !== roleColorOrDefault(department.colorHex));
+
+                return (
+                  <div className="department-manage-row department-manage-row-color" key={department.id}>
+                    <input
+                      className="department-manage-input"
+                      value={draft.name}
+                      placeholder={t.department}
+                      onChange={(event) =>
+                        setDepartmentDrafts((prev) => ({
+                          ...prev,
+                          [department.id]: {
+                            ...draft,
+                            name: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                    <div className="role-color-editor">
+                      <CustomColorPicker
+                        value={draft.colorHex}
+                        label={t.color}
+                        copyLabel={t.copyHex}
+                        fallbackHex={roleColorOrDefault(department.colorHex)}
+                        onChange={(nextHex) =>
+                          setDepartmentDrafts((prev) => ({
+                            ...prev,
+                            [department.id]: {
+                              ...draft,
+                              colorHex: nextHex,
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="department-manage-action"
+                      disabled={!canSave}
+                      title={t.save}
+                      aria-label={t.save}
+                      onClick={() => {
+                        if (!canSave) return;
+                        void onUpdateDepartment(
+                          department.id,
+                          trimmedName,
+                          normalizeHex(draft.colorHex) ?? roleColorOrDefault(department.colorHex),
+                        );
+                      }}
+                    >
+                      <Icon name="check" />
+                    </button>
+                    <button
+                      type="button"
+                      className="department-manage-action"
+                      title={t.deleteDepartment}
+                      aria-label={t.deleteDepartment}
+                      onClick={() => {
+                        if (!window.confirm(t.confirmDeleteDepartment)) return;
+                        void onDeleteDepartment(department.id);
+                      }}
+                    >
+                      <Icon name="x" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="settings-column">
+            <div className="section-header roles-list-header">
+              <h3>{t.gradesList}</h3>
+            </div>
+            <div className="department-manage-row create department-manage-row-grade">
+              <input
+                className="department-manage-input"
+                value={newGradeName}
+                placeholder={t.grade}
+                onChange={(event) => setNewGradeName(event.target.value)}
+              />
+              <button
+                type="button"
+                className="department-manage-action primary"
+                disabled={!nextGradeName}
+                onClick={() => {
+                  if (!nextGradeName) return;
+                  onAddGrade(nextGradeName);
+                  setNewGradeName('');
+                }}
+                title={t.addGrade}
+                aria-label={t.addGrade}
+              >
+                <Icon name="plus" />
+              </button>
+            </div>
+            <div className="department-manage-list">
+              {gradeOptions.map((grade) => {
+                const draft = gradeDrafts[grade] ?? grade;
+                const trimmedName = draft.trim();
+                const duplicateExists = gradeOptions.some((item) => item !== grade && item === trimmedName);
+                const canSave = trimmedName.length > 0 && trimmedName !== grade && !duplicateExists;
+
+                return (
+                  <div className="department-manage-row department-manage-row-grade-edit" key={grade}>
+                    <input
+                      className="department-manage-input"
+                      value={draft}
+                      onChange={(event) =>
+                        setGradeDrafts((prev) => ({
+                          ...prev,
+                          [grade]: event.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="department-manage-action"
+                      disabled={!canSave}
+                      title={t.save}
+                      aria-label={t.save}
+                      onClick={() => {
+                        if (!canSave) return;
+                        onRenameGrade(grade, trimmedName);
+                      }}
+                    >
+                      <Icon name="check" />
+                    </button>
+                    <button
+                      type="button"
+                      className="department-manage-action"
+                      title={t.deleteGrade}
+                      aria-label={t.deleteGrade}
+                      onClick={() => onDeleteGrade(grade)}
+                    >
+                      <Icon name="x" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
       </article>
 
       {isCreateRoleOpen ? (

@@ -2,6 +2,7 @@ type BenchMember = {
   id: string;
   fullName: string;
   roleName: string;
+  roleColorHex: string;
   annualLoadPercent: number;
 };
 
@@ -57,7 +58,12 @@ export function BenchColumn(props: BenchColumnProps) {
                   onDragEnd={onMemberDragEnd}
                 >
                   <strong>{toInitials(member.fullName)}</strong>
-                  <span>{`${member.roleName} · ${member.annualLoadPercent}%`}</span>
+                  <span className="bench-member-meta">
+                    <span className="timeline-role-chip" style={{ background: member.roleColorHex }}>
+                      {member.roleName}
+                    </span>
+                    <span>{`${member.annualLoadPercent}%`}</span>
+                  </span>
                 </button>
               ))}
             </div>
