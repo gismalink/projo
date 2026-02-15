@@ -2,13 +2,24 @@ type TimelineToolbarProps = {
   t: Record<string, string>;
   selectedYear: number;
   dragStepDays: 1 | 7 | 30;
+  useProductionCalendar: boolean;
   onOpenProjectModal: () => void;
   onYearChange: (nextYear: number) => Promise<void>;
   onDragStepDaysChange: (next: 1 | 7 | 30) => void;
+  onUseProductionCalendarChange: (next: boolean) => void;
 };
 
 export function TimelineToolbar(props: TimelineToolbarProps) {
-  const { t, selectedYear, dragStepDays, onOpenProjectModal, onYearChange, onDragStepDaysChange } = props;
+  const {
+    t,
+    selectedYear,
+    dragStepDays,
+    useProductionCalendar,
+    onOpenProjectModal,
+    onYearChange,
+    onDragStepDaysChange,
+    onUseProductionCalendarChange,
+  } = props;
 
   return (
     <div className="timeline-toolbar">
@@ -36,6 +47,23 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
             onClick={() => onDragStepDaysChange(30)}
           >
             {t.stepMonth}
+          </button>
+        </div>
+        <div className="timeline-step-switch" role="group" aria-label={t.calendarScenarioLabel}>
+          <span className="timeline-step-label">{t.calendarScenarioLabel}</span>
+          <button
+            type="button"
+            className={useProductionCalendar ? 'tab active' : 'tab'}
+            onClick={() => onUseProductionCalendarChange(true)}
+          >
+            {t.calendarScenarioOn}
+          </button>
+          <button
+            type="button"
+            className={!useProductionCalendar ? 'tab active' : 'tab'}
+            onClick={() => onUseProductionCalendarChange(false)}
+          >
+            {t.calendarScenarioOff}
           </button>
         </div>
       </div>

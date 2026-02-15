@@ -34,6 +34,44 @@
   margin-right: 0.2rem;
 }
 
+.timeline-calendar-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.05rem 0 0.45rem;
+  font-size: 0.74rem;
+  color: var(--ios-text-secondary);
+}
+
+.timeline-calendar-legend-title {
+  font-weight: 600;
+}
+
+.timeline-calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.timeline-calendar-health {
+  margin-left: 0.4rem;
+}
+
+.timeline-calendar-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--ios-border);
+}
+
+.timeline-calendar-swatch.weekend {
+  background: rgba(120, 120, 128, 0.1);
+}
+
+.timeline-calendar-swatch.holiday {
+  background: rgba(255, 69, 58, 0.12);
+}
+
 .year-switcher {
   display: inline-flex;
   align-items: center;

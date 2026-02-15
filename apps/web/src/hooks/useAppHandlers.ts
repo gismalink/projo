@@ -88,7 +88,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, calendarData] =
+    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, calendarData, calendarHealth] =
       await Promise.all([
         api.getRoles(authToken),
         api.getSkills(authToken),
@@ -99,6 +99,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         api.getProjects(authToken),
         api.getTimelineYear(year, authToken),
         api.getCalendarYear(year, authToken),
+        api.getCalendarHealth(authToken),
       ]);
 
     const nextRoles = rolesData as typeof state.roles;
@@ -118,6 +119,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setProjects(nextProjects);
     state.setTimeline(timelineData);
     state.setCalendarDays(calendarData.days);
+    state.setCalendarHealth(calendarHealth);
     state.setTimelineOrder((prev) => {
       const ids = timelineData.map((row) => row.id);
       const kept = prev.filter((id) => ids.includes(id));
@@ -569,12 +571,14 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setSelectedYear(nextYear);
     if (!state.token) return;
     try {
-      const [timelineData, calendarData] = await Promise.all([
+      const [timelineData, calendarData, calendarHealth] = await Promise.all([
         api.getTimelineYear(nextYear, state.token),
         api.getCalendarYear(nextYear, state.token),
+        api.getCalendarHealth(state.token),
       ]);
       state.setTimeline(timelineData);
       state.setCalendarDays(calendarData.days);
+      state.setCalendarHealth(calendarHealth);
       state.setTimelineOrder((prev) => {
         const ids = timelineData.map((row) => row.id);
         const kept = prev.filter((id) => ids.includes(id));

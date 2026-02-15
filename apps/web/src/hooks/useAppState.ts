@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   AssignmentItem,
   CalendarDayItem,
+  CalendarHealthResponse,
   DepartmentItem,
   ProjectDetail,
   ProjectListItem,
@@ -69,6 +70,7 @@ export function useAppState() {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineRow[]>([]);
   const [calendarDays, setCalendarDays] = useState<CalendarDayItem[]>([]);
+  const [calendarHealth, setCalendarHealth] = useState<CalendarHealthResponse | null>(null);
   const [timelineOrder, setTimelineOrder] = useState<string[]>([]);
   const [expandedProjectIds, setExpandedProjectIds] = useState<string[]>([]);
   const [projectDetails, setProjectDetails] = useState<Record<string, ProjectDetail>>({});
@@ -143,6 +145,7 @@ export function useAppState() {
     projects,
     timeline,
     calendarDays,
+    calendarHealth,
     timelineOrder,
     expandedProjectIds,
     projectDetails,
@@ -212,6 +215,7 @@ export function useAppState() {
     setProjects,
     setTimeline,
     setCalendarDays,
+    setCalendarHealth,
     setTimelineOrder,
     setExpandedProjectIds,
     setProjectDetails,

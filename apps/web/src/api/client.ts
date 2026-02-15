@@ -206,6 +206,20 @@ export type CalendarYearResponse = {
   days: CalendarDayItem[];
 };
 
+export type CalendarHealthYearState = {
+  year: number;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  lastStatus: string;
+  freshness: 'fresh' | 'stale' | 'missing';
+};
+
+export type CalendarHealthResponse = {
+  ttlHours: number;
+  currentYear: CalendarHealthYearState;
+  nextYear: CalendarHealthYearState;
+};
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -283,6 +297,7 @@ export const api = {
   getTimelineYear: (year: number, token: string) =>
     request<ProjectTimelineRow[]>(`/timeline/year?year=${year}`, {}, token),
   getCalendarYear: (year: number, token: string) => request<CalendarYearResponse>(`/calendar/${year}`, {}, token),
+  getCalendarHealth: (token: string) => request<CalendarHealthResponse>('/calendar/health/status', {}, token),
   createProject: (payload: CreateProjectPayload, token: string) =>
     request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateProject: (projectId: string, payload: UpdateProjectPayload, token: string) =>

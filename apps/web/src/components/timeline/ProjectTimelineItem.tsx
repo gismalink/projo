@@ -16,6 +16,7 @@ type ProjectTimelineItemProps = {
   monthBoundaryPercents: number[];
   todayPosition: string | null;
   projectFact: { style: { left: string; width: string }; startIso: string; endIso: string } | null;
+  projectHourStats?: { actualHours: number; lostHours: number };
   displayTooltipMode: 'move' | 'resize-start' | 'resize-end';
   tooltipMode: 'move' | 'resize-start' | 'resize-end' | null;
   displayTooltipText: string;
@@ -54,6 +55,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     monthBoundaryPercents,
     todayPosition,
     projectFact,
+    projectHourStats,
     displayTooltipMode,
     tooltipMode,
     displayTooltipText,
@@ -124,6 +126,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                   ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} ${t.hoursWord}`
                   : `— ${t.hoursWord}`}
               </span>
+              <span>{t.factHoursShort}: {(projectHourStats?.actualHours ?? 0).toFixed(1)}</span>
+              <span>{t.lostHoursShort}: {(projectHourStats?.lostHours ?? 0).toFixed(1)}</span>
               <span>
                 {detail?.costSummary
                   ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)

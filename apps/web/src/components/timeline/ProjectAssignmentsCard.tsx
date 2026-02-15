@@ -1,5 +1,5 @@
 import { MouseEvent as ReactMouseEvent, MutableRefObject, useMemo } from 'react';
-import { ProjectDetail } from '../../api/client';
+import { CalendarDayItem, ProjectDetail } from '../../api/client';
 import { Icon } from '../Icon';
 
 type AssignmentDragState = {
@@ -32,6 +32,8 @@ type ProjectAssignmentsCardProps = {
   detail: ProjectDetail;
   dayStep: string;
   calendarSegments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }>;
+  calendarDayByIso: Map<string, CalendarDayItem>;
+  useProductionCalendar: boolean;
   todayPosition: string | null;
   assignmentStyle: (startDate: string, endDate: string) => { left: string; width: string };
   employeeRoleColorById: Map<string, string>;
@@ -69,6 +71,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     detail,
     dayStep,
     calendarSegments,
+    calendarDayByIso,
+    useProductionCalendar,
     todayPosition,
     assignmentStyle,
     employeeRoleColorById,
@@ -99,6 +103,71 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     [detail.assignments],
   );
 
+  const actualHoursByAssignmentId = useMemo(() => {
+    const result = new Map<string, { actualHours: number; lostHours: number }>();
+
+    const toUtcDay = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+    const formatIso = (value: Date) => toUtcDay(value).toISOString().slice(0, 10);
+    const isWeekendByDate = (value: Date) => {
+      const day = value.getUTCDay();
+      return day === 0 || day === 6;
+    };
+
+    for (const assignment of sortedAssignments) {
+      const assignmentStart = toUtcDay(new Date(assignment.assignmentStartDate));
+      const assignmentEnd = toUtcDay(new Date(assignment.assignmentEndDate));
+      if (assignmentEnd < assignmentStart) {
+        result.set(assignment.id, { actualHours: 0, lostHours: 0 });
+        continue;
+      }
+
+      const dailyHours =
+        assignment.plannedHoursPerDay !== null
+          ? Number(assignment.plannedHoursPerDay)
+          : (8 * Number(assignment.allocationPercent)) / 100;
+
+      if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
+        result.set(assignment.id, { actualHours: 0, lostHours: 0 });
+        continue;
+      }
+
+      const vacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
+      const vacationRanges = vacations.map((vacation) => ({
+        start: toUtcDay(new Date(vacation.startDate)),
+        end: toUtcDay(new Date(vacation.endDate)),
+      }));
+
+      let totalHours = 0;
+      let plannedHours = 0;
+      const cursor = new Date(assignmentStart);
+      while (cursor <= assignmentEnd) {
+        const isoDate = formatIso(cursor);
+        const calendarDay = calendarDayByIso.get(isoDate);
+        const isHoliday = calendarDay?.isHoliday ?? false;
+        const isWeekend = useProductionCalendar ? (calendarDay ? calendarDay.isWeekend : isWeekendByDate(cursor)) : false;
+        const isWorkingDay = useProductionCalendar ? (calendarDay ? calendarDay.isWorkingDay : !isWeekend) : true;
+        const effectiveIsHoliday = useProductionCalendar ? isHoliday : false;
+
+        if (isWorkingDay && !isWeekend && !effectiveIsHoliday) {
+          plannedHours += dailyHours;
+          const onVacation = vacationRanges.some((range) => cursor >= range.start && cursor <= range.end);
+          if (!onVacation) {
+            totalHours += dailyHours;
+          }
+        }
+
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+
+      result.set(assignment.id, {
+        actualHours: Number(totalHours.toFixed(2)),
+        lostHours: Number(Math.max(0, plannedHours - totalHours).toFixed(2)),
+      });
+    }
+
+    return result;
+  }, [calendarDayByIso, sortedAssignments, useProductionCalendar, vacationsByEmployeeId]);
+
   return (
     <section className="project-card">
       <div className="assignment-list">
@@ -113,6 +182,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
               <div className="assignment-item-header">
                 <strong>{assignment.employee.fullName}</strong>
                 <span>{Number(assignment.allocationPercent)}%</span>
+                <span>{t.factHoursShort}: {(actualHoursByAssignmentId.get(assignment.id)?.actualHours ?? 0).toFixed(1)}</span>
+                <span>{t.lostHoursShort}: {(actualHoursByAssignmentId.get(assignment.id)?.lostHours ?? 0).toFixed(1)}</span>
                 <span
                   role="button"
                   tabIndex={0}

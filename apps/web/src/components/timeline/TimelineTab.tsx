@@ -1,5 +1,5 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { AssignmentItem, CalendarDayItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { AssignmentItem, CalendarDayItem, CalendarHealthResponse, ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
@@ -8,6 +8,7 @@ import { TimelineToolbar } from './TimelineToolbar';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
+const TIMELINE_CALENDAR_MODE_STORAGE_KEY = 'timeline.useProductionCalendar';
 
 type TimelineTabProps = {
   t: Record<string, string>;
@@ -20,6 +21,7 @@ type TimelineTabProps = {
   roles: Array<{ name: string; colorHex?: string | null }>;
   sortedTimeline: ProjectTimelineRow[];
   calendarDays: CalendarDayItem[];
+  calendarHealth: CalendarHealthResponse | null;
   expandedProjectIds: string[];
   projectDetails: Record<string, ProjectDetail>;
   onOpenProjectModal: () => void;
@@ -58,6 +60,7 @@ export function TimelineTab(props: TimelineTabProps) {
     roles,
     sortedTimeline,
     calendarDays,
+    calendarHealth,
     expandedProjectIds,
     projectDetails,
     onOpenProjectModal,
@@ -77,6 +80,11 @@ export function TimelineTab(props: TimelineTabProps) {
     if (typeof window === 'undefined') return 7;
     const saved = Number(window.localStorage.getItem(TIMELINE_DRAG_STEP_STORAGE_KEY));
     return saved === 1 || saved === 7 || saved === 30 ? saved : 7;
+  });
+  const [useProductionCalendar, setUseProductionCalendar] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = window.localStorage.getItem(TIMELINE_CALENDAR_MODE_STORAGE_KEY);
+    return saved === null ? true : saved === 'true';
   });
 
   const [assignmentDragState, setAssignmentDragState] = useState<{
@@ -141,6 +149,15 @@ export function TimelineTab(props: TimelineTabProps) {
     if (day.isHoliday) return day.holidayName ? `${t.dayTypeHoliday}: ${day.holidayName}` : t.dayTypeHoliday;
     if (day.isWeekend) return t.dayTypeWeekend;
     return t.dayTypeWorking;
+  };
+
+  const formatHealthDateTime = (value: string | null) => {
+    if (!value) return t.calendarHealthMissing;
+    try {
+      return new Date(value).toLocaleString(t.prev === 'Назад' ? 'ru-RU' : 'en-US');
+    } catch {
+      return value;
+    }
   };
 
   const dayMarkers = [];
@@ -606,6 +623,70 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [vacations]);
 
+  const projectHourStatsById = useMemo(() => {
+    const result = new Map<string, { actualHours: number; lostHours: number }>();
+
+    const isWeekendByDate = (value: Date) => {
+      const day = value.getUTCDay();
+      return day === 0 || day === 6;
+    };
+
+    for (const [projectId, projectAssignments] of assignmentsByProjectId.entries()) {
+      let actualHours = 0;
+      let lostHours = 0;
+
+      for (const assignment of projectAssignments) {
+        const assignmentStart = toUtcDay(new Date(assignment.assignmentStartDate));
+        const assignmentEnd = toUtcDay(new Date(assignment.assignmentEndDate));
+        if (assignmentEnd < assignmentStart) continue;
+
+        const dailyHours =
+          assignment.plannedHoursPerDay !== null
+            ? Number(assignment.plannedHoursPerDay)
+            : (8 * Number(assignment.allocationPercent)) / 100;
+        if (!Number.isFinite(dailyHours) || dailyHours <= 0) continue;
+
+        const vacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
+        const vacationRanges = vacations.map((vacation) => ({
+          start: toUtcDay(new Date(vacation.startDate)),
+          end: toUtcDay(new Date(vacation.endDate)),
+        }));
+
+        let assignmentActualHours = 0;
+        let assignmentPlannedHours = 0;
+        const cursor = new Date(assignmentStart);
+
+        while (cursor <= assignmentEnd) {
+          const isoDate = cursor.toISOString().slice(0, 10);
+          const calendarDay = calendarDayByIso.get(isoDate);
+          const isHoliday = useProductionCalendar ? (calendarDay?.isHoliday ?? false) : false;
+          const isWeekend = useProductionCalendar ? (calendarDay ? calendarDay.isWeekend : isWeekendByDate(cursor)) : false;
+          const isWorkingDay = useProductionCalendar ? (calendarDay ? calendarDay.isWorkingDay : !isWeekend) : true;
+
+          if (isWorkingDay && !isWeekend && !isHoliday) {
+            assignmentPlannedHours += dailyHours;
+            const onVacation = vacationRanges.some((range) => cursor >= range.start && cursor <= range.end);
+            if (!onVacation) {
+              assignmentActualHours += dailyHours;
+            }
+          }
+
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+
+        actualHours += assignmentActualHours;
+        lostHours += Math.max(0, assignmentPlannedHours - assignmentActualHours);
+      }
+
+      result.set(projectId, {
+        actualHours: Number(actualHours.toFixed(2)),
+        lostHours: Number(lostHours.toFixed(2)),
+      });
+    }
+
+    return result;
+  }, [assignmentsByProjectId, calendarDayByIso, toUtcDay, useProductionCalendar, vacationsByEmployeeId]);
+
   const {
     dragState,
     pendingPlanPreview,
@@ -629,6 +710,10 @@ export function TimelineTab(props: TimelineTabProps) {
   useEffect(() => {
     window.localStorage.setItem(TIMELINE_DRAG_STEP_STORAGE_KEY, String(dragStepDays));
   }, [dragStepDays]);
+
+  useEffect(() => {
+    window.localStorage.setItem(TIMELINE_CALENDAR_MODE_STORAGE_KEY, String(useProductionCalendar));
+  }, [useProductionCalendar]);
 
   useEffect(() => {
     if (!dragState && !assignmentDragState) return;
@@ -665,10 +750,30 @@ export function TimelineTab(props: TimelineTabProps) {
           t={t}
           selectedYear={selectedYear}
           dragStepDays={dragStepDays}
+          useProductionCalendar={useProductionCalendar}
           onOpenProjectModal={onOpenProjectModal}
           onYearChange={onYearChange}
           onDragStepDaysChange={setDragStepDays}
+          onUseProductionCalendarChange={setUseProductionCalendar}
         />
+
+        <div className="timeline-calendar-legend" aria-label={t.calendarLegendLabel}>
+          <span className="timeline-calendar-legend-title">{t.calendarLegendLabel}</span>
+          <span className="timeline-calendar-legend-item">
+            <span className="timeline-calendar-swatch holiday" />
+            {t.dayTypeHoliday}
+          </span>
+          <span className="timeline-calendar-legend-item">
+            <span className="timeline-calendar-swatch weekend" />
+            {t.dayTypeWeekend}
+          </span>
+          {calendarHealth ? (
+            <span className="timeline-calendar-health">
+              {t.calendarHealthLabel}: {calendarHealth.currentYear.freshness} · {t.calendarHealthLastSync}:{' '}
+              {formatHealthDateTime(calendarHealth.currentYear.lastSuccessAt)}
+            </span>
+          ) : null}
+        </div>
 
         <CompanyLoadCard
           t={t}
@@ -747,6 +852,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       monthBoundaryPercents={projectMonthBoundaryPercents}
                       todayPosition={todayPosition}
                       projectFact={projectFactByProjectId.get(row.id) ?? null}
+                      projectHourStats={projectHourStatsById.get(row.id)}
                       displayTooltipMode={displayTooltipMode}
                       tooltipMode={tooltipMode}
                       displayTooltipText={displayTooltipText}
@@ -770,6 +876,8 @@ export function TimelineTab(props: TimelineTabProps) {
                           detail={detail}
                           dayStep={dayStep}
                           calendarSegments={calendarSegments}
+                          calendarDayByIso={calendarDayByIso}
+                          useProductionCalendar={useProductionCalendar}
                           todayPosition={todayPosition}
                           assignmentStyle={assignmentStyle}
                           employeeRoleColorById={employeeRoleColorById}
