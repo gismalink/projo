@@ -1,0 +1,5 @@
+export const MS_PER_DAY = 86_400_000;
+export const ASSIGNMENT_MIN_WIDTH_PERCENT = 1.2;
+export const ASSIGNMENT_DRAG_THRESHOLD_PX = 2;
+export const ASSIGNMENT_EDGE_WIDTH_PX = 8;
+export const TIMELINE_FALLBACK_COLOR_HEX = '#6E7B8A';

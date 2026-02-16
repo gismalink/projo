@@ -6,6 +6,13 @@ import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
 import { ProjectTimelineItem } from './ProjectTimelineItem';
 import { TimelineToolbar } from './TimelineToolbar';
+import {
+  ASSIGNMENT_DRAG_THRESHOLD_PX,
+  ASSIGNMENT_EDGE_WIDTH_PX,
+  ASSIGNMENT_MIN_WIDTH_PERCENT,
+  MS_PER_DAY,
+  TIMELINE_FALLBACK_COLOR_HEX,
+} from './timeline.constants';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
@@ -130,7 +137,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
   const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
-  const totalDays = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
+  const totalDays = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / MS_PER_DAY));
   const dayStep =
     dragStepDays === 30 ? `${(100 / 12).toFixed(8)}%` : `${((dragStepDays / totalDays) * 100).toFixed(5)}%`;
   const projectMonthBoundaryPercents = useMemo(() => {
@@ -139,7 +146,7 @@ export function TimelineTab(props: TimelineTabProps) {
     const boundaries: number[] = [];
     for (let monthIndex = 0; monthIndex <= 12; monthIndex += 1) {
       const monthStart = new Date(Date.UTC(selectedYear, monthIndex, 1));
-      const offsetDays = Math.max(0, Math.min(totalDays, (monthStart.getTime() - yearStart.getTime()) / 86400000));
+      const offsetDays = Math.max(0, Math.min(totalDays, (monthStart.getTime() - yearStart.getTime()) / MS_PER_DAY));
       boundaries.push((offsetDays / totalDays) * 100);
     }
     return boundaries;
@@ -240,7 +247,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const companyLoad = useMemo(() => {
     const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
     const yearEnd = new Date(Date.UTC(selectedYear + 1, 0, 1));
-    const days = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
+    const days = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / MS_PER_DAY));
     const rawTotals = Array.from({ length: days }, () => 0);
 
     const isLoadBearingDay = (date: Date) => {
@@ -259,11 +266,11 @@ export function TimelineTab(props: TimelineTabProps) {
       const start = new Date(assignment.assignmentStartDate);
       const end = new Date(assignment.assignmentEndDate);
       const effectiveStart = start < yearStart ? yearStart : start;
-      const effectiveEnd = end >= yearEnd ? new Date(yearEnd.getTime() - 86400000) : end;
+      const effectiveEnd = end >= yearEnd ? new Date(yearEnd.getTime() - MS_PER_DAY) : end;
       if (effectiveEnd < effectiveStart) continue;
 
-      const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / 86400000));
-      const endIndex = Math.min(days - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / 86400000));
+      const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / MS_PER_DAY));
+      const endIndex = Math.min(days - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / MS_PER_DAY));
       for (let i = startIndex; i <= endIndex; i += 1) {
         const currentDate = new Date(yearStart);
         currentDate.setUTCDate(currentDate.getUTCDate() + i);
@@ -302,8 +309,8 @@ export function TimelineTab(props: TimelineTabProps) {
       for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
         const monthStart = new Date(Date.UTC(selectedYear, monthIndex, 1));
         const nextMonthStart = new Date(Date.UTC(selectedYear, monthIndex + 1, 1));
-        const startIndex = Math.max(0, Math.floor((monthStart.getTime() - yearStart.getTime()) / 86400000));
-        const endIndex = Math.max(startIndex, Math.min(days, Math.floor((nextMonthStart.getTime() - yearStart.getTime()) / 86400000)));
+        const startIndex = Math.max(0, Math.floor((monthStart.getTime() - yearStart.getTime()) / MS_PER_DAY));
+        const endIndex = Math.max(startIndex, Math.min(days, Math.floor((nextMonthStart.getTime() - yearStart.getTime()) / MS_PER_DAY)));
         const slice = dailyUtilization.slice(startIndex, endIndex);
         const avg = slice.length > 0 ? slice.reduce((sum, value) => sum + value, 0) / slice.length : 0;
         values.push(avg);
@@ -329,7 +336,7 @@ export function TimelineTab(props: TimelineTabProps) {
 
   const diffDays = (from: Date, to: Date) => {
     const diff = toUtcDay(to).getTime() - toUtcDay(from).getTime();
-    return Math.round(diff / 86400000);
+    return Math.round(diff / MS_PER_DAY);
   };
 
   const toApiDate = (value: Date) => toUtcDay(value).toISOString();
@@ -362,13 +369,13 @@ export function TimelineTab(props: TimelineTabProps) {
     const endInYear = new Date(Date.UTC(selectedYear, 11, 31));
     const effectiveStart = start < startInYear ? startInYear : start;
     const effectiveEnd = end > endInYear ? endInYear : end;
-    const totalDays = Math.max(1, Math.floor((endInYear.getTime() - startInYear.getTime()) / 86400000));
-    const startOffset = Math.floor((effectiveStart.getTime() - startInYear.getTime()) / 86400000) / totalDays;
-    const endOffset = Math.floor((effectiveEnd.getTime() - startInYear.getTime()) / 86400000) / totalDays;
+    const totalDays = Math.max(1, Math.floor((endInYear.getTime() - startInYear.getTime()) / MS_PER_DAY));
+    const startOffset = Math.floor((effectiveStart.getTime() - startInYear.getTime()) / MS_PER_DAY) / totalDays;
+    const endOffset = Math.floor((effectiveEnd.getTime() - startInYear.getTime()) / MS_PER_DAY) / totalDays;
 
     return {
       left: `${Math.max(0, startOffset * 100).toFixed(2)}%`,
-      width: `${Math.max((endOffset - startOffset) * 100, 1.2).toFixed(2)}%`,
+      width: `${Math.max((endOffset - startOffset) * 100, ASSIGNMENT_MIN_WIDTH_PERCENT).toFixed(2)}%`,
     };
   };
 
@@ -446,7 +453,7 @@ export function TimelineTab(props: TimelineTabProps) {
       return next;
     };
     const shiftDays = diffDays(baseDate, snapToBoundary(candidateDate));
-    if (Math.abs(deltaX) >= 2) {
+    if (Math.abs(deltaX) >= ASSIGNMENT_DRAG_THRESHOLD_PX) {
       assignmentDragMovedRef.current = true;
     }
     if (shiftDays !== assignmentDragState.shiftDays) {
@@ -489,7 +496,7 @@ export function TimelineTab(props: TimelineTabProps) {
     if (assignmentDragState) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
-    const edgeWidth = 8;
+    const edgeWidth = ASSIGNMENT_EDGE_WIDTH_PX;
     let mode: 'move' | 'resize-start' | 'resize-end' = 'move';
     if (x <= edgeWidth) {
       mode = 'resize-start';
@@ -587,7 +594,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const employeeRoleColorById = useMemo(() => {
     const result = new Map<string, string>();
     for (const employee of employees) {
-      result.set(employee.id, roleColorByName.get(employee.role.name) ?? '#6E7B8A');
+      result.set(employee.id, roleColorByName.get(employee.role.name) ?? TIMELINE_FALLBACK_COLOR_HEX);
     }
     return result;
   }, [employees, roleColorByName]);
@@ -656,7 +663,7 @@ export function TimelineTab(props: TimelineTabProps) {
       const effectiveEnd = end > yearEndDay ? yearEndDay : end;
       if (effectiveEnd < effectiveStart) continue;
 
-      const overlapDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / 86400000) + 1;
+      const overlapDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / MS_PER_DAY) + 1;
       const weightedUtilization = (allocation * overlapDays) / totalDays;
       annualUtilizationByEmployeeId.set(
         assignment.employeeId,
@@ -683,9 +690,9 @@ export function TimelineTab(props: TimelineTabProps) {
         id: employee.id,
         fullName: employee.fullName,
         grade: employee.grade,
-        gradeColorHex: employee.grade ? (gradeColorByName.get(employee.grade) ?? '#6E7B8A') : undefined,
+        gradeColorHex: employee.grade ? (gradeColorByName.get(employee.grade) ?? TIMELINE_FALLBACK_COLOR_HEX) : undefined,
         roleName: employeeRoleLabelById.get(employee.id) ?? employee.role.name,
-        roleColorHex: employeeRoleColorById.get(employee.id) ?? '#6E7B8A',
+        roleColorHex: employeeRoleColorById.get(employee.id) ?? TIMELINE_FALLBACK_COLOR_HEX,
         annualLoadPercent: Math.max(0, Math.round(annualUtilization)),
       };
       const items = groups.get(departmentName);

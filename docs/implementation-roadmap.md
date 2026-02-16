@@ -15,14 +15,15 @@
 - Добавлен чип выбранного шаблона в строке проекта.
 
 ### P1 — техдолг и срочный рефакторинг
-1. Убрать хардкод bootstrap-учеток из web state и API service:
+1. [x] Убрать хардкод bootstrap-учеток из web state и API service:
    - перенести в env/config,
    - оставить безопасные dev defaults только через `.env`.
-2. Устранить `as any` в `apps/api/src/team-templates/team-templates.service.ts`:
+2. [x] Устранить `as any` в `apps/api/src/team-templates/team-templates.service.ts`:
    - восстановить строгую типизацию Prisma delegate после полной регенерации/проверки типов.
-3. Централизовать магические числа и дефолты UI/API:
+3. [~] Централизовать магические числа и дефолты UI/API:
    - `MONTHLY_HOURS = 168`, `setTimeout(..., 4500/420)`, дефолтные цвета и статусы.
-4. Убрать локализацию через косвенные хардкоды вида `t.prev === 'Назад'` в пользу явного `lang`/locale state.
+   - сделано частично: `TimelineTab` переведен на именованные constants (`MS_PER_DAY`, fallback color, drag thresholds).
+4. [x] Убрать локализацию через косвенные хардкоды вида `t.prev === 'Назад'` в пользу явного `lang`/locale state.
 
 ### P2 — стабильность и покрытие
 1. Добавить целевые integration/e2e сценарии по критическим потокам:
