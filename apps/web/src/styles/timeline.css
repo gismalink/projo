@@ -36,45 +36,6 @@
   color: var(--ios-text-secondary);
 }
 
-.timeline-calendar-toggle-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.78rem;
-  color: var(--ios-text-secondary);
-  flex-direction: row;
-}
-
-.timeline-switch {
-  width: 34px;
-  height: 20px;
-  border-radius: 999px;
-  border: 1px solid var(--ios-border);
-  background: rgba(120, 120, 128, 0.3);
-  padding: 1px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  transition: background 0.16s ease;
-}
-
-.timeline-switch.active {
-  background: var(--ios-accent);
-  border-color: var(--ios-accent);
-}
-
-.timeline-switch-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: transform 0.16s ease;
-}
-
-.timeline-switch.active .timeline-switch-thumb {
-  transform: translateX(14px);
-}
 
 .timeline-calendar-checkbox input {
   margin: 0;

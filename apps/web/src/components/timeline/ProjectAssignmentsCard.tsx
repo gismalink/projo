@@ -34,7 +34,6 @@ type ProjectAssignmentsCardProps = {
   dayStep: string;
   calendarSegments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }>;
   calendarDayByIso: Map<string, CalendarDayItem>;
-  useProductionCalendar: boolean;
   todayPosition: string | null;
   assignmentStyle: (startDate: string, endDate: string) => { left: string; width: string };
   employeeRoleColorById: Map<string, string>;
@@ -75,7 +74,6 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     dayStep,
     calendarSegments,
     calendarDayByIso,
-    useProductionCalendar,
     todayPosition,
     assignmentStyle,
     employeeRoleColorById,
@@ -148,12 +146,9 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       while (cursor <= assignmentEnd) {
         const isoDate = formatIso(cursor);
         const calendarDay = calendarDayByIso.get(isoDate);
-        const isHoliday = calendarDay?.isHoliday ?? false;
-        const isWeekend = useProductionCalendar ? (calendarDay ? calendarDay.isWeekend : isWeekendByDate(cursor)) : false;
-        const isWorkingDay = useProductionCalendar ? (calendarDay ? calendarDay.isWorkingDay : !isWeekend) : true;
-        const effectiveIsHoliday = useProductionCalendar ? isHoliday : false;
+        const isWorkingDay = calendarDay ? calendarDay.isWorkingDay : !isWeekendByDate(cursor);
 
-        if (isWorkingDay && !isWeekend && !effectiveIsHoliday) {
+        if (isWorkingDay) {
           plannedHours += dailyHours;
           const onVacation = vacationRanges.some((range) => cursor >= range.start && cursor <= range.end);
           if (!onVacation) {
@@ -171,7 +166,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     }
 
     return result;
-  }, [calendarDayByIso, sortedAssignments, useProductionCalendar, vacationsByEmployeeId]);
+  }, [calendarDayByIso, sortedAssignments, vacationsByEmployeeId]);
 
   return (
     <section className="project-card">

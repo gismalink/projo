@@ -4,11 +4,9 @@ type TimelineToolbarProps = {
   t: Record<string, string>;
   selectedYear: number;
   dragStepDays: 1 | 7 | 30;
-  useProductionCalendar: boolean;
   onOpenProjectModal: () => void;
   onYearChange: (nextYear: number) => Promise<void>;
   onDragStepDaysChange: (next: 1 | 7 | 30) => void;
-  onUseProductionCalendarChange: (next: boolean) => void;
 };
 
 export function TimelineToolbar(props: TimelineToolbarProps) {
@@ -16,11 +14,9 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
     t,
     selectedYear,
     dragStepDays,
-    useProductionCalendar,
     onOpenProjectModal,
     onYearChange,
     onDragStepDaysChange,
-    onUseProductionCalendarChange,
   } = props;
 
   return (
@@ -49,18 +45,6 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
             {t.stepMonth}
           </button>
         </div>
-        <label className="timeline-calendar-toggle-row" aria-label={t.timelineWithWeekends}>
-          <span>{t.timelineWithWeekends}</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={!useProductionCalendar}
-            className={!useProductionCalendar ? 'timeline-switch active' : 'timeline-switch'}
-            onClick={() => onUseProductionCalendarChange(!useProductionCalendar)}
-          >
-            <span className="timeline-switch-thumb" />
-          </button>
-        </label>
       </div>
       <div className="year-switcher">
         <button

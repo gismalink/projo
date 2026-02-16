@@ -9,7 +9,6 @@ import { TimelineToolbar } from './TimelineToolbar';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
-const TIMELINE_CALENDAR_MODE_STORAGE_KEY = 'timeline.useProductionCalendar';
 
 type TimelineTabProps = {
   t: Record<string, string>;
@@ -93,12 +92,6 @@ export function TimelineTab(props: TimelineTabProps) {
     const saved = Number(window.localStorage.getItem(TIMELINE_DRAG_STEP_STORAGE_KEY));
     return saved === 1 || saved === 7 || saved === 30 ? saved : 7;
   });
-  const [useProductionCalendar, setUseProductionCalendar] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const saved = window.localStorage.getItem(TIMELINE_CALENDAR_MODE_STORAGE_KEY);
-    return saved === null ? true : saved === 'true';
-  });
-
   const [assignmentDragState, setAssignmentDragState] = useState<{
     projectId: string;
     assignmentId: string;
@@ -246,6 +239,15 @@ export function TimelineTab(props: TimelineTabProps) {
     const days = Math.max(1, Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000));
     const rawTotals = Array.from({ length: days }, () => 0);
 
+    const isLoadBearingDay = (date: Date) => {
+      const isoDate = date.toISOString().slice(0, 10);
+      const calendarDay = calendarDayByIso.get(isoDate);
+      if (calendarDay) return calendarDay.isWorkingDay;
+
+      const day = date.getUTCDay();
+      return day !== 0 && day !== 6;
+    };
+
     for (const assignment of assignments) {
       const allocation = Number(assignment.allocationPercent);
       if (!Number.isFinite(allocation) || allocation <= 0) continue;
@@ -259,6 +261,9 @@ export function TimelineTab(props: TimelineTabProps) {
       const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / 86400000));
       const endIndex = Math.min(days - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / 86400000));
       for (let i = startIndex; i <= endIndex; i += 1) {
+        const currentDate = new Date(yearStart);
+        currentDate.setUTCDate(currentDate.getUTCDate() + i);
+        if (!isLoadBearingDay(currentDate)) continue;
         rawTotals[i] += allocation;
       }
     }
@@ -303,7 +308,7 @@ export function TimelineTab(props: TimelineTabProps) {
 
     const max = Math.max(1, ...values);
     return { values, max };
-  }, [assignments, selectedYear, employees.length, dragStepDays]);
+  }, [assignments, selectedYear, employees.length, dragStepDays, calendarDayByIso]);
 
   const companyLoadScaleMax = Math.max(100, Math.ceil(companyLoad.max / 25) * 25);
   const companyDayMarkers = dragStepDays === 30 ? [] : dayMarkers;
@@ -741,11 +746,9 @@ export function TimelineTab(props: TimelineTabProps) {
         while (cursor <= assignmentEnd) {
           const isoDate = cursor.toISOString().slice(0, 10);
           const calendarDay = calendarDayByIso.get(isoDate);
-          const isHoliday = useProductionCalendar ? (calendarDay?.isHoliday ?? false) : false;
-          const isWeekend = useProductionCalendar ? (calendarDay ? calendarDay.isWeekend : isWeekendByDate(cursor)) : false;
-          const isWorkingDay = useProductionCalendar ? (calendarDay ? calendarDay.isWorkingDay : !isWeekend) : true;
+          const isWorkingDay = calendarDay ? calendarDay.isWorkingDay : !isWeekendByDate(cursor);
 
-          if (isWorkingDay && !isWeekend && !isHoliday) {
+          if (isWorkingDay) {
             assignmentPlannedHours += dailyHours;
             const onVacation = vacationRanges.some((range) => cursor >= range.start && cursor <= range.end);
             if (!onVacation) {
@@ -767,7 +770,7 @@ export function TimelineTab(props: TimelineTabProps) {
     }
 
     return result;
-  }, [assignmentsByProjectId, calendarDayByIso, toUtcDay, useProductionCalendar, vacationsByEmployeeId]);
+  }, [assignmentsByProjectId, calendarDayByIso, toUtcDay, vacationsByEmployeeId]);
 
   const {
     dragState,
@@ -792,10 +795,6 @@ export function TimelineTab(props: TimelineTabProps) {
   useEffect(() => {
     window.localStorage.setItem(TIMELINE_DRAG_STEP_STORAGE_KEY, String(dragStepDays));
   }, [dragStepDays]);
-
-  useEffect(() => {
-    window.localStorage.setItem(TIMELINE_CALENDAR_MODE_STORAGE_KEY, String(useProductionCalendar));
-  }, [useProductionCalendar]);
 
   useEffect(() => {
     if (!dragState && !assignmentDragState) return;
@@ -832,11 +831,9 @@ export function TimelineTab(props: TimelineTabProps) {
           t={t}
           selectedYear={selectedYear}
           dragStepDays={dragStepDays}
-          useProductionCalendar={useProductionCalendar}
           onOpenProjectModal={onOpenProjectModal}
           onYearChange={onYearChange}
           onDragStepDaysChange={setDragStepDays}
-          onUseProductionCalendarChange={setUseProductionCalendar}
         />
 
         <div className="timeline-calendar-legend" aria-label={t.calendarLegendLabel}>
@@ -967,7 +964,6 @@ export function TimelineTab(props: TimelineTabProps) {
                           dayStep={dayStep}
                           calendarSegments={calendarSegments}
                           calendarDayByIso={calendarDayByIso}
-                          useProductionCalendar={useProductionCalendar}
                           todayPosition={todayPosition}
                           assignmentStyle={assignmentStyle}
                           employeeRoleColorById={employeeRoleColorById}
