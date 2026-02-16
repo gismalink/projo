@@ -121,6 +121,54 @@ test('API e2e smoke: project member + assignment consistency', async () => {
     assert.equal(typeof createdAssignment.payload?.id, 'string', 'created assignment should contain id');
     createdAssignmentId = createdAssignment.payload.id;
 
+    const duplicateAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate,
+        assignmentEndDate,
+        allocationPercent: 60,
+      }),
+    });
+
+    assert.equal(duplicateAssignment.response.status, 409, 'duplicate assignment should return 409');
+    const duplicateMessage =
+      typeof duplicateAssignment.payload?.message === 'string'
+        ? duplicateAssignment.payload.message
+        : Array.isArray(duplicateAssignment.payload?.message)
+          ? duplicateAssignment.payload.message.join(' | ')
+          : '';
+    assert.ok(
+      duplicateMessage.includes('ERR_ASSIGNMENT_EMPLOYEE_ALREADY_IN_PROJECT'),
+      'duplicate assignment should include conflict error code',
+    );
+
+    const invalidDateAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate: `${year}-03-10T00:00:00.000Z`,
+        assignmentEndDate: `${year}-03-01T00:00:00.000Z`,
+        allocationPercent: 30,
+      }),
+    });
+
+    assert.equal(invalidDateAssignment.response.status, 400, 'invalid assignment date range should return 400');
+    const invalidDateMessage =
+      typeof invalidDateAssignment.payload?.message === 'string'
+        ? invalidDateAssignment.payload.message
+        : Array.isArray(invalidDateAssignment.payload?.message)
+          ? invalidDateAssignment.payload.message.join(' | ')
+          : '';
+    assert.ok(
+      invalidDateMessage.includes('ERR_ASSIGNMENT_DATE_RANGE_INVALID'),
+      'invalid date assignment should include validation error code',
+    );
+
     const projectMembers = await request(`/projects/${createdProjectId}/members`, { headers: authHeaders });
     assert.equal(projectMembers.response.status, 200, 'project members endpoint should return 200');
     assert.ok(Array.isArray(projectMembers.payload), 'project members payload should be array');
