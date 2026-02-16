@@ -9,6 +9,7 @@ import { TimelineToolbar } from './TimelineToolbar';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
+const DEFAULT_REQUIRED_PROJECT_ROLES = ['pm', 'lead'];
 
 type TimelineTabProps = {
   t: Record<string, string>;
@@ -791,6 +792,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const projectErrorsById = useMemo(() => {
     const result = new Map<string, Array<{ key: string; message: string }>>();
     const priorityByKey: Record<string, number> = {
+      'missing-template-roles': 0,
       'missing-rates': 1,
       'fact-range': 2,
       vacations: 3,
@@ -803,6 +805,20 @@ export function TimelineTab(props: TimelineTabProps) {
       const detail = projectDetails[row.id];
 
       if (detail) {
+        const presentRoleKeys = new Set(
+          detail.assignments.map((assignment) => assignment.employee.role.name.toLowerCase()),
+        );
+        const missingRequiredRoles = DEFAULT_REQUIRED_PROJECT_ROLES.filter(
+          (requiredRole) =>
+            !Array.from(presentRoleKeys).some((roleName) => roleName.includes(requiredRole)),
+        );
+        if (missingRequiredRoles.length > 0) {
+          issues.push({
+            key: 'missing-template-roles',
+            message: `${t.timelineErrorMissingTemplateRoles}: ${missingRequiredRoles.join(', ')}`,
+          });
+        }
+
         const vacationOverlapEmployees = new Set<string>();
 
         for (const assignment of detail.assignments) {
@@ -861,7 +877,17 @@ export function TimelineTab(props: TimelineTabProps) {
     }
 
     return result;
-  }, [projectDetails, projectFactByProjectId, sortedTimeline, t.timelineErrorFactRange, t.timelineErrorMissingRates, t.timelineErrorVacations, toUtcDay, vacationsByEmployeeId]);
+  }, [
+    projectDetails,
+    projectFactByProjectId,
+    sortedTimeline,
+    t.timelineErrorFactRange,
+    t.timelineErrorMissingRates,
+    t.timelineErrorMissingTemplateRoles,
+    t.timelineErrorVacations,
+    toUtcDay,
+    vacationsByEmployeeId,
+  ]);
 
   const {
     dragState,
