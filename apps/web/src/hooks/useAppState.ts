@@ -13,9 +13,12 @@ import {
 } from '../api/client';
 import { ActiveTab, Employee, Role, Toast } from '../pages/app-types';
 
+const WEB_DEFAULT_LOGIN_EMAIL = import.meta.env.VITE_WEB_DEFAULT_LOGIN_EMAIL ?? '';
+const WEB_DEFAULT_LOGIN_PASSWORD = import.meta.env.VITE_WEB_DEFAULT_LOGIN_PASSWORD ?? '';
+
 export function useAppState() {
-  const [email, setEmail] = useState('admin@projo.local');
-  const [password, setPassword] = useState('ProjoAdmin!2026');
+  const [email, setEmail] = useState(WEB_DEFAULT_LOGIN_EMAIL);
+  const [password, setPassword] = useState(WEB_DEFAULT_LOGIN_PASSWORD);
   const [token, setToken] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 

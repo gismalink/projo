@@ -39,10 +39,13 @@
 - API smoke test only: `npm run test:e2e:api`
 
 ## Default bootstrap admin
-- email: `admin@projo.local`
-- password: `ProjoAdmin!2026`
+- Credentials are read from env:
+   - `BOOTSTRAP_ADMIN_EMAIL`
+   - `BOOTSTRAP_ADMIN_PASSWORD`
+- Optional legacy-password rotation support:
+   - `LEGACY_BOOTSTRAP_ADMIN_PASSWORD`
 
-Created automatically on API startup if not found.
+Bootstrap admin is created automatically on API startup if the required env variables are set.
 
 ## Project docs
 - Architecture: `docs/architecture-overview.md`

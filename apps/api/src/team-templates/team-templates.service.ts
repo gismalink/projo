@@ -27,10 +27,9 @@ export class TeamTemplatesService {
 
   create(dto: CreateTeamTemplateDto) {
     return this.prisma.$transaction(async (tx) => {
-      const txClient = tx as any;
       const roleIds = await this.validateRoleIds(dto.roleIds);
 
-      return txClient.projectTeamTemplate.create({
+      return tx.projectTeamTemplate.create({
         data: {
           name: dto.name.trim(),
           roles: {
@@ -53,8 +52,7 @@ export class TeamTemplatesService {
   }
 
   findAll() {
-    const prismaClient = this.prisma as any;
-    return prismaClient.projectTeamTemplate.findMany({
+    return this.prisma.projectTeamTemplate.findMany({
       orderBy: { name: 'asc' },
       include: {
         roles: {
@@ -68,8 +66,7 @@ export class TeamTemplatesService {
   }
 
   async findOne(id: string) {
-    const prismaClient = this.prisma as any;
-    const template = await prismaClient.projectTeamTemplate.findUnique({
+    const template = await this.prisma.projectTeamTemplate.findUnique({
       where: { id },
       include: {
         roles: {
@@ -92,11 +89,10 @@ export class TeamTemplatesService {
     await this.findOne(id);
 
     return this.prisma.$transaction(async (tx) => {
-      const txClient = tx as any;
       if (dto.roleIds) {
         const roleIds = await this.validateRoleIds(dto.roleIds);
-        await txClient.projectTeamTemplateRole.deleteMany({ where: { templateId: id } });
-        await txClient.projectTeamTemplateRole.createMany({
+        await tx.projectTeamTemplateRole.deleteMany({ where: { templateId: id } });
+        await tx.projectTeamTemplateRole.createMany({
           data: roleIds.map((roleId, index) => ({
             templateId: id,
             roleId,
@@ -105,7 +101,7 @@ export class TeamTemplatesService {
         });
       }
 
-      return txClient.projectTeamTemplate.update({
+      return tx.projectTeamTemplate.update({
         where: { id },
         data: {
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
@@ -124,7 +120,6 @@ export class TeamTemplatesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    const prismaClient = this.prisma as any;
-    return prismaClient.projectTeamTemplate.delete({ where: { id } });
+    return this.prisma.projectTeamTemplate.delete({ where: { id } });
   }
 }

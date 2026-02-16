@@ -3,34 +3,41 @@ import { AppRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
 
-const LEGACY_BOOTSTRAP_PASSWORD = 'admin12345';
-const BOOTSTRAP_PASSWORD = 'ProjoAdmin!2026';
-
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async ensureBootstrapAdmin() {
+    const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
+    const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+    const legacyBootstrapPassword = process.env.LEGACY_BOOTSTRAP_ADMIN_PASSWORD;
+
+    if (!bootstrapEmail || !bootstrapPassword) {
+      return null;
+    }
+
     const existing = await this.prisma.user.findUnique({
-      where: { email: 'admin@projo.local' },
+      where: { email: bootstrapEmail },
     });
 
     if (existing) {
-      const isLegacyPassword = await bcrypt.compare(LEGACY_BOOTSTRAP_PASSWORD, existing.passwordHash);
-      if (isLegacyPassword) {
-        const passwordHash = await bcrypt.hash(BOOTSTRAP_PASSWORD, 10);
-        return this.prisma.user.update({
-          where: { id: existing.id },
-          data: { passwordHash },
-        });
+      if (legacyBootstrapPassword) {
+        const isLegacyPassword = await bcrypt.compare(legacyBootstrapPassword, existing.passwordHash);
+        if (isLegacyPassword) {
+          const passwordHash = await bcrypt.hash(bootstrapPassword, 10);
+          return this.prisma.user.update({
+            where: { id: existing.id },
+            data: { passwordHash },
+          });
+        }
       }
       return existing;
     }
 
-    const passwordHash = await bcrypt.hash(BOOTSTRAP_PASSWORD, 10);
+    const passwordHash = await bcrypt.hash(bootstrapPassword, 10);
     return this.prisma.user.create({
       data: {
-        email: 'admin@projo.local',
+        email: bootstrapEmail,
         fullName: 'System Admin',
         passwordHash,
         appRole: AppRole.ADMIN,
