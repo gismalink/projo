@@ -40,8 +40,18 @@
 - App logic split:
   - state: `src/hooks/useAppState.ts`
   - derived selectors: `src/hooks/useAppDerivedData.ts`
-  - async handlers: `src/hooks/useAppHandlers.ts`
+  - async handlers facade/composition: `src/hooks/useAppHandlers.ts`
+  - async handlers by domain: `src/hooks/handlers/*`
+    - `auth.handlers.ts` (login/bootstrap)
+    - `personnel.handlers.ts` (roles, skills, employees, vacations, departments, templates)
+    - `projects.handlers.ts` (project create/edit/select/order)
+    - `assignments.handlers.ts` (assignment create/edit/delete/plan updates)
+    - `timeline.handlers.ts` (year switching + project timeline plan adjustments)
   - facade: `src/hooks/useAppData.ts`
+- Shared frontend utilities and constants:
+  - constants: `src/constants/app.constants.ts`, `src/constants/seed-defaults.constants.ts`
+  - timeline date helpers: `src/components/timeline/timeline-date.utils.ts`
+  - salary helpers: `src/hooks/salary.utils.ts`
 - Components by domain: `src/components/personnel`, `src/components/roles`, `src/components/timeline`, `src/components/modals`.
 - i18n dictionaries: `src/pages/app-i18n.ts` (`ru`/`en`).
 - Styles are split by domain:

@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_DEBOUNCE_MS_SLOW } from '../../constants/app.constants';
+import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_DEBOUNCE_MS_SLOW, DEFAULT_EDITOR_ACCENT_COLOR_HEX } from '../../constants/app.constants';
 import { Icon } from '../Icon';
 import { Role } from '../../pages/app-types';
 import { DepartmentItem, GradeItem, TeamTemplateItem } from '../../api/client';
 import { CustomColorPicker, normalizeHex } from './CustomColorPicker';
+import { NameColorActionRow } from './NameColorActionRow';
 
 type UpdateRolePayload = {
   name?: string;
@@ -91,10 +92,10 @@ export function RolesTab(props: RolesTabProps) {
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [roleDrafts, setRoleDrafts] = useState<Record<string, RoleDraft>>({});
   const [newDepartmentName, setNewDepartmentName] = useState('');
-  const [newDepartmentColor, setNewDepartmentColor] = useState('#7A8A9A');
+  const [newDepartmentColor, setNewDepartmentColor] = useState(DEFAULT_EDITOR_ACCENT_COLOR_HEX);
   const [departmentDrafts, setDepartmentDrafts] = useState<Record<string, { name: string; colorHex: string }>>({});
   const [newGradeName, setNewGradeName] = useState('');
-  const [newGradeColor, setNewGradeColor] = useState('#7A8A9A');
+  const [newGradeColor, setNewGradeColor] = useState(DEFAULT_EDITOR_ACCENT_COLOR_HEX);
   const [gradeDrafts, setGradeDrafts] = useState<Record<string, GradeDraft>>({});
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateRoleIds, setNewTemplateRoleIds] = useState<string[]>([]);
@@ -471,37 +472,28 @@ export function RolesTab(props: RolesTabProps) {
             <div className="section-header roles-list-header">
               <h3>{t.departmentsList}</h3>
             </div>
-            <div className="department-manage-row create department-manage-row-color">
-              <input
-                className="department-manage-input"
-                value={newDepartmentName}
-                placeholder={t.department}
-                onChange={(event) => setNewDepartmentName(event.target.value)}
-              />
-              <div className="role-color-editor">
-                <CustomColorPicker
-                  value={newDepartmentColor}
-                  label={t.color}
-                  copyLabel={t.copyHex}
-                  fallbackHex="#7A8A9A"
-                  onChange={setNewDepartmentColor}
-                />
-              </div>
-              <button
-                type="button"
-                className="department-manage-action primary"
-                disabled={!nextDepartmentName}
-                onClick={() => {
-                  if (!nextDepartmentName) return;
-                  void onCreateDepartment(nextDepartmentName, newDepartmentColor);
-                  setNewDepartmentName('');
-                }}
-                title={t.addDepartment}
-                aria-label={t.addDepartment}
-              >
-                <Icon name="plus" />
-              </button>
-            </div>
+            <NameColorActionRow
+              rowClassName="department-manage-row create department-manage-row-color"
+              actionClassName="department-manage-action primary"
+              actionIcon="plus"
+              placeholder={t.department}
+              nameAriaLabel={t.department}
+              nameValue={newDepartmentName}
+              colorValue={newDepartmentColor}
+              fallbackHex={DEFAULT_EDITOR_ACCENT_COLOR_HEX}
+              colorLabel={t.color}
+              copyHexLabel={t.copyHex}
+              actionTitle={t.addDepartment}
+              actionLabel={t.addDepartment}
+              actionDisabled={!nextDepartmentName}
+              onNameChange={setNewDepartmentName}
+              onColorChange={setNewDepartmentColor}
+              onAction={() => {
+                if (!nextDepartmentName) return;
+                void onCreateDepartment(nextDepartmentName, newDepartmentColor);
+                setNewDepartmentName('');
+              }}
+            />
             <div className="department-manage-list">
               {departments.map((department) => {
                 const draft = departmentDrafts[department.id] ?? {
@@ -510,35 +502,27 @@ export function RolesTab(props: RolesTabProps) {
                 };
 
                 return (
-                  <div className="department-manage-row department-manage-row-color" key={department.id}>
-                    <input
-                      className="department-manage-input"
-                      value={draft.name}
-                      placeholder={t.department}
-                      onChange={(event) => updateDepartmentDraft(department.id, { name: event.target.value })}
-                    />
-                    <div className="role-color-editor">
-                      <CustomColorPicker
-                        value={draft.colorHex}
-                        label={t.color}
-                        copyLabel={t.copyHex}
-                        fallbackHex={roleColorOrDefault(department.colorHex)}
-                        onChange={(nextHex) => updateDepartmentDraft(department.id, { colorHex: nextHex })}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="department-manage-action"
-                      title={t.deleteDepartment}
-                      aria-label={t.deleteDepartment}
-                      onClick={() => {
-                        if (!window.confirm(t.confirmDeleteDepartment)) return;
-                        void onDeleteDepartment(department.id);
-                      }}
-                    >
-                      <Icon name="x" />
-                    </button>
-                  </div>
+                  <NameColorActionRow
+                    key={department.id}
+                    rowClassName="department-manage-row department-manage-row-color"
+                    actionClassName="department-manage-action"
+                    actionIcon="x"
+                    placeholder={t.department}
+                    nameAriaLabel={t.department}
+                    nameValue={draft.name}
+                    colorValue={draft.colorHex}
+                    fallbackHex={roleColorOrDefault(department.colorHex)}
+                    colorLabel={t.color}
+                    copyHexLabel={t.copyHex}
+                    actionTitle={t.deleteDepartment}
+                    actionLabel={t.deleteDepartment}
+                    onNameChange={(value) => updateDepartmentDraft(department.id, { name: value })}
+                    onColorChange={(value) => updateDepartmentDraft(department.id, { colorHex: value })}
+                    onAction={() => {
+                      if (!window.confirm(t.confirmDeleteDepartment)) return;
+                      void onDeleteDepartment(department.id);
+                    }}
+                  />
                 );
               })}
             </div>
@@ -640,37 +624,28 @@ export function RolesTab(props: RolesTabProps) {
             <div className="section-header roles-list-header">
               <h3>{t.gradesList}</h3>
             </div>
-            <div className="department-manage-row create department-manage-row-grade">
-              <input
-                className="department-manage-input"
-                value={newGradeName}
-                placeholder={t.grade}
-                onChange={(event) => setNewGradeName(event.target.value)}
-              />
-              <div className="role-color-editor">
-                <CustomColorPicker
-                  value={newGradeColor}
-                  label={t.color}
-                  copyLabel={t.copyHex}
-                  fallbackHex="#7A8A9A"
-                  onChange={setNewGradeColor}
-                />
-              </div>
-              <button
-                type="button"
-                className="department-manage-action primary"
-                disabled={!nextGradeName}
-                onClick={() => {
-                  if (!nextGradeName) return;
-                  onAddGrade(nextGradeName, newGradeColor);
-                  setNewGradeName('');
-                }}
-                title={t.addGrade}
-                aria-label={t.addGrade}
-              >
-                <Icon name="plus" />
-              </button>
-            </div>
+            <NameColorActionRow
+              rowClassName="department-manage-row create department-manage-row-grade"
+              actionClassName="department-manage-action primary"
+              actionIcon="plus"
+              placeholder={t.grade}
+              nameAriaLabel={t.grade}
+              nameValue={newGradeName}
+              colorValue={newGradeColor}
+              fallbackHex={DEFAULT_EDITOR_ACCENT_COLOR_HEX}
+              colorLabel={t.color}
+              copyHexLabel={t.copyHex}
+              actionTitle={t.addGrade}
+              actionLabel={t.addGrade}
+              actionDisabled={!nextGradeName}
+              onNameChange={setNewGradeName}
+              onColorChange={setNewGradeColor}
+              onAction={() => {
+                if (!nextGradeName) return;
+                onAddGrade(nextGradeName, newGradeColor);
+                setNewGradeName('');
+              }}
+            />
             <div className="department-manage-list">
               {grades.map((grade) => {
                 const draft = gradeDrafts[grade.id] ?? {
@@ -679,31 +654,24 @@ export function RolesTab(props: RolesTabProps) {
                 };
 
                 return (
-                  <div className="department-manage-row department-manage-row-grade-edit" key={grade.id}>
-                    <input
-                      className="department-manage-input"
-                      value={draft.name}
-                      onChange={(event) => updateGradeDraft(grade.id, { name: event.target.value })}
-                    />
-                    <div className="role-color-editor">
-                      <CustomColorPicker
-                        value={draft.colorHex}
-                        label={t.color}
-                        copyLabel={t.copyHex}
-                        fallbackHex={roleColorOrDefault(grade.colorHex)}
-                        onChange={(nextHex) => updateGradeDraft(grade.id, { colorHex: nextHex })}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="department-manage-action"
-                      title={t.deleteGrade}
-                      aria-label={t.deleteGrade}
-                      onClick={() => onDeleteGrade(grade.id)}
-                    >
-                      <Icon name="x" />
-                    </button>
-                  </div>
+                  <NameColorActionRow
+                    key={grade.id}
+                    rowClassName="department-manage-row department-manage-row-grade-edit"
+                    actionClassName="department-manage-action"
+                    actionIcon="x"
+                    placeholder={t.grade}
+                    nameAriaLabel={t.grade}
+                    nameValue={draft.name}
+                    colorValue={draft.colorHex}
+                    fallbackHex={roleColorOrDefault(grade.colorHex)}
+                    colorLabel={t.color}
+                    copyHexLabel={t.copyHex}
+                    actionTitle={t.deleteGrade}
+                    actionLabel={t.deleteGrade}
+                    onNameChange={(value) => updateGradeDraft(grade.id, { name: value })}
+                    onColorChange={(value) => updateGradeDraft(grade.id, { colorHex: value })}
+                    onAction={() => onDeleteGrade(grade.id)}
+                  />
                 );
               })}
             </div>

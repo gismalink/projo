@@ -1,6 +1,7 @@
 import { FormEvent } from 'react';
 import { DepartmentItem } from '../../api/client';
 import { Role } from '../../pages/app-types';
+import { EmployeeProfileFields } from './EmployeeProfileFields';
 
 type EmployeeCreateModalProps = {
   t: Record<string, string>;
@@ -63,71 +64,26 @@ export function EmployeeCreateModal(props: EmployeeCreateModalProps) {
           </button>
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
-          <label>
-            {t.fullName}
-            <input value={employeeFullName} onChange={(e) => setEmployeeFullName(e.target.value)} />
-          </label>
-          <label>
-            {t.email}
-            <input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
-          </label>
-          <label>
-            {t.role}
-            <select value={employeeRoleId} onChange={(e) => setEmployeeRoleId(e.target.value)}>
-              <option value="">{t.selectRole}</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.department}
-            <select value={employeeDepartmentId} onChange={(e) => setEmployeeDepartmentId(e.target.value)}>
-              <option value="">{t.selectDepartment}</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.grade}
-            <select value={employeeGrade} onChange={(e) => setEmployeeGrade(e.target.value)}>
-              <option value="">—</option>
-              {gradeOptions.map((gradeOption) => (
-                <option key={gradeOption} value={gradeOption}>
-                  {gradeOption}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t.status}
-            <select value={employeeStatus} onChange={(e) => setEmployeeStatus(e.target.value)}>
-              <option value="active">{t.statusActive}</option>
-              <option value="inactive">{t.statusInactive}</option>
-            </select>
-          </label>
-          <label>
-            {t.salaryPerMonth}
-            <input
-              type="number"
-              min={0}
-              step="1"
-              value={employeeSalary}
-              onChange={(e) => setEmployeeSalary(e.target.value)}
-              onBlur={(e) => {
-                const normalized = e.target.value.replace(',', '.').trim();
-                if (!normalized) return;
-                const parsed = Number(normalized);
-                if (!Number.isFinite(parsed) || parsed <= 0) return;
-                setEmployeeSalary(String(Math.round(parsed)));
-              }}
-            />
-          </label>
+          <EmployeeProfileFields
+            t={t}
+            roles={roles}
+            departments={departments}
+            gradeOptions={gradeOptions}
+            fullName={employeeFullName}
+            email={employeeEmail}
+            roleId={employeeRoleId}
+            departmentId={employeeDepartmentId}
+            grade={employeeGrade}
+            status={employeeStatus}
+            salary={employeeSalary}
+            setFullName={setEmployeeFullName}
+            setEmail={setEmployeeEmail}
+            setRoleId={setEmployeeRoleId}
+            setDepartmentId={setEmployeeDepartmentId}
+            setGrade={setEmployeeGrade}
+            setStatus={setEmployeeStatus}
+            setSalary={setEmployeeSalary}
+          />
           <button type="submit">{t.createWorker}</button>
         </form>
       </div>

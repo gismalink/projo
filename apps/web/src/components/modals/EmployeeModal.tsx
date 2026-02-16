@@ -3,6 +3,8 @@ import { DepartmentItem, VacationItem } from '../../api/client';
 import { DEFAULT_VACATION_TYPE, PROFILE_AUTOSAVE_DEBOUNCE_MS } from '../../constants/app.constants';
 import { Role } from '../../pages/app-types';
 import { Icon } from '../Icon';
+import { EmployeeProfileFields } from './EmployeeProfileFields';
+import { VacationTypeSelect } from './VacationTypeSelect';
 
 type EmployeeModalProps = {
   t: Record<string, string>;
@@ -255,7 +257,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
     <div className="modal-backdrop">
       <div className="modal-card">
         <div className="section-header">
-          <h3>{t.editProfile || 'Редактировать профиль'}</h3>
+          <h3>{t.editProfile}</h3>
           <button
             type="button"
             className="create-role-icon-btn team-icon-btn modal-icon-btn"
@@ -267,73 +269,27 @@ export function EmployeeModal(props: EmployeeModalProps) {
           </button>
         </div>
         <div className="timeline-form">
-          <label>
-            {t.fullName}
-            <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-          </label>
-          <label>
-            {t.email}
-            <input value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-          <div className="employee-meta-compact">
-            <label>
-              {t.department}
-              <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
-                <option value="">{t.selectDepartment}</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t.role}
-              <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-                <option value="">{t.selectRole}</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t.grade}
-              <select value={grade} onChange={(e) => setGrade(e.target.value)}>
-                <option value="">—</option>
-                {gradeOptions.map((gradeOption) => (
-                  <option key={gradeOption} value={gradeOption}>
-                    {gradeOption}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label>
-            {t.status}
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="active">{t.statusActive}</option>
-              <option value="inactive">{t.statusInactive}</option>
-            </select>
-          </label>
-          <label>
-            {t.salaryPerMonth}
-            <input
-              type="number"
-              min={0}
-              step="1"
-              value={salary}
-              onChange={(e) => setSalary(e.target.value)}
-              onBlur={(e) => {
-                const normalized = e.target.value.replace(',', '.').trim();
-                if (!normalized) return;
-                const parsed = Number(normalized);
-                if (!Number.isFinite(parsed) || parsed <= 0) return;
-                setSalary(String(Math.round(parsed)));
-              }}
-            />
-          </label>
+          <EmployeeProfileFields
+            t={t}
+            roles={roles}
+            departments={departments}
+            gradeOptions={gradeOptions}
+            fullName={fullName}
+            email={email}
+            roleId={roleId}
+            departmentId={departmentId}
+            grade={grade}
+            status={status}
+            salary={salary}
+            compactMeta
+            setFullName={setFullName}
+            setEmail={setEmail}
+            setRoleId={setRoleId}
+            setDepartmentId={setDepartmentId}
+            setGrade={setGrade}
+            setStatus={setStatus}
+            setSalary={setSalary}
+          />
 
           <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
             <strong>{t.vacations || 'Отпуска'}</strong>
@@ -351,19 +307,16 @@ export function EmployeeModal(props: EmployeeModalProps) {
                     value={vacation.endDate.slice(0, 10)}
                     onChange={(e) => void onUpdateVacation(vacation.id, { startDate: vacation.startDate.slice(0, 10), endDate: e.target.value, type: vacation.type })}
                   />
-                  <select
+                  <VacationTypeSelect
+                    t={t}
                     value={vacation.type}
-                    onChange={(e) => void onUpdateVacation(vacation.id, { startDate: vacation.startDate.slice(0, 10), endDate: vacation.endDate.slice(0, 10), type: e.target.value })}
-                  >
-                    <option value="vacation">{t.vacationTypeVacation}</option>
-                    <option value="sick">{t.vacationTypeSick}</option>
-                    <option value="day_off">{t.vacationTypeDayOff}</option>
-                  </select>
+                    onChange={(value) => void onUpdateVacation(vacation.id, { startDate: vacation.startDate.slice(0, 10), endDate: vacation.endDate.slice(0, 10), type: value })}
+                  />
                   <button
                     type="button"
                     className="create-role-icon-btn team-icon-btn modal-icon-btn"
-                    title={t.delete || 'Удалить отпуск'}
-                    aria-label={t.delete || 'Удалить отпуск'}
+                    title={t.deleteVacation}
+                    aria-label={t.deleteVacation}
                     onClick={() => void onDeleteVacation(vacation.id)}
                   >
                     <Icon name="x" />
@@ -387,17 +340,17 @@ export function EmployeeModal(props: EmployeeModalProps) {
                       >
                         <span
                           className="assignment-plan-handle left"
-                          title="Сдвиг начала"
+                          title={t.vacationResizeStart}
                           onMouseDown={(event) => beginVacationDrag(event, vacation, 'resize-start')}
                         />
                         <span
                           className="assignment-plan-handle center"
-                          title="Перемещение диапазона"
+                          title={t.vacationMoveRange}
                           onMouseDown={(event) => beginVacationDrag(event, vacation, 'move')}
                         />
                         <span
                           className="assignment-plan-handle right"
-                          title="Сдвиг конца"
+                          title={t.vacationResizeEnd}
                           onMouseDown={(event) => beginVacationDrag(event, vacation, 'resize-end')}
                         />
                       </span>
@@ -411,11 +364,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
               <input type="date" value={newVacationStart} onChange={(e) => setNewVacationStart(e.target.value)} />
               <span>—</span>
               <input type="date" value={newVacationEnd} onChange={(e) => setNewVacationEnd(e.target.value)} />
-              <select value={newVacationType} onChange={(e) => setNewVacationType(e.target.value)}>
-                <option value="vacation">{t.vacationTypeVacation}</option>
-                <option value="sick">{t.vacationTypeSick}</option>
-                <option value="day_off">{t.vacationTypeDayOff}</option>
-              </select>
+              <VacationTypeSelect t={t} value={newVacationType} onChange={setNewVacationType} />
               <button
                 type="button"
                 className="create-role-icon-btn team-icon-btn modal-icon-btn"

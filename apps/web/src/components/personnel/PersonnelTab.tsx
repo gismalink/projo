@@ -214,8 +214,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
                         <button
                           type="button"
                           className="create-role-icon-btn team-icon-btn"
-                          title={t.editProfileTooltip || 'Редактировать профиль'}
-                          aria-label={t.editProfileTooltip || 'Редактировать профиль'}
+                          title={t.editProfileTooltip}
+                          aria-label={t.editProfileTooltip}
                           onClick={() => openEmployeeModal(employee)}
                         >
                           <Icon name="edit" />

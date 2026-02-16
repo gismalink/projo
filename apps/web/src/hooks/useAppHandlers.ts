@@ -1,9 +1,12 @@
-import { FormEvent } from 'react';
 import { api, ProjectDetail } from '../api/client';
-import { DEFAULT_EMPLOYEE_STATUS, MONTHLY_HOURS, TOAST_AUTO_DISMISS_MS, TOAST_ID_RANDOM_RANGE } from '../constants/app.constants';
-import { Employee, Toast } from '../pages/app-types';
-import { STANDARD_DAY_HOURS, isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
-import { monthlyToHourly, parseSalaryInput } from './salary.utils';
+import { MONTHLY_HOURS, TOAST_AUTO_DISMISS_MS, TOAST_ID_RANDOM_RANGE } from '../constants/app.constants';
+import { Toast } from '../pages/app-types';
+import { roleColorOrDefault } from './app-helpers';
+import { createAssignmentsHandlers } from './handlers/assignments.handlers';
+import { createAuthHandlers } from './handlers/auth.handlers';
+import { createPersonnelHandlers } from './handlers/personnel.handlers';
+import { createProjectsHandlers } from './handlers/projects.handlers';
+import { createTimelineHandlers } from './handlers/timeline.handlers';
 import { AppState } from './useAppState';
 
 type Params = {
@@ -13,34 +16,6 @@ type Params = {
 };
 
 export function useAppHandlers({ state, t, errorText }: Params) {
-  function getNextProjectCode() {
-    const suffixes = state.projects
-      .map((project) => {
-        const match = project.code.match(/^PRJ-(\d+)$/i);
-        return match ? Number(match[1]) : null;
-      })
-      .filter((value): value is number => value !== null && Number.isFinite(value));
-
-    const maxValue = suffixes.length > 0 ? Math.max(...suffixes) : 0;
-    const nextValue = maxValue + 1;
-    return `PRJ-${String(nextValue).padStart(3, '0')}`;
-  }
-
-  function openProjectModal() {
-    state.setProjectCode(getNextProjectCode());
-    state.setProjectTeamTemplateId('');
-    state.setIsProjectModalOpen(true);
-  }
-
-  function openProjectDatesModal(projectId: string) {
-    const detail = state.projectDetails[projectId];
-    if (!detail) return;
-    state.setEditProjectId(projectId);
-    state.setEditProjectStartDate(isoToInputDate(detail.startDate));
-    state.setEditProjectEndDate(isoToInputDate(detail.endDate));
-    state.setIsProjectDatesModalOpen(true);
-  }
-
   function pushToast(message: string) {
     const toast: Toast = { id: Date.now() + Math.floor(Math.random() * TOAST_ID_RANDOM_RANGE), message };
     state.setToasts((prev) => [...prev, toast]);
@@ -68,8 +43,8 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
 
     state.setEditAssignmentId(picked.id);
-    state.setEditAssignmentStartDate(isoToInputDate(picked.assignmentStartDate));
-    state.setEditAssignmentEndDate(isoToInputDate(picked.assignmentEndDate));
+    state.setEditAssignmentStartDate(new Date(picked.assignmentStartDate).toISOString().slice(0, 10));
+    state.setEditAssignmentEndDate(new Date(picked.assignmentEndDate).toISOString().slice(0, 10));
     state.setEditAssignmentPercent(Number(picked.allocationPercent));
   }
 
@@ -88,6 +63,33 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     } else {
       setAssignmentEditorFromDetail(detail);
     }
+  }
+
+  async function refreshTimelineYearData(authToken: string, year: number, timelineDataArg?: typeof state.timeline) {
+    const timelineData = timelineDataArg ?? (await api.getTimelineYear(year, authToken));
+    state.setTimeline(timelineData);
+
+    const [calendarYearResult, calendarHealthResult] = await Promise.allSettled([
+      api.getCalendarYear(year, authToken),
+      api.getCalendarHealth(authToken),
+    ]);
+    if (calendarYearResult.status === 'fulfilled') {
+      state.setCalendarDays(calendarYearResult.value.days);
+    } else {
+      state.setCalendarDays([]);
+    }
+    if (calendarHealthResult.status === 'fulfilled') {
+      state.setCalendarHealth(calendarHealthResult.value);
+    } else {
+      state.setCalendarHealth(null);
+    }
+
+    state.setTimelineOrder((prev) => {
+      const ids = timelineData.map((row) => row.id);
+      const kept = prev.filter((id) => ids.includes(id));
+      const appended = ids.filter((id) => !kept.includes(id));
+      return [...kept, ...appended];
+    });
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
@@ -122,7 +124,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setVacations(nextVacations);
     state.setAssignments(nextAssignments);
     state.setProjects(nextProjects);
-    state.setTimeline(timelineData);
+    await refreshTimelineYearData(authToken, year, timelineData);
 
     const now = new Date();
     const employeeSalaryById: Record<string, number> = {};
@@ -148,27 +150,6 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
     state.setEmployeeSalaryById(employeeSalaryById);
     state.setEmployeeActiveRateIdByEmployeeId(employeeActiveRateIdByEmployeeId);
-
-    const [calendarYearResult, calendarHealthResult] = await Promise.allSettled([
-      api.getCalendarYear(year, authToken),
-      api.getCalendarHealth(authToken),
-    ]);
-    if (calendarYearResult.status === 'fulfilled') {
-      state.setCalendarDays(calendarYearResult.value.days);
-    } else {
-      state.setCalendarDays([]);
-    }
-    if (calendarHealthResult.status === 'fulfilled') {
-      state.setCalendarHealth(calendarHealthResult.value);
-    } else {
-      state.setCalendarHealth(null);
-    }
-    state.setTimelineOrder((prev) => {
-      const ids = timelineData.map((row) => row.id);
-      const kept = prev.filter((id) => ids.includes(id));
-      const appended = ids.filter((id) => !kept.includes(id));
-      return [...kept, ...appended];
-    });
 
     state.setRoleColorDrafts((prev) => {
       const next = { ...prev };
@@ -245,795 +226,22 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
-  function toggleRoleFilter(roleNameValue: string) {
-    state.setSelectedRoleFilters((prev) =>
-      prev.includes(roleNameValue) ? prev.filter((name) => name !== roleNameValue) : [...prev, roleNameValue],
-    );
-  }
-
-  async function handleLogin(event: FormEvent) {
-    event.preventDefault();
-    try {
-      const result = await api.login(state.email, state.password);
-      state.setToken(result.accessToken);
-      state.setCurrentUserRole(result.user.role);
-      await refreshData(result.accessToken, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiLoginFailed, errorText));
-    }
-  }
-
-  async function handleCreateRole(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token) return;
-
-    try {
-      await api.createRole(
-        {
-          name: state.roleName,
-          shortName: state.roleShortName || undefined,
-          description: state.roleDescription,
-          level: state.roleLevel,
-          colorHex: '#6E7B8A',
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-      state.setRoleName((prev) => `${prev}-2`);
-      state.setRoleShortName('');
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateRoleFailed, errorText));
-    }
-  }
-
-  async function handleUpdateRole(
-    roleId: string,
-    payload: {
-      name?: string;
-      shortName?: string;
-      description?: string;
-      level?: number;
-      colorHex?: string;
-    },
-  ) {
-    if (!state.token) return;
-    try {
-      await api.updateRole(roleId, payload, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiUpdateRoleColorFailed, errorText));
-    }
-  }
-
-  async function handleCreateSkill(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token) return;
-    try {
-      await api.createSkill({ name: state.skillName, description: state.skillDescription }, state.token);
-      await refreshData(state.token, state.selectedYear);
-      state.setSkillName((prev) => `${prev}-2`);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateSkillFailed, errorText));
-    }
-  }
-
-  async function handleCreateEmployee(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.employeeRoleId) return;
-
-    const salaryMonthly = parseSalaryInput(state.employeeSalary);
-
-    try {
-      if (state.editEmployeeId) {
-        await api.updateEmployee(
-          state.editEmployeeId,
-          {
-            fullName: state.employeeFullName,
-            email: state.employeeEmail,
-            roleId: state.employeeRoleId,
-            departmentId: state.employeeDepartmentId || undefined,
-            status: state.employeeStatus,
-            grade: state.employeeGrade,
-          },
-          state.token,
-        );
-
-        if (salaryMonthly !== null) {
-          const amountPerHour = monthlyToHourly(salaryMonthly, MONTHLY_HOURS);
-          const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
-          if (existingRateId) {
-            await api.updateCostRate(
-              existingRateId,
-              {
-                amountPerHour,
-                currency: 'USD',
-              },
-              state.token,
-            );
-          } else {
-            await api.createCostRate(
-              {
-                employeeId: state.editEmployeeId,
-                amountPerHour,
-                currency: 'USD',
-                validFrom: new Date().toISOString(),
-              },
-              state.token,
-            );
-          }
-        }
-      } else {
-        const createdEmployee = (await api.createEmployee(
-          {
-            fullName: state.employeeFullName,
-            email: state.employeeEmail,
-            roleId: state.employeeRoleId,
-            departmentId: state.employeeDepartmentId || undefined,
-            status: state.employeeStatus,
-            grade: state.employeeGrade,
-            defaultCapacityHoursPerDay: STANDARD_DAY_HOURS,
-          },
-          state.token,
-        )) as { id: string };
-
-        if (salaryMonthly !== null && createdEmployee?.id) {
-          await api.createCostRate(
-            {
-              employeeId: createdEmployee.id,
-              amountPerHour: monthlyToHourly(salaryMonthly, MONTHLY_HOURS),
-              currency: 'USD',
-              validFrom: new Date().toISOString(),
-            },
-            state.token,
-          );
-        }
-      }
-      await refreshData(state.token, state.selectedYear);
-      if (state.editEmployeeId) {
-        state.setIsEmployeeModalOpen(false);
-      } else {
-        state.setIsEmployeeCreateModalOpen(false);
-        state.setEmployeeEmail((prev) => {
-          const [name, domain] = prev.split('@');
-          return `${name}.2@${domain ?? 'projo.local'}`;
-        });
-      }
-      state.setEditEmployeeId('');
-      state.setEmployeeSalary('');
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
-    }
-  }
-
-  async function handleAutoSaveEmployeeProfile(payload: {
-    fullName: string;
-    email: string;
-    roleId: string;
-    departmentId?: string;
-    grade?: string;
-    status?: string;
-    salaryMonthly?: number;
-  }) {
-    if (!state.token || !state.editEmployeeId || !payload.roleId) return;
-    try {
-      await api.updateEmployee(
-        state.editEmployeeId,
-        {
-          fullName: payload.fullName,
-          email: payload.email,
-          roleId: payload.roleId,
-          departmentId: payload.departmentId,
-          grade: payload.grade,
-          status: payload.status,
-        },
-        state.token,
-      );
-
-      const currentSalary = state.employeeSalaryById[state.editEmployeeId];
-      const normalizedSalary =
-        payload.salaryMonthly !== undefined && Number.isFinite(payload.salaryMonthly)
-          ? Math.round(payload.salaryMonthly)
-          : undefined;
-      const shouldUpdateSalary =
-        payload.salaryMonthly !== undefined &&
-        Number.isFinite(payload.salaryMonthly) &&
-        payload.salaryMonthly > 0 &&
-        normalizedSalary !== undefined &&
-        (currentSalary === undefined || Math.abs(currentSalary - normalizedSalary) >= 1);
-
-      if (shouldUpdateSalary) {
-        const amountPerHour = monthlyToHourly(normalizedSalary as number, MONTHLY_HOURS);
-        const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
-        if (existingRateId) {
-          await api.updateCostRate(
-            existingRateId,
-            {
-              amountPerHour,
-              currency: 'USD',
-            },
-            state.token,
-          );
-        } else {
-          await api.createCostRate(
-            {
-              employeeId: state.editEmployeeId,
-              amountPerHour,
-              currency: 'USD',
-              validFrom: new Date().toISOString(),
-            },
-            state.token,
-          );
-        }
-      }
-
-      state.setEmployeeFullName(payload.fullName);
-      state.setEmployeeEmail(payload.email);
-      state.setEmployeeRoleId(payload.roleId);
-      state.setEmployeeDepartmentId(payload.departmentId ?? '');
-      state.setEmployeeGrade(payload.grade ?? '');
-      state.setEmployeeStatus(payload.status ?? DEFAULT_EMPLOYEE_STATUS);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
-    }
-  }
-
-  function hasVacationOverlap(employeeId: string, startDate: string, endDate: string, excludeId?: string) {
-    const start = new Date(startDate).getTime();
-    const end = new Date(endDate).getTime();
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return true;
-    return state.vacations.some((vacation) => {
-      if (vacation.employeeId !== employeeId) return false;
-      if (excludeId && vacation.id === excludeId) return false;
-      const vacStart = new Date(vacation.startDate).getTime();
-      const vacEnd = new Date(vacation.endDate).getTime();
-      return start <= vacEnd && end >= vacStart;
-    });
-  }
-
-  async function handleCreateVacationFromEmployeeModal(payload: { startDate: string; endDate: string; type: string }) {
-    if (!state.token || !state.editEmployeeId) return;
-    if (hasVacationOverlap(state.editEmployeeId, payload.startDate, payload.endDate)) {
-      pushToast('Отпуска не должны пересекаться');
-      return;
-    }
-    try {
-      await api.createVacation(
-        {
-          employeeId: state.editEmployeeId,
-          startDate: new Date(payload.startDate).toISOString(),
-          endDate: new Date(payload.endDate).toISOString(),
-          type: payload.type,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
-    }
-  }
-
-  async function handleUpdateVacationFromEmployeeModal(
-    vacationId: string,
-    payload: { startDate: string; endDate: string; type: string },
-  ) {
-    if (!state.token || !state.editEmployeeId) return;
-    if (hasVacationOverlap(state.editEmployeeId, payload.startDate, payload.endDate, vacationId)) {
-      pushToast('Отпуска не должны пересекаться');
-      return;
-    }
-    try {
-      await api.updateVacation(
-        vacationId,
-        {
-          startDate: new Date(payload.startDate).toISOString(),
-          endDate: new Date(payload.endDate).toISOString(),
-          type: payload.type,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
-    }
-  }
-
-  async function handleDeleteVacationFromEmployeeModal(vacationId: string) {
-    if (!state.token) return;
-    try {
-      await api.deleteVacation(vacationId, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
-    }
-  }
-
-  async function handleAssignVacationFromEmployeeModal() {
-    if (!state.token || !state.editEmployeeId) return;
-    try {
-      await api.createVacation(
-        {
-          employeeId: state.editEmployeeId,
-          startDate: new Date(state.vacationStartDate).toISOString(),
-          endDate: new Date(state.vacationEndDate).toISOString(),
-          type: state.vacationType,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
-    }
-  }
-
-  function openEmployeeDepartmentModal(employee: Employee) {
-    state.setEditEmployeeId(employee.id);
-    state.setEditEmployeeName(employee.fullName);
-    state.setEditEmployeeRoleName(employee.role?.name ?? t.noRole);
-    state.setEditEmployeeDepartmentId(employee.department?.id ?? '');
-    state.setIsEmployeeDepartmentModalOpen(true);
-  }
-
-  async function handleUpdateEmployeeDepartment(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.editEmployeeId || !state.editEmployeeDepartmentId) return;
-
-    try {
-      await api.updateEmployee(
-        state.editEmployeeId,
-        {
-          departmentId: state.editEmployeeDepartmentId,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-      state.setIsEmployeeDepartmentModalOpen(false);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
-    }
-  }
-
-  async function handleCreateDepartment(name: string, colorHex?: string) {
-    if (!state.token || !name.trim()) return;
-    try {
-      await api.createDepartment({ name: name.trim(), colorHex }, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateDepartmentFailed, errorText));
-    }
-  }
-
-  async function handleUpdateDepartment(departmentId: string, name: string, colorHex?: string) {
-    if (!state.token || !name.trim()) return;
-    try {
-      await api.updateDepartment(departmentId, { name: name.trim(), colorHex }, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiUpdateDepartmentFailed, errorText));
-    }
-  }
-
-  async function handleDeleteDepartment(departmentId: string) {
-    if (!state.token) return;
-    try {
-      await api.deleteDepartment(departmentId, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiDeleteDepartmentFailed, errorText));
-    }
-  }
-
-  async function handleCreateTeamTemplate(name: string, roleIds: string[]) {
-    if (!state.token || !name.trim() || roleIds.length === 0) return;
-    try {
-      await api.createTeamTemplate(
-        {
-          name: name.trim(),
-          roleIds,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateTeamTemplateFailed, errorText));
-    }
-  }
-
-  async function handleUpdateTeamTemplate(templateId: string, payload: { name?: string; roleIds?: string[] }) {
-    if (!state.token) return;
-    const trimmedName = payload.name?.trim();
-    if (payload.name !== undefined && !trimmedName) return;
-    if (payload.roleIds !== undefined && payload.roleIds.length === 0) return;
-
-    try {
-      await api.updateTeamTemplate(
-        templateId,
-        {
-          ...(trimmedName !== undefined ? { name: trimmedName } : {}),
-          ...(payload.roleIds !== undefined ? { roleIds: payload.roleIds } : {}),
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiUpdateTeamTemplateFailed, errorText));
-    }
-  }
-
-  async function handleDeleteTeamTemplate(templateId: string) {
-    if (!state.token) return;
-    try {
-      await api.deleteTeamTemplate(templateId, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiDeleteTeamTemplateFailed, errorText));
-    }
-  }
-
-  async function handleImportEmployeesCsv(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.employeeCsv.trim()) return;
-    try {
-      const result = await api.importEmployeesCsv({ csv: state.employeeCsv }, state.token);
-      await refreshData(state.token, state.selectedYear);
-      state.setIsEmployeeImportModalOpen(false);
-      pushToast(`CSV: +${result.created} / ~${result.updated} / !${result.errors.length}`);
-      if (result.errors.length > 0) {
-        pushToast(result.errors.slice(0, 2).join(' | '));
-      }
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiImportEmployeesFailed, errorText));
-    }
-  }
-
-  async function handleCreateVacation(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.vacationEmployeeId) return;
-    try {
-      await api.createVacation(
-        {
-          employeeId: state.vacationEmployeeId,
-          startDate: new Date(state.vacationStartDate).toISOString(),
-          endDate: new Date(state.vacationEndDate).toISOString(),
-          type: state.vacationType,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-      state.setIsVacationModalOpen(false);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateVacationFailed, errorText));
-    }
-  }
-
-  function openVacationModal(employee: Employee) {
-    state.setVacationEmployeeId(employee.id);
-    state.setVacationEmployeeName(employee.fullName);
-    state.setIsVacationModalOpen(true);
-  }
-
-  async function handleCreateProject(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token) return;
-    try {
-      await api.createProject(
-        {
-          code: state.projectCode,
-          name: state.projectName,
-          startDate: new Date(state.projectStartDate).toISOString(),
-          endDate: new Date(state.projectEndDate).toISOString(),
-          status: 'planned',
-          priority: 2,
-          links: [],
-          teamTemplateId: state.projectTeamTemplateId || undefined,
-        },
-        state.token,
-      );
-
-      await refreshData(state.token, state.selectedYear);
-      state.setIsProjectModalOpen(false);
-      state.setProjectTeamTemplateId('');
-      state.setProjectCode((prev) => {
-        const match = prev.match(/(\d+)$/);
-        if (!match) return `${prev}-1`;
-        const next = String(Number(match[1]) + 1).padStart(match[1].length, '0');
-        return prev.replace(/\d+$/, next);
-      });
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
-    }
-  }
-
-  async function handleCreateAssignment(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.assignmentProjectId || !state.assignmentEmployeeId) return;
-    try {
-      await api.createAssignment(
-        {
-          projectId: state.assignmentProjectId,
-          employeeId: state.assignmentEmployeeId,
-          assignmentStartDate: new Date(state.assignmentStartDate).toISOString(),
-          assignmentEndDate: new Date(state.assignmentEndDate).toISOString(),
-          allocationPercent: state.assignmentPercent,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, state.assignmentProjectId);
-      state.setIsAssignmentModalOpen(false);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateAssignmentFailed, errorText));
-    }
-  }
-
-  async function handleUpdateProjectDates(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.editProjectId) return;
-
-    try {
-      await api.updateProject(
-        state.editProjectId,
-        {
-          startDate: new Date(state.editProjectStartDate).toISOString(),
-          endDate: new Date(state.editProjectEndDate).toISOString(),
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, state.editProjectId);
-      state.setIsProjectDatesModalOpen(false);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
-    }
-  }
-
-  async function handleAutoSaveProjectMeta(
-    projectId: string,
-    payload: { code: string; name: string; startDate: string; endDate: string; teamTemplateId?: string | null },
-  ) {
-    if (!state.token) return;
-
-    try {
-      await api.updateProject(
-        projectId,
-        {
-          code: payload.code,
-          name: payload.name,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          teamTemplateId: payload.teamTemplateId === undefined ? undefined : payload.teamTemplateId || '',
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
-    }
-  }
-
-  async function handleSelectProject(projectId: string) {
-    if (!state.token) return;
-
-    if (state.expandedProjectIds.includes(projectId)) {
-      const nextExpanded = state.expandedProjectIds.filter((id) => id !== projectId);
-      state.setExpandedProjectIds(nextExpanded);
-
-      if (state.selectedProjectId === projectId) {
-        const fallbackProjectId = nextExpanded[0] ?? '';
-        state.setSelectedProjectId(fallbackProjectId);
-        state.setSelectedProjectDetail(fallbackProjectId ? state.projectDetails[fallbackProjectId] ?? null : null);
-        if (!fallbackProjectId) state.setEditAssignmentId('');
-      }
-      return;
-    }
-
-    try {
-      await loadProjectDetail(state.token, projectId, false);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiLoadProjectDetailsFailed, errorText));
-    }
-  }
-
-  function handleEditorAssignmentChange(projectId: string, assignmentId: string) {
-    if (state.selectedProjectId === projectId && state.editAssignmentId === assignmentId) {
-      state.setEditAssignmentId('');
-      state.setEditAssignmentStartDate('');
-      state.setEditAssignmentEndDate('');
-      state.setEditAssignmentPercent(0);
-      return;
-    }
-
-    const detail = state.projectDetails[projectId];
-    if (!detail) return;
-
-    state.setSelectedProjectId(projectId);
-    state.setSelectedProjectDetail(detail);
-    state.setEditAssignmentId(assignmentId);
-    const next = detail.assignments.find((assignment) => assignment.id === assignmentId);
-    if (!next) return;
-    state.setEditAssignmentStartDate(isoToInputDate(next.assignmentStartDate));
-    state.setEditAssignmentEndDate(isoToInputDate(next.assignmentEndDate));
-    state.setEditAssignmentPercent(Number(next.allocationPercent));
-  }
-
-  async function handleUpdateAssignment(event: FormEvent) {
-    event.preventDefault();
-    if (!state.token || !state.editAssignmentId || !state.selectedProjectId) return;
-    try {
-      await api.updateAssignment(
-        state.editAssignmentId,
-        {
-          assignmentStartDate: new Date(state.editAssignmentStartDate).toISOString(),
-          assignmentEndDate: new Date(state.editAssignmentEndDate).toISOString(),
-          allocationPercent: state.editAssignmentPercent,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, state.selectedProjectId);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiUpdateAssignmentFailed, errorText));
-    }
-  }
-
-  async function handleDeleteAssignment(projectId: string, assignmentId: string) {
-    if (!state.token) return;
-    try {
-      await api.deleteAssignment(assignmentId, state.token);
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiUpdateAssignmentFailed, errorText));
-    }
-  }
-
-  async function handleAdjustAssignmentPlan(
-    projectId: string,
-    assignmentId: string,
-    nextStartIso: string,
-    nextEndIso: string,
-  ) {
-    if (!state.token) return;
-    try {
-      await api.updateAssignment(
-        assignmentId,
-        {
-          assignmentStartDate: nextStartIso,
-          assignmentEndDate: nextEndIso,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiUpdateAssignmentFailed, errorText));
-    }
-  }
-
-  async function handleYearChange(nextYear: number) {
-    state.setSelectedYear(nextYear);
-    if (!state.token) return;
-    try {
-      const timelineData = await api.getTimelineYear(nextYear, state.token);
-      state.setTimeline(timelineData);
-
-      const [calendarYearResult, calendarHealthResult] = await Promise.allSettled([
-        api.getCalendarYear(nextYear, state.token),
-        api.getCalendarHealth(state.token),
-      ]);
-      if (calendarYearResult.status === 'fulfilled') {
-        state.setCalendarDays(calendarYearResult.value.days);
-      } else {
-        state.setCalendarDays([]);
-      }
-      if (calendarHealthResult.status === 'fulfilled') {
-        state.setCalendarHealth(calendarHealthResult.value);
-      } else {
-        state.setCalendarHealth(null);
-      }
-      state.setTimelineOrder((prev) => {
-        const ids = timelineData.map((row) => row.id);
-        const kept = prev.filter((id) => ids.includes(id));
-        const appended = ids.filter((id) => !kept.includes(id));
-        return [...kept, ...appended];
-      });
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiLoadTimelineFailed, errorText));
-    }
-  }
-
-  function handleMoveProject(projectId: string, direction: 'up' | 'down') {
-    const ids = state.timeline.map((row) => row.id);
-    state.setTimelineOrder((prev) => {
-      const base = prev.length === ids.length && ids.every((id) => prev.includes(id)) ? [...prev] : [...ids];
-      const index = base.indexOf(projectId);
-      if (index < 0) return base;
-      const target = direction === 'up' ? index - 1 : index + 1;
-      if (target < 0 || target >= base.length) return base;
-      const next = [...base];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  }
-
-  function shiftIsoDateByDays(value: string, days: number) {
-    const date = new Date(value);
-    date.setUTCDate(date.getUTCDate() + days);
-    return date.toISOString();
-  }
-
-  async function handleAdjustProjectPlan(
-    projectId: string,
-    nextStartIso: string,
-    nextEndIso: string,
-    shiftDays: number,
-    mode: 'move' | 'resize-start' | 'resize-end',
-  ) {
-    if (!state.token) return;
-
-    try {
-      await api.updateProject(
-        projectId,
-        {
-          startDate: nextStartIso,
-          endDate: nextEndIso,
-        },
-        state.token,
-      );
-
-      if (mode !== 'resize-end' && shiftDays !== 0) {
-        const projectAssignments = state.assignments.filter((assignment) => assignment.projectId === projectId);
-        await Promise.all(
-          projectAssignments.map((assignment) =>
-            api.updateAssignment(
-              assignment.id,
-              {
-                assignmentStartDate: shiftIsoDateByDays(assignment.assignmentStartDate, shiftDays),
-                assignmentEndDate: shiftIsoDateByDays(assignment.assignmentEndDate, shiftDays),
-              },
-              state.token as string,
-            ),
-          ),
-        );
-      }
-
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (e) {
-      pushToast(resolveErrorMessage(e, t.uiCreateProjectFailed, errorText));
-    }
-  }
+  const deps = {
+    state,
+    t,
+    errorText,
+    pushToast,
+    refreshData,
+    refreshTimelineYearData: (authToken: string, year: number) => refreshTimelineYearData(authToken, year),
+    loadProjectDetail,
+    setAssignmentEditorFromDetail,
+  };
 
   return {
-    toggleRoleFilter,
-    openProjectModal,
-    openProjectDatesModal,
-    openVacationModal,
-    openEmployeeDepartmentModal,
-    handleLogin,
-    handleCreateRole,
-    handleCreateSkill,
-    handleUpdateRole,
-    handleCreateEmployee,
-    handleUpdateEmployeeDepartment,
-    handleCreateDepartment,
-    handleUpdateDepartment,
-    handleDeleteDepartment,
-    handleCreateTeamTemplate,
-    handleUpdateTeamTemplate,
-    handleDeleteTeamTemplate,
-    handleImportEmployeesCsv,
-    handleCreateVacation,
-    handleAssignVacationFromEmployeeModal,
-    handleAutoSaveEmployeeProfile,
-    handleCreateVacationFromEmployeeModal,
-    handleUpdateVacationFromEmployeeModal,
-    handleDeleteVacationFromEmployeeModal,
-    handleCreateProject,
-    handleCreateAssignment,
-    handleUpdateProjectDates,
-    handleAutoSaveProjectMeta,
-    handleSelectProject,
-    handleYearChange,
-    handleEditorAssignmentChange,
-    handleUpdateAssignment,
-    handleDeleteAssignment,
-    handleAdjustAssignmentPlan,
-    handleAdjustProjectPlan,
-    handleMoveProject,
+    ...createAuthHandlers(deps),
+    ...createPersonnelHandlers(deps),
+    ...createProjectsHandlers(deps),
+    ...createAssignmentsHandlers(deps),
+    ...createTimelineHandlers(deps),
   };
 }

@@ -14,6 +14,7 @@ export const MIN_TIMELINE_BAR_WIDTH_PERCENT = 1.2;
 export const DEFAULT_FALLBACK_COLOR_HEX = '#6E7B8A';
 export const DEFAULT_MUTED_BORDER_COLOR_HEX = '#B6BDC6';
 export const DEFAULT_SURFACE_COLOR_HEX = '#fff';
+export const DEFAULT_EDITOR_ACCENT_COLOR_HEX = '#7A8A9A';
 
 export const DEFAULT_EMPLOYEE_STATUS = 'active';
 export const DEFAULT_VACATION_TYPE = 'vacation';

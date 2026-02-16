@@ -5,6 +5,16 @@ import { PrismaService } from '../common/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
+const PROJECT_PERSON_SELECT = {
+  id: true,
+  fullName: true,
+  email: true,
+  grade: true,
+  roleId: true,
+  defaultCapacityHoursPerDay: true,
+  role: { select: { name: true } },
+} satisfies Prisma.EmployeeSelect;
+
 @Injectable()
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -207,15 +217,7 @@ export class ProjectsService {
         members: {
           include: {
             employee: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                grade: true,
-                roleId: true,
-                defaultCapacityHoursPerDay: true,
-                role: { select: { name: true } },
-              },
+              select: PROJECT_PERSON_SELECT,
             },
           },
           orderBy: { createdAt: 'asc' },
@@ -223,15 +225,7 @@ export class ProjectsService {
         assignments: {
           include: {
             employee: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                grade: true,
-                roleId: true,
-                defaultCapacityHoursPerDay: true,
-                role: { select: { name: true } },
-              },
+              select: PROJECT_PERSON_SELECT,
             },
           },
           orderBy: { createdAt: 'asc' },

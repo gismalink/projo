@@ -1,4 +1,5 @@
 import { FormEvent } from 'react';
+import { VacationTypeSelect } from './VacationTypeSelect';
 
 type VacationModalProps = {
   t: Record<string, string>;
@@ -52,11 +53,7 @@ export function VacationModal(props: VacationModalProps) {
           </label>
           <label>
             {t.type}
-            <select value={vacationType} onChange={(e) => setVacationType(e.target.value)}>
-              <option value="vacation">{t.vacationTypeVacation}</option>
-              <option value="sick">{t.vacationTypeSick}</option>
-              <option value="day_off">{t.vacationTypeDayOff}</option>
-            </select>
+            <VacationTypeSelect t={t} value={vacationType} onChange={setVacationType} />
           </label>
           <button type="submit">{t.saveVacation}</button>
         </form>
