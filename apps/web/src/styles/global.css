@@ -32,6 +32,11 @@ body {
     linear-gradient(180deg, #fbfbfd 0%, var(--ios-bg) 100%);
 }
 
+h1, h2, h3, h4, h5, h6 {
+  margin: .5rem 0;
+  color: var(--ios-text);
+}
+
 body.timeline-no-select,
 body.timeline-no-select * {
   user-select: none;
@@ -40,9 +45,9 @@ body.timeline-no-select * {
 }
 
 .container {
-  max-width: 1120px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: 1rem 1rem 3rem;
 }
 
 .subtitle {
@@ -52,11 +57,14 @@ body.timeline-no-select * {
 
 .tabs {
   display: flex;
-  gap: 0.6rem;
-  margin-bottom: 1rem;
+  gap: 0.3rem;
+  margin-bottom: 0.2rem;
+  margin-left: 12px;
+  margin-right: 12px;
 }
 
 .tab {
+  border-radius: 33px;
   border: 1px solid var(--ios-border);
   background: var(--ios-surface);
   color: var(--ios-text-secondary);

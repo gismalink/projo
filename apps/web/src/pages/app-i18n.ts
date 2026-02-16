@@ -11,7 +11,7 @@ export const GRADE_OPTIONS = ['джу', 'джун+', 'мидл', 'мидл+', '�
 
 export const TEXT: Record<Lang, Record<string, string>> = {
   ru: {
-    appTitle: 'Projo MVP',
+    appTitle: 'Projo Planner',
     subtitle: 'Планирование проектов',
     login: 'Вход',
     email: 'Email',
@@ -158,7 +158,7 @@ export const TEXT: Record<Lang, Record<string, string>> = {
     instructionStep5: '5. Сравнивайте план/факт через переключатель календаря и KPI.',
   },
   en: {
-    appTitle: 'Projo MVP',
+    appTitle: 'Projo Planner',
     subtitle: 'Project planning workspace',
     login: 'Login',
     email: 'Email',
