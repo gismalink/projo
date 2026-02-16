@@ -27,12 +27,14 @@
 4. [x] Убрать локализацию через косвенные хардкоды вида `t.prev === 'Назад'` в пользу явного `lang`/locale state.
 
 ### P2 — стабильность и покрытие
-1. Добавить целевые integration/e2e сценарии по критическим потокам:
+1. [~] Добавить целевые integration/e2e сценарии по критическим потокам:
    - login,
    - timeline drag/update,
    - department/role color persistence,
    - project member + assignment consistency.
-2. Укрепить smoke-check для CI (минимальный сценарий создания проекта и назначения).
+   - сделано частично: расширен `scripts/e2e-api-smoke.test.mjs` сценарием `auth + project member + assignment consistency`.
+2. [~] Укрепить smoke-check для CI (минимальный сценарий создания проекта и назначения).
+   - добавлен runtime-smoke поток с созданием проекта, добавлением member, созданием assignment и проверкой консистентности в `GET /projects/:id`.
 
 ### P3 — консолидация модели планирования
 1. Зафиксировать и документировать жизненный цикл `ProjectMember` vs `ProjectAssignment`.
