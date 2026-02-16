@@ -199,6 +199,26 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                   : '—'}
               </span>
               <span>
+                {detail?.costSummary
+                  ? `${t.factCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency)}`
+                  : `${t.factCostLabel}: —`}
+              </span>
+              <span>
+                {detail?.costSummary
+                  ? `${t.lostCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency)}`
+                  : `${t.lostCostLabel}: —`}
+              </span>
+              <span>
+                {detail?.costSummary
+                  ? `${t.missingRateDaysLabel}: ${detail.costSummary.missingRateDays}`
+                  : `${t.missingRateDaysLabel}: 0`}
+              </span>
+              <span>
+                {detail?.costSummary
+                  ? `${t.missingRateHoursLabel}: ${Number(detail.costSummary.missingRateHours).toFixed(1)}`
+                  : `${t.missingRateHoursLabel}: 0.0`}
+              </span>
+              <span>
                 {formatTimelineDate(row.startDate)} {t.fromTo} {formatTimelineDate(row.endDate)}
               </span>
             </div>

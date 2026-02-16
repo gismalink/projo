@@ -13,6 +13,7 @@ type EmployeeCreateModalProps = {
   employeeDepartmentId: string;
   employeeGrade: string;
   employeeStatus: string;
+  employeeSalary: string;
   gradeOptions: string[];
   onClose: () => void;
   onSubmit: (event: FormEvent) => Promise<void>;
@@ -22,6 +23,7 @@ type EmployeeCreateModalProps = {
   setEmployeeDepartmentId: (value: string) => void;
   setEmployeeGrade: (value: string) => void;
   setEmployeeStatus: (value: string) => void;
+  setEmployeeSalary: (value: string) => void;
 };
 
 export function EmployeeCreateModal(props: EmployeeCreateModalProps) {
@@ -36,6 +38,7 @@ export function EmployeeCreateModal(props: EmployeeCreateModalProps) {
     employeeDepartmentId,
     employeeGrade,
     employeeStatus,
+    employeeSalary,
     gradeOptions,
     onClose,
     onSubmit,
@@ -45,6 +48,7 @@ export function EmployeeCreateModal(props: EmployeeCreateModalProps) {
     setEmployeeDepartmentId,
     setEmployeeGrade,
     setEmployeeStatus,
+    setEmployeeSalary,
   } = props;
 
   if (!isOpen) return null;
@@ -106,6 +110,16 @@ export function EmployeeCreateModal(props: EmployeeCreateModalProps) {
               <option value="active">{t.statusActive}</option>
               <option value="inactive">{t.statusInactive}</option>
             </select>
+          </label>
+          <label>
+            {t.salaryPerMonth}
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={employeeSalary}
+              onChange={(e) => setEmployeeSalary(e.target.value)}
+            />
           </label>
           <button type="submit">{t.createWorker}</button>
         </form>

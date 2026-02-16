@@ -106,6 +106,7 @@ export function App() {
               roleByName={app.roleByName}
               utilizationByEmployee={app.utilizationByEmployee}
               monthlyUtilizationByEmployee={app.monthlyUtilizationByEmployee}
+              employeeSalaryById={app.employeeSalaryById}
               toggleRoleFilter={app.toggleRoleFilter}
               clearRoleFilters={() => app.setSelectedRoleFilters([])}
               openEmployeeModal={(employee) => {
@@ -117,6 +118,9 @@ export function App() {
                 app.setEmployeeDepartmentId(employee.department?.id ?? '');
                 app.setEmployeeGrade(employee.grade ?? '');
                 app.setEmployeeStatus(employee.status ?? 'active');
+                app.setEmployeeSalary(
+                  app.employeeSalaryById[employee.id] !== undefined ? String(app.employeeSalaryById[employee.id]) : '',
+                );
                 app.setVacationEmployeeId(employee.id);
                 app.setVacationStartDate(`${new Date().getFullYear()}-07-01`);
                 app.setVacationEndDate(`${new Date().getFullYear()}-07-14`);
@@ -131,6 +135,7 @@ export function App() {
                 app.setEmployeeDepartmentId('');
                 app.setEmployeeGrade('');
                 app.setEmployeeStatus('active');
+                app.setEmployeeSalary('');
                 app.setIsEmployeeCreateModalOpen(true);
               }}
               openEmployeeImportModal={() => app.setIsEmployeeImportModalOpen(true)}
@@ -151,6 +156,7 @@ export function App() {
             employeeDepartmentId={app.employeeDepartmentId}
             employeeGrade={app.employeeGrade}
             employeeStatus={app.employeeStatus}
+            employeeSalary={app.employeeSalary}
             gradeOptions={gradeOptions}
             onClose={() => app.setIsEmployeeCreateModalOpen(false)}
             onSubmit={app.handleCreateEmployee}
@@ -160,6 +166,7 @@ export function App() {
             setEmployeeDepartmentId={app.setEmployeeDepartmentId}
             setEmployeeGrade={app.setEmployeeGrade}
             setEmployeeStatus={app.setEmployeeStatus}
+            setEmployeeSalary={app.setEmployeeSalary}
           />
 
           {app.activeTab === 'roles' ? (
@@ -339,6 +346,7 @@ export function App() {
             employeeDepartmentId={app.employeeDepartmentId}
             employeeGrade={app.employeeGrade}
             employeeStatus={app.employeeStatus}
+            employeeSalary={app.employeeSalary}
             selectedYear={app.selectedYear}
             gradeOptions={gradeOptions}
             onClose={() => {

@@ -54,6 +54,9 @@ export function useAppState() {
   const [employeeDepartmentId, setEmployeeDepartmentId] = useState('');
   const [employeeStatus, setEmployeeStatus] = useState('active');
   const [employeeGrade, setEmployeeGrade] = useState('мидл');
+  const [employeeSalary, setEmployeeSalary] = useState('');
+  const [employeeSalaryById, setEmployeeSalaryById] = useState<Record<string, number>>({});
+  const [employeeActiveRateIdByEmployeeId, setEmployeeActiveRateIdByEmployeeId] = useState<Record<string, string>>({});
   const [employeeCsv, setEmployeeCsv] = useState(
     'fullName,email,role,department,grade,status,defaultCapacityHoursPerDay\nJohn Doe,john.doe@projo.local,Backend Developer,Engineering,мидл,active,8',
   );
@@ -134,6 +137,9 @@ export function useAppState() {
     employeeDepartmentId,
     employeeStatus,
     employeeGrade,
+    employeeSalary,
+    employeeSalaryById,
+    employeeActiveRateIdByEmployeeId,
     employeeCsv,
     editEmployeeId,
     editEmployeeName,
@@ -205,6 +211,9 @@ export function useAppState() {
     setEmployeeDepartmentId,
     setEmployeeStatus,
     setEmployeeGrade,
+    setEmployeeSalary,
+    setEmployeeSalaryById,
+    setEmployeeActiveRateIdByEmployeeId,
     setEmployeeCsv,
     setEditEmployeeId,
     setEditEmployeeName,

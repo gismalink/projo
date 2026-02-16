@@ -4,6 +4,8 @@ import { Employee, Toast } from '../pages/app-types';
 import { STANDARD_DAY_HOURS, isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
 import { AppState } from './useAppState';
 
+const MONTHLY_HOURS = 168;
+
 type Params = {
   state: AppState;
   t: Record<string, string>;
@@ -88,7 +90,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData] =
+    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, costRatesData] =
       await Promise.all([
         api.getRoles(authToken),
         api.getSkills(authToken),
@@ -98,6 +100,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         api.getAssignments(authToken),
         api.getProjects(authToken),
         api.getTimelineYear(year, authToken),
+        api.getCostRates(authToken),
       ]);
 
     const nextRoles = rolesData as typeof state.roles;
@@ -116,6 +119,31 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setAssignments(nextAssignments);
     state.setProjects(nextProjects);
     state.setTimeline(timelineData);
+
+    const now = new Date();
+    const employeeSalaryById: Record<string, number> = {};
+    const employeeActiveRateIdByEmployeeId: Record<string, string> = {};
+    const activePersonalRates = costRatesData
+      .filter((rate) => Boolean(rate.employeeId))
+      .filter((rate) => {
+        const validFrom = new Date(rate.validFrom);
+        const validTo = rate.validTo ? new Date(rate.validTo) : null;
+        return validFrom <= now && (!validTo || validTo >= now);
+      })
+      .sort((left, right) => new Date(right.validFrom).getTime() - new Date(left.validFrom).getTime());
+
+    for (const rate of activePersonalRates) {
+      const employeeId = rate.employeeId;
+      if (!employeeId) continue;
+      if (employeeSalaryById[employeeId] !== undefined) continue;
+      const hourly = Number(rate.amountPerHour);
+      if (!Number.isFinite(hourly) || hourly <= 0) continue;
+      employeeSalaryById[employeeId] = Number((hourly * MONTHLY_HOURS).toFixed(2));
+      employeeActiveRateIdByEmployeeId[employeeId] = rate.id;
+    }
+
+    state.setEmployeeSalaryById(employeeSalaryById);
+    state.setEmployeeActiveRateIdByEmployeeId(employeeActiveRateIdByEmployeeId);
 
     const [calendarYearResult, calendarHealthResult] = await Promise.allSettled([
       api.getCalendarYear(year, authToken),
@@ -288,6 +316,10 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   async function handleCreateEmployee(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.employeeRoleId) return;
+
+    const parsedSalary = Number(state.employeeSalary);
+    const salaryMonthly = Number.isFinite(parsedSalary) && parsedSalary > 0 ? parsedSalary : null;
+
     try {
       if (state.editEmployeeId) {
         await api.updateEmployee(
@@ -302,8 +334,33 @@ export function useAppHandlers({ state, t, errorText }: Params) {
           },
           state.token,
         );
+
+        if (salaryMonthly !== null) {
+          const amountPerHour = Number((salaryMonthly / MONTHLY_HOURS).toFixed(2));
+          const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
+          if (existingRateId) {
+            await api.updateCostRate(
+              existingRateId,
+              {
+                amountPerHour,
+                currency: 'USD',
+              },
+              state.token,
+            );
+          } else {
+            await api.createCostRate(
+              {
+                employeeId: state.editEmployeeId,
+                amountPerHour,
+                currency: 'USD',
+                validFrom: new Date().toISOString(),
+              },
+              state.token,
+            );
+          }
+        }
       } else {
-        await api.createEmployee(
+        const createdEmployee = (await api.createEmployee(
           {
             fullName: state.employeeFullName,
             email: state.employeeEmail,
@@ -314,7 +371,19 @@ export function useAppHandlers({ state, t, errorText }: Params) {
             defaultCapacityHoursPerDay: STANDARD_DAY_HOURS,
           },
           state.token,
-        );
+        )) as { id: string };
+
+        if (salaryMonthly !== null && createdEmployee?.id) {
+          await api.createCostRate(
+            {
+              employeeId: createdEmployee.id,
+              amountPerHour: Number((salaryMonthly / MONTHLY_HOURS).toFixed(2)),
+              currency: 'USD',
+              validFrom: new Date().toISOString(),
+            },
+            state.token,
+          );
+        }
       }
       await refreshData(state.token, state.selectedYear);
       if (state.editEmployeeId) {
@@ -327,6 +396,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         });
       }
       state.setEditEmployeeId('');
+      state.setEmployeeSalary('');
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));
     }
@@ -339,10 +409,55 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     departmentId?: string;
     grade?: string;
     status?: string;
+    salaryMonthly?: number;
   }) {
     if (!state.token || !state.editEmployeeId || !payload.roleId) return;
     try {
-      await api.updateEmployee(state.editEmployeeId, payload, state.token);
+      await api.updateEmployee(
+        state.editEmployeeId,
+        {
+          fullName: payload.fullName,
+          email: payload.email,
+          roleId: payload.roleId,
+          departmentId: payload.departmentId,
+          grade: payload.grade,
+          status: payload.status,
+        },
+        state.token,
+      );
+
+      const currentSalary = state.employeeSalaryById[state.editEmployeeId];
+      const shouldUpdateSalary =
+        payload.salaryMonthly !== undefined &&
+        Number.isFinite(payload.salaryMonthly) &&
+        payload.salaryMonthly > 0 &&
+        (currentSalary === undefined || Math.abs(currentSalary - payload.salaryMonthly) >= 0.01);
+
+      if (shouldUpdateSalary) {
+        const amountPerHour = Number((payload.salaryMonthly / MONTHLY_HOURS).toFixed(2));
+        const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
+        if (existingRateId) {
+          await api.updateCostRate(
+            existingRateId,
+            {
+              amountPerHour,
+              currency: 'USD',
+            },
+            state.token,
+          );
+        } else {
+          await api.createCostRate(
+            {
+              employeeId: state.editEmployeeId,
+              amountPerHour,
+              currency: 'USD',
+              validFrom: new Date().toISOString(),
+            },
+            state.token,
+          );
+        }
+      }
+
       state.setEmployeeFullName(payload.fullName);
       state.setEmployeeEmail(payload.email);
       state.setEmployeeRoleId(payload.roleId);

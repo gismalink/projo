@@ -168,6 +168,29 @@ export type CreateAssignmentPayload = {
 
 export type UpdateAssignmentPayload = Partial<CreateAssignmentPayload>;
 
+export type CostRateItem = {
+  id: string;
+  employeeId: string | null;
+  roleId: string | null;
+  amountPerHour: string | number;
+  currency: string;
+  validFrom: string;
+  validTo: string | null;
+  employee?: { id: string; fullName: string } | null;
+  role?: { id: string; name: string } | null;
+};
+
+export type CreateCostRatePayload = {
+  employeeId?: string;
+  roleId?: string;
+  amountPerHour: number;
+  currency?: string;
+  validFrom: string;
+  validTo?: string;
+};
+
+export type UpdateCostRatePayload = Partial<CreateCostRatePayload>;
+
 export type AssignmentItem = {
   id: string;
   projectId: string;
@@ -190,9 +213,14 @@ export type ProjectDetail = {
   endDate: string;
   costSummary?: {
     totalPlannedHours: number;
+    totalActualHours: number;
+    totalLostHours: number;
     totalPlannedCost: number;
+    totalActualCost: number;
+    totalLostCost: number;
     currency: string;
     missingRateDays: number;
+    missingRateHours: number;
   };
   assignments: Array<{
     id: string;
@@ -336,4 +364,9 @@ export const api = {
   updateAssignment: (assignmentId: string, payload: UpdateAssignmentPayload, token: string) =>
     request(`/assignments/${assignmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   deleteAssignment: (assignmentId: string, token: string) => request(`/assignments/${assignmentId}`, { method: 'DELETE' }, token),
+  getCostRates: (token: string) => request<CostRateItem[]>('/cost-rates', {}, token),
+  createCostRate: (payload: CreateCostRatePayload, token: string) =>
+    request<CostRateItem>('/cost-rates', { method: 'POST', body: JSON.stringify(payload) }, token),
+  updateCostRate: (costRateId: string, payload: UpdateCostRatePayload, token: string) =>
+    request<CostRateItem>(`/cost-rates/${costRateId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
 };

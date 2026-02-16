@@ -14,6 +14,7 @@
     "build": "npm run build -ws",
     "lint": "npm run lint -ws",
     "test": "npm run test -ws",
+    "seed:salaries": "node ./scripts/seed-employee-salaries.mjs",
     "test:e2e:api": "node --test ./scripts/e2e-api-smoke.test.mjs",
     "verify": "bash ./scripts/verify-all.sh",
     "ci:check": "npm run verify"

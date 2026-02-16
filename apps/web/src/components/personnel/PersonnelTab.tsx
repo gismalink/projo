@@ -22,6 +22,7 @@ type PersonnelTabProps = {
   roleByName: Map<string, Role>;
   utilizationByEmployee: Record<string, number>;
   monthlyUtilizationByEmployee: Record<string, number[]>;
+  employeeSalaryById: Record<string, number>;
   toggleRoleFilter: (roleName: string) => void;
   clearRoleFilters: () => void;
   openEmployeeModal: (employee: Employee) => void;
@@ -44,6 +45,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
     roleByName,
     utilizationByEmployee,
     monthlyUtilizationByEmployee,
+    employeeSalaryById,
     toggleRoleFilter,
     clearRoleFilters,
     openEmployeeModal,
@@ -197,6 +199,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 const roleColor = roleColorOrDefault(roleByName.get(employee.role?.name ?? '')?.colorHex);
                 const util = utilizationByEmployee[employee.id] ?? 0;
                 const monthlyUtilization = monthlyUtilizationByEmployee[employee.id] ?? Array.from({ length: 12 }, () => 0);
+                const salaryMonthly = employeeSalaryById[employee.id];
 
                 return (
                   <article className="employee-card" key={employee.id}>
@@ -229,8 +232,9 @@ export function PersonnelTab(props: PersonnelTabProps) {
                           {employee.grade}
                         </span>
                       ) : null}
-                      {' • '}
-                      {employee.status}
+                    </span>
+                    <span className="salary-line">
+                      {t.salaryPerMonth}: {salaryMonthly !== undefined ? `${salaryMonthly.toFixed(0)} ${t.currencyUSD}` : '—'}
                     </span>
                     <span className="vacation-line">
                       {employeeVacations.length === 0
@@ -240,19 +244,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
                             .join(' | ')}
                     </span>
                     <div className="utilization-block">
-                      <div className="utilization-label">
-                        <span>{t.utilization}</span>
-                        <strong>{util.toFixed(1)}%</strong>
-                      </div>
-                      <div className="utilization-bar-bg">
-                        <div
-                          className="utilization-bar"
-                          style={{
-                            width: `${Math.min(util, 140)}%`,
-                            background: utilizationColor(util),
-                          }}
-                        />
-                      </div>
+                      <span className="monthly-load-label">{t.monthlyLoadLabel}</span>
                       <div className="employee-monthly-load" aria-label={t.monthlyLoadLabel}>
                         {monthlyUtilization.map((value, index) => (
                           <span
@@ -265,6 +257,20 @@ export function PersonnelTab(props: PersonnelTabProps) {
                             title={`${months[index] ?? String(index + 1)}: ${value.toFixed(1)}%`}
                           />
                         ))}
+                      </div>
+
+                      <div className="utilization-label">
+                        <span>{t.utilization}</span>
+                        <strong>{util.toFixed(1)}%</strong>
+                      </div>
+                      <div className="utilization-bar-bg">
+                        <div
+                          className="utilization-bar"
+                          style={{
+                            width: `${Math.min(util, 140)}%`,
+                            background: utilizationColor(util),
+                          }}
+                        />
                       </div>
                     </div>
                   </article>

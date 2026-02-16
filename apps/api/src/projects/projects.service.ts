@@ -9,6 +9,10 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private isoDayKey(value: Date): string {
+    return this.startOfUtcDay(value).toISOString().slice(0, 10);
+  }
+
   private startOfUtcDay(value: Date): Date {
     return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
   }
@@ -208,24 +212,73 @@ export class ProjectsService {
     const roleIds = Array.from(new Set(project.assignments.map((assignment) => assignment.employee.roleId)));
     const employeeIds = Array.from(new Set(project.assignments.map((assignment) => assignment.employeeId)));
 
-    const rates = await this.prisma.costRate.findMany({
-      where: {
-        AND: [
-          {
-            OR: [{ employeeId: { in: employeeIds } }, { roleId: { in: roleIds } }],
+    const [rates, vacations, calendarDays] = await Promise.all([
+      this.prisma.costRate.findMany({
+        where: {
+          AND: [
+            {
+              OR: [{ employeeId: { in: employeeIds } }, { roleId: { in: roleIds } }],
+            },
+            { validFrom: { lte: project.endDate } },
+            {
+              OR: [{ validTo: null }, { validTo: { gte: project.startDate } }],
+            },
+          ],
+        },
+        orderBy: [{ validFrom: 'desc' }],
+      }),
+      this.prisma.vacation.findMany({
+        where: {
+          employeeId: { in: employeeIds },
+          startDate: { lte: project.endDate },
+          endDate: { gte: project.startDate },
+        },
+        select: {
+          employeeId: true,
+          startDate: true,
+          endDate: true,
+        },
+      }),
+      this.prisma.calendarDay.findMany({
+        where: {
+          date: {
+            gte: this.startOfUtcDay(project.startDate),
+            lte: this.startOfUtcDay(project.endDate),
           },
-          { validFrom: { lte: project.endDate } },
-          {
-            OR: [{ validTo: null }, { validTo: { gte: project.startDate } }],
-          },
-        ],
-      },
-      orderBy: [{ validFrom: 'desc' }],
-    });
+        },
+        select: {
+          date: true,
+          isWorkingDay: true,
+        },
+      }),
+    ]);
+
+    const workingDayByIso = new Map<string, boolean>();
+    for (const day of calendarDays) {
+      workingDayByIso.set(this.isoDayKey(day.date), day.isWorkingDay);
+    }
+
+    const vacationsByEmployeeId = new Map<string, Array<{ start: Date; end: Date }>>();
+    for (const vacation of vacations) {
+      const ranges = vacationsByEmployeeId.get(vacation.employeeId);
+      const range = {
+        start: this.startOfUtcDay(vacation.startDate),
+        end: this.startOfUtcDay(vacation.endDate),
+      };
+      if (ranges) {
+        ranges.push(range);
+      } else {
+        vacationsByEmployeeId.set(vacation.employeeId, [range]);
+      }
+    }
 
     let totalPlannedHours = 0;
+    let totalActualHours = 0;
     let totalPlannedCost = 0;
+    let totalActualCost = 0;
     let missingRateDays = 0;
+    let missingRateHours = 0;
+    const usedCurrencies = new Set<string>();
 
     for (const assignment of project.assignments) {
       const assignmentDays = this.listUtcDays(assignment.assignmentStartDate, assignment.assignmentEndDate);
@@ -234,8 +287,25 @@ export class ProjectsService {
           ? Number(assignment.plannedHoursPerDay)
           : (Number(assignment.employee.defaultCapacityHoursPerDay) * Number(assignment.allocationPercent)) / 100;
 
+      const employeeVacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
+
       for (const day of assignmentDays) {
+        const dayKey = this.isoDayKey(day);
+        const isWorkingDay = workingDayByIso.has(dayKey)
+          ? Boolean(workingDayByIso.get(dayKey))
+          : (() => {
+              const weekday = day.getUTCDay();
+              return weekday !== 0 && weekday !== 6;
+            })();
+
+        if (!isWorkingDay) continue;
+
         totalPlannedHours += dailyHours;
+
+        const onVacation = employeeVacations.some((range) => day >= range.start && day <= range.end);
+        if (!onVacation) {
+          totalActualHours += dailyHours;
+        }
 
         const employeeRate = rates.find(
           (rate) =>
@@ -253,20 +323,34 @@ export class ProjectsService {
         const rate = employeeRate ?? roleRate;
         if (!rate) {
           missingRateDays += 1;
+          missingRateHours += dailyHours;
           continue;
         }
 
+        usedCurrencies.add(rate.currency);
         totalPlannedCost += dailyHours * Number(rate.amountPerHour);
+        if (!onVacation) {
+          totalActualCost += dailyHours * Number(rate.amountPerHour);
+        }
       }
     }
+
+    const totalLostHours = Math.max(0, totalPlannedHours - totalActualHours);
+    const totalLostCost = Math.max(0, totalPlannedCost - totalActualCost);
+    const currency = usedCurrencies.size === 1 ? Array.from(usedCurrencies)[0] : rates[0]?.currency ?? 'USD';
 
     return {
       ...project,
       costSummary: {
         totalPlannedHours: Number(totalPlannedHours.toFixed(2)),
+        totalActualHours: Number(totalActualHours.toFixed(2)),
+        totalLostHours: Number(totalLostHours.toFixed(2)),
         totalPlannedCost: Number(totalPlannedCost.toFixed(2)),
-        currency: rates[0]?.currency ?? 'USD',
+        totalActualCost: Number(totalActualCost.toFixed(2)),
+        totalLostCost: Number(totalLostCost.toFixed(2)),
+        currency,
         missingRateDays,
+        missingRateHours: Number(missingRateHours.toFixed(2)),
       },
     };
   }

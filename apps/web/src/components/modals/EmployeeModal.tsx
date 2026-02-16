@@ -14,6 +14,7 @@ type EmployeeModalProps = {
   employeeDepartmentId: string;
   employeeGrade: string;
   employeeStatus: string;
+  employeeSalary: string;
   selectedYear: number;
   gradeOptions: string[];
   onClose: () => void;
@@ -25,6 +26,7 @@ type EmployeeModalProps = {
     departmentId?: string;
     grade?: string;
     status?: string;
+    salaryMonthly?: number;
   }) => Promise<void>;
   onCreateVacation: (payload: { startDate: string; endDate: string; type: string }) => Promise<void>;
   onUpdateVacation: (vacationId: string, payload: { startDate: string; endDate: string; type: string }) => Promise<void>;
@@ -43,6 +45,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
     employeeDepartmentId,
     employeeGrade,
     employeeStatus,
+    employeeSalary,
     selectedYear,
     gradeOptions,
     onClose,
@@ -59,6 +62,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
   const [departmentId, setDepartmentId] = useState(employeeDepartmentId);
   const [grade, setGrade] = useState(employeeGrade);
   const [status, setStatus] = useState(employeeStatus);
+  const [salary, setSalary] = useState(employeeSalary);
   const [newVacationStart, setNewVacationStart] = useState(`${new Date().getFullYear()}-07-01`);
   const [newVacationEnd, setNewVacationEnd] = useState(`${new Date().getFullYear()}-07-14`);
   const [newVacationType, setNewVacationType] = useState('vacation');
@@ -223,7 +227,8 @@ export function EmployeeModal(props: EmployeeModalProps) {
     setDepartmentId(employeeDepartmentId);
     setGrade(employeeGrade);
     setStatus(employeeStatus);
-  }, [isOpen, employeeFullName, employeeEmail, employeeRoleId, employeeDepartmentId, employeeGrade, employeeStatus]);
+    setSalary(employeeSalary);
+  }, [isOpen, employeeFullName, employeeEmail, employeeRoleId, employeeDepartmentId, employeeGrade, employeeStatus, employeeSalary]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -235,10 +240,11 @@ export function EmployeeModal(props: EmployeeModalProps) {
         departmentId: departmentId || undefined,
         grade: grade || undefined,
         status,
+        salaryMonthly: salary.trim() ? Number(salary) : undefined,
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [isOpen, fullName, email, roleId, departmentId, grade, status, onProfileAutoSave]);
+  }, [isOpen, fullName, email, roleId, departmentId, grade, status, salary, onProfileAutoSave]);
 
   if (!isOpen) return null;
 
@@ -307,6 +313,16 @@ export function EmployeeModal(props: EmployeeModalProps) {
               <option value="active">{t.statusActive}</option>
               <option value="inactive">{t.statusInactive}</option>
             </select>
+          </label>
+          <label>
+            {t.salaryPerMonth}
+            <input
+              type="number"
+              min={0}
+              step="50"
+              value={salary}
+              onChange={(e) => setSalary(e.target.value)}
+            />
           </label>
 
           <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
