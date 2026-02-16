@@ -174,6 +174,7 @@ export function App() {
               t={t}
               roles={app.roles}
               departments={app.departments}
+              teamTemplates={app.teamTemplates}
               grades={grades}
               roleName={app.roleName}
               roleShortName={app.roleShortName}
@@ -189,6 +190,9 @@ export function App() {
               onCreateDepartment={app.handleCreateDepartment}
               onUpdateDepartment={app.handleUpdateDepartment}
               onDeleteDepartment={app.handleDeleteDepartment}
+              onCreateTeamTemplate={app.handleCreateTeamTemplate}
+              onUpdateTeamTemplate={app.handleUpdateTeamTemplate}
+              onDeleteTeamTemplate={app.handleDeleteTeamTemplate}
               onAddGrade={(name, colorHex) => {
                 if (!app.token) return;
                 const trimmed = name.trim();
@@ -264,6 +268,7 @@ export function App() {
               vacations={app.vacations}
               employees={app.employees}
               roles={app.roles}
+              teamTemplates={app.teamTemplates}
               grades={grades}
               sortedTimeline={app.sortedTimeline}
               calendarDays={app.calendarDays}
@@ -297,12 +302,15 @@ export function App() {
             projectName={app.projectName}
             projectStartDate={app.projectStartDate}
             projectEndDate={app.projectEndDate}
+            teamTemplates={app.teamTemplates}
+            projectTeamTemplateId={app.projectTeamTemplateId}
             onClose={() => app.setIsProjectModalOpen(false)}
             onSubmit={app.handleCreateProject}
             setProjectCode={app.setProjectCode}
             setProjectName={app.setProjectName}
             setProjectStartDate={app.setProjectStartDate}
             setProjectEndDate={app.setProjectEndDate}
+            setProjectTeamTemplateId={app.setProjectTeamTemplateId}
           />
 
           <ProjectDatesModal

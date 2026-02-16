@@ -18,6 +18,7 @@ export class RolesService {
       { name: 'UI_DESIGNER', shortName: 'UI', description: 'UI designer', level: 3, colorHex: '#46B7D6' },
       { name: 'UX_DESIGNER', shortName: 'UX', description: 'UX designer', level: 3, colorHex: '#31B28D' },
       { name: 'BACKEND_DEVELOPER', shortName: 'BACK', description: 'Backend developer', level: 3, colorHex: '#5B8DEF' },
+      { name: 'FRONTEND_DEVELOPER', shortName: 'FRONT', description: 'Frontend developer', level: 3, colorHex: '#4C9F70' },
       { name: 'ARTIST_3D', shortName: '3DART', description: '3D artist', level: 3, colorHex: '#C178E8' },
       { name: 'ANALYST', shortName: 'ANLST', description: 'Business/system analyst', level: 3, colorHex: '#E6A23C' },
       { name: 'QA_ENGINEER', shortName: 'QA', description: 'QA test engineer', level: 3, colorHex: '#F06A8A' },

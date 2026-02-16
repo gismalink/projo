@@ -1,11 +1,22 @@
 # Projo Planner
 
+Актуализация: 2026-02-16
+
 Это продуктовый годовой планер для команд и руководителей, который помогает собирать реалистичный план проектов с прозрачной загрузкой людей и прогнозом стоимости. Система учитывает рабочий календарь, выходные и отпуска, показывает влияние назначений на доступность сотрудников и снижает риск перегрузки на этапе планирования. В одном интерфейсе доступны управление командой (роли, отделы, грейды), планирование по таймлайну, контроль факта/потерь часов и быстрые сценарии перепланирования без ручных таблиц.
 
 ## Stack
 - API: NestJS + Prisma + PostgreSQL + JWT + role guards
 - Web: React + Vite + TypeScript
 - Infra: Docker Compose (PostgreSQL)
+
+## Реализовано в текущем инкременте
+- Шаблоны состава проекта (`team-templates`) в Settings: CRUD, редактирование названия и списка ролей.
+- Привязка шаблона к проекту: выбор при создании и инлайн-редактировании проекта на Timeline.
+- Диагностика недостающих ролей на Timeline считается по выбранному шаблону проекта.
+- В заголовке строки проекта отображается чип с названием выбранного шаблона.
+- В базе по умолчанию присутствуют шаблоны:
+   - `web proj` (`PM UI QA BACK ANLST FRONT`)
+   - `unity lab` (`PM UI UX QA ANLST UNITY 3DART`)
 
 ## Quick start
 1. Copy env files:
@@ -39,6 +50,8 @@ Created automatically on API startup if not found.
 - Product specification: `docs/product-spec.md`
 - Implementation roadmap: `docs/implementation-roadmap.md`
 - Workflow checklist: `docs/workflow-checklist.md`
+- Stabilization audit (2026-02-15): `docs/stabilization-audit-2026-02-15.md`
+- Technical audit (2026-02-16): `docs/technical-audit-2026-02-16.md`
 
 ## Documentation ownership
 - API methods, roles and request contracts: `docs/api-reference.md`

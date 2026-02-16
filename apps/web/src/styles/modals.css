@@ -5,22 +5,22 @@
 
 .department-manage-list {
   display: grid;
-  gap: 0.38rem;
-  max-height: min(48vh, 420px);
+  gap: 0.3rem;
+  max-height: min(52vh, 460px);
   overflow: auto;
-  padding-right: 0.1rem;
+  padding-right: 0.08rem;
 }
 
 .settings-columns {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.62rem;
 }
 
 .settings-column {
   display: grid;
   align-content: start;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .department-manage-row {
@@ -60,15 +60,15 @@
 }
 
 .department-manage-input {
-  min-height: 34px;
-  padding: 0.45rem 0.7rem;
+  min-height: 32px;
+  padding: 0.4rem 0.58rem;
 }
 
 .department-manage-action {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   border: 1px solid var(--ios-border);
   background: var(--ios-surface-strong);
   color: var(--ios-text-secondary);
@@ -165,10 +165,16 @@
 
 @media (max-width: 900px) {
   .settings-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .employee-meta-compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .settings-columns {
     grid-template-columns: 1fr;
   }
 }

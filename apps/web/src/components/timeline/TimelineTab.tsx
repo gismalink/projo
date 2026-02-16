@@ -9,8 +9,6 @@ import { TimelineToolbar } from './TimelineToolbar';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
-const DEFAULT_REQUIRED_PROJECT_ROLES = ['pm', 'lead'];
-
 type TimelineTabProps = {
   t: Record<string, string>;
   months: string[];
@@ -26,6 +24,7 @@ type TimelineTabProps = {
     department?: { name: string } | null;
   }>;
   roles: Array<{ name: string; shortName?: string | null; colorHex?: string | null }>;
+  teamTemplates: Array<{ id: string; name: string }>;
   grades: GradeItem[];
   sortedTimeline: ProjectTimelineRow[];
   calendarDays: CalendarDayItem[];
@@ -35,7 +34,7 @@ type TimelineTabProps = {
   onOpenProjectModal: () => void;
   onAutoSaveProjectMeta: (
     projectId: string,
-    payload: { code: string; name: string; startDate: string; endDate: string },
+    payload: { code: string; name: string; startDate: string; endDate: string; teamTemplateId?: string | null },
   ) => Promise<void>;
   onOpenAssignmentModal: (projectId: string, employeeId?: string) => void;
   onSelectProject: (projectId: string) => Promise<void>;
@@ -69,6 +68,7 @@ export function TimelineTab(props: TimelineTabProps) {
     vacations,
     employees,
     roles,
+    teamTemplates,
     grades,
     sortedTimeline,
     calendarDays,
@@ -805,25 +805,14 @@ export function TimelineTab(props: TimelineTabProps) {
       const detail = projectDetails[row.id];
 
       if (detail) {
-        const presentRoleKeys = new Set(
-          detail.assignments.map((assignment) => assignment.employee.role.name.toLowerCase()),
-        );
-        const missingRequiredRoleKeys = DEFAULT_REQUIRED_PROJECT_ROLES.filter(
-          (requiredRole) =>
-            !Array.from(presentRoleKeys).some((roleName) => roleName.includes(requiredRole)),
-        );
-
-        const missingRequiredRoles = missingRequiredRoleKeys.map((requiredRole) => {
-          const matchedRole = roles.find((role) => {
-            const roleName = role.name.toLowerCase();
-            const roleShortName = role.shortName?.toLowerCase() ?? '';
-            return roleName.includes(requiredRole) || roleShortName === requiredRole;
+        const templateRoleIds = detail.teamTemplate?.roles.map((entry) => entry.role.id) ?? [];
+        const presentRoleIds = new Set(detail.assignments.map((assignment) => assignment.employee.roleId));
+        const missingRequiredRoles = (detail.teamTemplate?.roles ?? [])
+          .filter((requiredRole) => templateRoleIds.includes(requiredRole.role.id) && !presentRoleIds.has(requiredRole.role.id))
+          .map((requiredRole) => {
+            const shortName = requiredRole.role.shortName?.trim();
+            return shortName && shortName.length > 0 ? shortName : requiredRole.role.name;
           });
-
-          if (!matchedRole) return requiredRole.toUpperCase();
-          const shortName = matchedRole.shortName?.trim();
-          return shortName && shortName.length > 0 ? shortName : matchedRole.name;
-        });
 
         if (missingRequiredRoles.length > 0) {
           issues.push({
@@ -898,7 +887,6 @@ export function TimelineTab(props: TimelineTabProps) {
     t.timelineErrorMissingRates,
     t.timelineErrorMissingTemplateRoles,
     t.timelineErrorVacations,
-    roles,
     toUtcDay,
     vacationsByEmployeeId,
   ]);
@@ -1089,6 +1077,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       displayTooltipText={displayTooltipText}
                       formatTimelineDate={formatTimelineDate}
                       formatPlannedCost={formatPlannedCost}
+                      teamTemplates={teamTemplates}
                       isDropTarget={hoverProjectDropId === row.id && !draggedEmployeeAssigned}
                       onRowDragOver={handleProjectRowDragOver}
                       onRowDragLeave={handleProjectRowDragLeave}

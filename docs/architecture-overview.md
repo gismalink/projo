@@ -19,7 +19,7 @@
   - JWT + RBAC: `src/auth/*`, `src/common/decorators/roles.decorator.ts`, `src/common/guards/roles.guard.ts`
   - Error code map: `src/common/error-codes.ts`
 - Domain modules:
-  - `roles`, `skills`, `departments`, `employees`, `vacations`, `cost-rates`, `projects`, `assignments`, `timeline`, `calendar`, `health`.
+  - `roles`, `skills`, `departments`, `employees`, `vacations`, `cost-rates`, `team-templates`, `projects`, `assignments`, `timeline`, `calendar`, `health`.
 - Common backend pattern: `controller -> service -> prisma`.
 
 ## 4) Data model highlights (Prisma)
@@ -27,8 +27,10 @@
 - `Department`: supports `colorHex` and is linked to employees.
 - `Employee`: linked to role and optional department; has grade/status/capacity.
 - `Project`:
+  - optional binding to `ProjectTeamTemplate` via `teamTemplateId`,
   - `ProjectMember` keeps membership list,
   - `ProjectAssignment` keeps timeline allocation periods.
+- `ProjectTeamTemplate` + `ProjectTeamTemplateRole`: настраиваемые шаблоны обязательного состава проекта.
 - `Vacation`: employee absences.
 - `CostRate`: role/employee rates with validity interval.
 - `CalendarDay` + `CalendarYearSync`: production calendar cache and sync health.
@@ -54,3 +56,4 @@
 - API endpoints and contracts: `docs/api-reference.md`.
 - Run/start instructions: `README.md`.
 - Delivery workflow and checks: `docs/workflow-checklist.md`.
+- Stabilization/technical audits: `docs/stabilization-audit-2026-02-15.md`, `docs/technical-audit-2026-02-16.md`.

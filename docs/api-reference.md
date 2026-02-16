@@ -145,16 +145,23 @@
 ### `POST /api/projects`
 - Roles: `ADMIN | PM`
 - Body: `CreateProjectDto`
+  - `code: string`
+  - `name: string`
+  - `startDate: ISO string`
+  - `endDate: ISO string`
+  - `teamTemplateId?: string`
 
 ### `GET /api/projects`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 
 ### `GET /api/projects/:id`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Возвращает `teamTemplate` (если привязан) с ролями шаблона.
 
 ### `PATCH /api/projects/:id`
 - Roles: `ADMIN | PM`
 - Body: `UpdateProjectDto`
+  - поддерживает `teamTemplateId?: string | null` (отвязка через `null`/пустое значение в payload клиента).
 
 ### `DELETE /api/projects/:id`
 - Roles: `ADMIN`
@@ -168,6 +175,27 @@
 
 ### `DELETE /api/projects/:id/members/:employeeId`
 - Roles: `ADMIN | PM`
+
+## Team Templates
+
+### `POST /api/team-templates`
+- Roles: `ADMIN`
+- Body:
+  - `name: string`
+  - `roleIds: string[]` (минимум 1)
+
+### `GET /api/team-templates`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Response: список шаблонов с вложенными ролями (`roles[]`, `role.id/name/shortName`).
+
+### `PATCH /api/team-templates/:id`
+- Roles: `ADMIN`
+- Body:
+  - `name?: string`
+  - `roleIds?: string[]`
+
+### `DELETE /api/team-templates/:id`
+- Roles: `ADMIN`
 
 ## Assignments
 

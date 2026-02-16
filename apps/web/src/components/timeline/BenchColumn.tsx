@@ -50,16 +50,6 @@ export function BenchColumn(props: BenchColumnProps) {
     <aside className="bench-column">
       <div className="bench-header-row">
         <div className="bench-header">{t.bench}</div>
-        {selectedEmployeeId ? (
-          <button
-            type="button"
-            className="bench-filter-clear-btn"
-            onClick={() => onToggleEmployeeFilter(selectedEmployeeId)}
-            aria-label={t.clearFilter}
-          >
-            ×
-          </button>
-        ) : null}
       </div>
       {benchGroups.length === 0 ? (
         <p className="muted">—</p>

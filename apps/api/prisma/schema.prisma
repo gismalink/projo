@@ -33,6 +33,7 @@ model Role {
   colorHex    String?  @db.VarChar(7)
   employees   Employee[]
   costRates   CostRate[]
+  templateRoles ProjectTeamTemplateRole[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -125,10 +126,39 @@ model Project {
   startDate   DateTime
   endDate     DateTime
   links       Json?
+  teamTemplateId String?
+  teamTemplate ProjectTeamTemplate? @relation(fields: [teamTemplateId], references: [id], onDelete: SetNull)
   assignments ProjectAssignment[]
   members     ProjectMember[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  @@index([teamTemplateId])
+}
+
+model ProjectTeamTemplate {
+  id        String                    @id @default(cuid())
+  name      String                    @unique
+  roles     ProjectTeamTemplateRole[]
+  projects  Project[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+}
+
+model ProjectTeamTemplateRole {
+  id         String              @id @default(cuid())
+  templateId String
+  roleId     String
+  position   Int                 @default(0)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  template ProjectTeamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  role     Role                @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([templateId, roleId])
+  @@index([templateId, position])
+  @@index([roleId])
 }
 
 model ProjectMember {

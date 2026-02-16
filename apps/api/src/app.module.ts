@@ -13,6 +13,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { RolesModule } from './roles/roles.module';
 import { SkillsModule } from './skills/skills.module';
 import { TimelineModule } from './timeline/timeline.module';
+import { TeamTemplatesModule } from './team-templates/team-templates.module';
 import { UsersModule } from './users/users.module';
 import { VacationsModule } from './vacations/vacations.module';
 
@@ -32,6 +33,7 @@ import { VacationsModule } from './vacations/vacations.module';
     ProjectsModule,
     AssignmentsModule,
     TimelineModule,
+    TeamTemplatesModule,
     VacationsModule,
     HealthModule,
   ],

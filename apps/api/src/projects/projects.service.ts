@@ -9,6 +9,13 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureTeamTemplateExists(templateId: string) {
+    const template = await this.prisma.projectTeamTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
+    if (!template) {
+      throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
+    }
+  }
+
   private isoDayKey(value: Date): string {
     return this.startOfUtcDay(value).toISOString().slice(0, 10);
   }
@@ -41,10 +48,14 @@ export class ProjectsService {
     throw error;
   }
 
-  create(dto: CreateProjectDto) {
+  async create(dto: CreateProjectDto) {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
     this.ensureDateRange(startDate, endDate);
+
+    if (dto.teamTemplateId) {
+      await this.ensureTeamTemplateExists(dto.teamTemplateId);
+    }
 
     return this.prisma.project
       .create({
@@ -57,6 +68,7 @@ export class ProjectsService {
           startDate,
           endDate,
           links: dto.links ?? [],
+          teamTemplateId: dto.teamTemplateId || undefined,
         },
       })
       .catch((error) => this.handlePrismaError(error));
@@ -158,6 +170,12 @@ export class ProjectsService {
   findAll() {
     return this.prisma.project.findMany({
       include: {
+        teamTemplate: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         _count: {
           select: { assignments: true },
         },
@@ -170,6 +188,22 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
+        teamTemplate: {
+          include: {
+            roles: {
+              orderBy: { position: 'asc' },
+              include: {
+                role: {
+                  select: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         members: {
           include: {
             employee: {
@@ -358,6 +392,10 @@ export class ProjectsService {
   async update(id: string, dto: UpdateProjectDto) {
     await this.findOne(id);
 
+    if (dto.teamTemplateId) {
+      await this.ensureTeamTemplateExists(dto.teamTemplateId);
+    }
+
     if (dto.startDate && dto.endDate) {
       this.ensureDateRange(new Date(dto.startDate), new Date(dto.endDate));
     }
@@ -374,6 +412,7 @@ export class ProjectsService {
           startDate: dto.startDate ? new Date(dto.startDate) : undefined,
           endDate: dto.endDate ? new Date(dto.endDate) : undefined,
           links: dto.links,
+          teamTemplateId: dto.teamTemplateId === undefined ? undefined : dto.teamTemplateId || null,
         },
       })
       .catch((error) => this.handlePrismaError(error));

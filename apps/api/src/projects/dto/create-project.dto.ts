@@ -34,4 +34,8 @@ export class CreateProjectDto {
   @IsArray()
   @IsString({ each: true })
   links?: string[];
+
+  @IsOptional()
+  @IsString()
+  teamTemplateId?: string;
 }

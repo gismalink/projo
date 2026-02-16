@@ -1,5 +1,10 @@
 import { FormEvent } from 'react';
 
+type TeamTemplateOption = {
+  id: string;
+  name: string;
+};
+
 type ProjectModalProps = {
   t: Record<string, string>;
   isOpen: boolean;
@@ -7,12 +12,15 @@ type ProjectModalProps = {
   projectName: string;
   projectStartDate: string;
   projectEndDate: string;
+  teamTemplates: TeamTemplateOption[];
+  projectTeamTemplateId: string;
   onClose: () => void;
   onSubmit: (event: FormEvent) => Promise<void>;
   setProjectCode: (value: string) => void;
   setProjectName: (value: string) => void;
   setProjectStartDate: (value: string) => void;
   setProjectEndDate: (value: string) => void;
+  setProjectTeamTemplateId: (value: string) => void;
 };
 
 export function ProjectModal(props: ProjectModalProps) {
@@ -23,12 +31,15 @@ export function ProjectModal(props: ProjectModalProps) {
     projectName,
     projectStartDate,
     projectEndDate,
+    teamTemplates,
+    projectTeamTemplateId,
     onClose,
     onSubmit,
     setProjectCode,
     setProjectName,
     setProjectStartDate,
     setProjectEndDate,
+    setProjectTeamTemplateId,
   } = props;
 
   if (!isOpen) return null;
@@ -58,6 +69,17 @@ export function ProjectModal(props: ProjectModalProps) {
           <label>
             {t.end}
             <input type="date" value={projectEndDate} onChange={(e) => setProjectEndDate(e.target.value)} />
+          </label>
+          <label>
+            {t.teamTemplate}
+            <select value={projectTeamTemplateId} onChange={(e) => setProjectTeamTemplateId(e.target.value)}>
+              <option value="">{t.noTeamTemplate}</option>
+              {teamTemplates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
           </label>
           <button type="submit">{t.createProject}</button>
         </form>

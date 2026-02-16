@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { Role } from '../../pages/app-types';
-import { DepartmentItem, GradeItem } from '../../api/client';
+import { DepartmentItem, GradeItem, TeamTemplateItem } from '../../api/client';
 import { CustomColorPicker, normalizeHex } from './CustomColorPicker';
 
 type UpdateRolePayload = {
@@ -16,6 +16,7 @@ type RolesTabProps = {
   t: Record<string, string>;
   roles: Role[];
   departments: DepartmentItem[];
+  teamTemplates: TeamTemplateItem[];
   grades: GradeItem[];
   roleName: string;
   roleShortName: string;
@@ -31,6 +32,9 @@ type RolesTabProps = {
   onCreateDepartment: (name: string, colorHex: string) => Promise<void>;
   onUpdateDepartment: (departmentId: string, name: string, colorHex: string) => Promise<void>;
   onDeleteDepartment: (departmentId: string) => Promise<void>;
+  onCreateTeamTemplate: (name: string, roleIds: string[]) => Promise<void>;
+  onUpdateTeamTemplate: (templateId: string, payload: { name?: string; roleIds?: string[] }) => Promise<void>;
+  onDeleteTeamTemplate: (templateId: string) => Promise<void>;
   onAddGrade: (name: string, colorHex: string) => void;
   onUpdateGrade: (gradeId: string, payload: { name?: string; colorHex?: string }) => void;
   onDeleteGrade: (gradeId: string) => void;
@@ -49,11 +53,17 @@ type GradeDraft = {
   colorHex: string;
 };
 
+type TeamTemplateDraft = {
+  name: string;
+  roleIds: string[];
+};
+
 export function RolesTab(props: RolesTabProps) {
   const {
     t,
     roles,
     departments,
+    teamTemplates,
     grades,
     roleName,
     roleShortName,
@@ -69,6 +79,9 @@ export function RolesTab(props: RolesTabProps) {
     onCreateDepartment,
     onUpdateDepartment,
     onDeleteDepartment,
+    onCreateTeamTemplate,
+    onUpdateTeamTemplate,
+    onDeleteTeamTemplate,
     onAddGrade,
     onUpdateGrade,
     onDeleteGrade,
@@ -82,9 +95,13 @@ export function RolesTab(props: RolesTabProps) {
   const [newGradeName, setNewGradeName] = useState('');
   const [newGradeColor, setNewGradeColor] = useState('#7A8A9A');
   const [gradeDrafts, setGradeDrafts] = useState<Record<string, GradeDraft>>({});
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateRoleIds, setNewTemplateRoleIds] = useState<string[]>([]);
+  const [teamTemplateDrafts, setTeamTemplateDrafts] = useState<Record<string, TeamTemplateDraft>>({});
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const departmentSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const gradeSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const teamTemplateSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const roleById = useMemo(() => {
     const map = new Map<string, Role>();
@@ -138,6 +155,21 @@ export function RolesTab(props: RolesTabProps) {
   }, [grades, roleColorOrDefault]);
 
   useEffect(() => {
+    setTeamTemplateDrafts((prev) => {
+      const next: Record<string, TeamTemplateDraft> = {};
+      for (const template of teamTemplates) {
+        const current = prev[template.id];
+        const roleIds = template.roles.map((item) => item.roleId);
+        next[template.id] = {
+          name: current?.name ?? template.name,
+          roleIds: current?.roleIds ?? roleIds,
+        };
+      }
+      return next;
+    });
+  }, [teamTemplates]);
+
+  useEffect(() => {
     return () => {
       for (const timer of Object.values(saveTimersRef.current)) {
         clearTimeout(timer);
@@ -148,8 +180,17 @@ export function RolesTab(props: RolesTabProps) {
       for (const timer of Object.values(gradeSaveTimersRef.current)) {
         clearTimeout(timer);
       }
+      for (const timer of Object.values(teamTemplateSaveTimersRef.current)) {
+        clearTimeout(timer);
+      }
     };
   }, []);
+
+  const templateById = useMemo(() => {
+    const map = new Map<string, TeamTemplateItem>();
+    for (const template of teamTemplates) map.set(template.id, template);
+    return map;
+  }, [teamTemplates]);
 
   const scheduleRoleAutosave = (roleId: string, draft: RoleDraft) => {
     const existing = saveTimersRef.current[roleId];
@@ -278,6 +319,70 @@ export function RolesTab(props: RolesTabProps) {
     });
   };
 
+  const scheduleTeamTemplateAutosave = (templateId: string, draft: TeamTemplateDraft) => {
+    const existing = teamTemplateSaveTimersRef.current[templateId];
+    if (existing) clearTimeout(existing);
+
+    teamTemplateSaveTimersRef.current[templateId] = setTimeout(() => {
+      const template = templateById.get(templateId);
+      if (!template) return;
+
+      const nextName = draft.name.trim();
+      if (!nextName || draft.roleIds.length === 0) return;
+
+      const baseRoleIds = template.roles.map((item) => item.roleId);
+      const roleIdsUnchanged =
+        baseRoleIds.length === draft.roleIds.length &&
+        baseRoleIds.every((roleId, index) => roleId === draft.roleIds[index]);
+      const unchanged = template.name === nextName && roleIdsUnchanged;
+      if (unchanged) return;
+
+      void onUpdateTeamTemplate(templateId, {
+        name: nextName,
+        roleIds: draft.roleIds,
+      });
+    }, 450);
+  };
+
+  const updateTeamTemplateDraft = (templateId: string, patch: Partial<TeamTemplateDraft>) => {
+    setTeamTemplateDrafts((prev) => {
+      const fallback = templateById.get(templateId);
+      const current = prev[templateId] ?? {
+        name: fallback?.name ?? '',
+        roleIds: fallback?.roles.map((item) => item.roleId) ?? [],
+      };
+      const next = {
+        ...current,
+        ...patch,
+      };
+      scheduleTeamTemplateAutosave(templateId, next);
+      return {
+        ...prev,
+        [templateId]: next,
+      };
+    });
+  };
+
+  const toggleTemplateRole = (templateId: string, roleId: string) => {
+    const draft = teamTemplateDrafts[templateId] ?? {
+      name: templateById.get(templateId)?.name ?? '',
+      roleIds: templateById.get(templateId)?.roles.map((item) => item.roleId) ?? [],
+    };
+
+    const nextRoleIds = draft.roleIds.includes(roleId)
+      ? draft.roleIds.filter((item) => item !== roleId)
+      : [...draft.roleIds, roleId];
+
+    if (nextRoleIds.length === 0) return;
+    updateTeamTemplateDraft(templateId, { roleIds: nextRoleIds });
+  };
+
+  const toggleNewTemplateRole = (roleId: string) => {
+    setNewTemplateRoleIds((prev) =>
+      prev.includes(roleId) ? prev.filter((item) => item !== roleId) : [...prev, roleId],
+    );
+  };
+
   const handleCreateRoleSubmit = async (event: FormEvent) => {
     await onCreateRole(event);
     setIsCreateRoleOpen(false);
@@ -285,6 +390,7 @@ export function RolesTab(props: RolesTabProps) {
 
   const nextDepartmentName = newDepartmentName.trim();
   const nextGradeName = newGradeName.trim();
+  const nextTemplateName = newTemplateName.trim();
 
   return (
     <section className="grid">
@@ -431,6 +537,98 @@ export function RolesTab(props: RolesTabProps) {
                     >
                       <Icon name="x" />
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="settings-column">
+            <div className="section-header roles-list-header">
+              <h3>{t.teamTemplatesList}</h3>
+            </div>
+            <div className="template-manage-create">
+              <input
+                className="department-manage-input"
+                value={newTemplateName}
+                placeholder={t.name}
+                onChange={(event) => setNewTemplateName(event.target.value)}
+              />
+              <div className="template-role-chips">
+                {roles.map((role) => {
+                  const active = newTemplateRoleIds.includes(role.id);
+                  return (
+                    <button
+                      type="button"
+                      key={`create-template-role-${role.id}`}
+                      className={active ? 'template-role-chip active' : 'template-role-chip'}
+                      onClick={() => toggleNewTemplateRole(role.id)}
+                    >
+                      {role.shortName || role.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                className="department-manage-action primary template-create-btn"
+                disabled={!nextTemplateName || newTemplateRoleIds.length === 0}
+                onClick={() => {
+                  if (!nextTemplateName || newTemplateRoleIds.length === 0) return;
+                  void onCreateTeamTemplate(nextTemplateName, newTemplateRoleIds);
+                  setNewTemplateName('');
+                  setNewTemplateRoleIds([]);
+                }}
+                title={t.addTeamTemplate}
+                aria-label={t.addTeamTemplate}
+              >
+                <Icon name="plus" />
+              </button>
+            </div>
+            <div className="department-manage-list template-manage-list">
+              {teamTemplates.map((template) => {
+                const draft = teamTemplateDrafts[template.id] ?? {
+                  name: template.name,
+                  roleIds: template.roles.map((item) => item.roleId),
+                };
+
+                return (
+                  <div className="template-manage-card" key={template.id}>
+                    <div className="template-manage-header">
+                      <input
+                        className="department-manage-input"
+                        value={draft.name}
+                        placeholder={t.name}
+                        onChange={(event) => updateTeamTemplateDraft(template.id, { name: event.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="department-manage-action"
+                        title={t.deleteTeamTemplate}
+                        aria-label={t.deleteTeamTemplate}
+                        onClick={() => {
+                          if (!window.confirm(t.confirmDeleteTeamTemplate)) return;
+                          void onDeleteTeamTemplate(template.id);
+                        }}
+                      >
+                        <Icon name="x" />
+                      </button>
+                    </div>
+                    <div className="template-role-chips">
+                      {roles.map((role) => {
+                        const active = draft.roleIds.includes(role.id);
+                        return (
+                          <button
+                            type="button"
+                            key={`template-${template.id}-role-${role.id}`}
+                            className={active ? 'template-role-chip active' : 'template-role-chip'}
+                            onClick={() => toggleTemplateRole(template.id, role.id)}
+                          >
+                            {role.shortName || role.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}

@@ -8,6 +8,7 @@ import {
   ProjectListItem,
   ProjectTimelineRow,
   SkillItem,
+  TeamTemplateItem,
   VacationItem,
 } from '../api/client';
 import { ActiveTab, Employee, Role, Toast } from '../pages/app-types';
@@ -33,6 +34,7 @@ export function useAppState() {
   const [skillDescription, setSkillDescription] = useState('Frontend and backend development');
 
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [teamTemplates, setTeamTemplates] = useState<TeamTemplateItem[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [vacations, setVacations] = useState<VacationItem[]>([]);
   const [selectedRoleFilters, setSelectedRoleFilters] = useState<string[]>([]);
@@ -85,6 +87,7 @@ export function useAppState() {
   const [projectName, setProjectName] = useState('Pilot CRM Rollout');
   const [projectStartDate, setProjectStartDate] = useState(`${new Date().getFullYear()}-02-01`);
   const [projectEndDate, setProjectEndDate] = useState(`${new Date().getFullYear()}-06-30`);
+  const [projectTeamTemplateId, setProjectTeamTemplateId] = useState('');
   const [editProjectId, setEditProjectId] = useState('');
   const [editProjectStartDate, setEditProjectStartDate] = useState('');
   const [editProjectEndDate, setEditProjectEndDate] = useState('');
@@ -118,6 +121,7 @@ export function useAppState() {
     skillName,
     skillDescription,
     departments,
+    teamTemplates,
     employees,
     vacations,
     selectedRoleFilters,
@@ -163,6 +167,7 @@ export function useAppState() {
     projectName,
     projectStartDate,
     projectEndDate,
+    projectTeamTemplateId,
     editProjectId,
     editProjectStartDate,
     editProjectEndDate,
@@ -192,6 +197,7 @@ export function useAppState() {
     setSkillName,
     setSkillDescription,
     setDepartments,
+    setTeamTemplates,
     setEmployees,
     setVacations,
     setSelectedRoleFilters,
@@ -237,6 +243,7 @@ export function useAppState() {
     setProjectName,
     setProjectStartDate,
     setProjectEndDate,
+    setProjectTeamTemplateId,
     setEditProjectId,
     setEditProjectStartDate,
     setEditProjectEndDate,

@@ -1,7 +1,7 @@
 .role-row {
   align-items: flex-start;
   gap: 0.55rem;
-  padding-bottom: 0.19rem;
+  padding-bottom: 0.15rem;
   border-bottom: 0;
 }
 
@@ -12,15 +12,15 @@
 .role-table-head {
   display: grid;
   grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px 40px;
-  gap: 0.4rem;
-  font-size: 0.74rem;
+  gap: 0.32rem;
+  font-size: 0.72rem;
   color: var(--ios-text-secondary);
   font-weight: 600;
   padding: 0 0 0.1rem;
 }
 
 .roles-list {
-  gap: 0.3rem;
+  gap: 0.24rem;
 }
 
 .create-role-icon-btn {
@@ -35,14 +35,14 @@
 .role-fields {
   display: grid;
   grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px;
-  gap: 0.4rem;
+  gap: 0.32rem;
   width: 100%;
   align-items: end;
 }
 
 .role-fields input {
-  padding: 0.45rem 0.55rem;
-  min-height: 34px;
+  padding: 0.4rem 0.52rem;
+  min-height: 32px;
 }
 
 .role-level-input {
@@ -157,7 +157,7 @@
 .color-picker-trigger {
   cursor: pointer;
   width: 40px;
-  height: 34px;
+  height: 32px;
   border: 1px solid var(--ios-border);
   border-radius: 12px;
   padding: 0.2rem;
@@ -167,6 +167,72 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.template-manage-create {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: start;
+}
+
+.template-manage-create .department-manage-input {
+  grid-column: 1 / 2;
+}
+
+.template-manage-create .template-role-chips {
+  grid-column: 1 / 2;
+}
+
+.template-create-btn {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+  align-self: stretch;
+}
+
+.template-manage-list {
+  gap: 0.38rem;
+}
+
+.template-manage-card {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.38rem;
+  border: 1px solid var(--ios-border);
+  border-radius: 10px;
+  background: var(--ios-surface-soft);
+}
+
+.template-manage-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.template-role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.24rem;
+}
+
+.template-role-chip {
+  min-height: 22px;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  font-size: 0.67rem;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.template-role-chip.active {
+  background: rgba(10, 132, 255, 0.16);
+  border-color: rgba(10, 132, 255, 0.5);
+  color: var(--ios-text-primary);
 }
 
 .color-picker-trigger-swatch {

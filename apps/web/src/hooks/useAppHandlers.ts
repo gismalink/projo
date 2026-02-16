@@ -35,6 +35,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
   function openProjectModal() {
     state.setProjectCode(getNextProjectCode());
+    state.setProjectTeamTemplateId('');
     state.setIsProjectModalOpen(true);
   }
 
@@ -97,11 +98,12 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   }
 
   async function refreshData(authToken: string, year: number, preferredProjectId?: string) {
-    const [rolesData, skillsData, departmentsData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, costRatesData] =
+    const [rolesData, skillsData, departmentsData, teamTemplatesData, employeesData, vacationsData, assignmentsData, projectsData, timelineData, costRatesData] =
       await Promise.all([
         api.getRoles(authToken),
         api.getSkills(authToken),
         api.getDepartments(authToken),
+        api.getTeamTemplates(authToken),
         api.getEmployees(authToken),
         api.getVacations(authToken),
         api.getAssignments(authToken),
@@ -113,6 +115,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     const nextRoles = rolesData as typeof state.roles;
     const nextSkills = skillsData as typeof state.skills;
     const nextDepartments = departmentsData as typeof state.departments;
+    const nextTeamTemplates = teamTemplatesData as typeof state.teamTemplates;
     const nextEmployees = employeesData as typeof state.employees;
     const nextVacations = vacationsData as typeof state.vacations;
     const nextAssignments = assignmentsData as typeof state.assignments;
@@ -121,6 +124,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     state.setRoles(nextRoles);
     state.setSkills(nextSkills);
     state.setDepartments(nextDepartments);
+    state.setTeamTemplates(nextTeamTemplates);
     state.setEmployees(nextEmployees);
     state.setVacations(nextVacations);
     state.setAssignments(nextAssignments);
@@ -626,6 +630,53 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     }
   }
 
+  async function handleCreateTeamTemplate(name: string, roleIds: string[]) {
+    if (!state.token || !name.trim() || roleIds.length === 0) return;
+    try {
+      await api.createTeamTemplate(
+        {
+          name: name.trim(),
+          roleIds,
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiCreateTeamTemplateFailed, errorText));
+    }
+  }
+
+  async function handleUpdateTeamTemplate(templateId: string, payload: { name?: string; roleIds?: string[] }) {
+    if (!state.token) return;
+    const trimmedName = payload.name?.trim();
+    if (payload.name !== undefined && !trimmedName) return;
+    if (payload.roleIds !== undefined && payload.roleIds.length === 0) return;
+
+    try {
+      await api.updateTeamTemplate(
+        templateId,
+        {
+          ...(trimmedName !== undefined ? { name: trimmedName } : {}),
+          ...(payload.roleIds !== undefined ? { roleIds: payload.roleIds } : {}),
+        },
+        state.token,
+      );
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiUpdateTeamTemplateFailed, errorText));
+    }
+  }
+
+  async function handleDeleteTeamTemplate(templateId: string) {
+    if (!state.token) return;
+    try {
+      await api.deleteTeamTemplate(templateId, state.token);
+      await refreshData(state.token, state.selectedYear);
+    } catch (e) {
+      pushToast(resolveErrorMessage(e, t.uiDeleteTeamTemplateFailed, errorText));
+    }
+  }
+
   async function handleImportEmployeesCsv(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.employeeCsv.trim()) return;
@@ -681,12 +732,14 @@ export function useAppHandlers({ state, t, errorText }: Params) {
           status: 'planned',
           priority: 2,
           links: [],
+          teamTemplateId: state.projectTeamTemplateId || undefined,
         },
         state.token,
       );
 
       await refreshData(state.token, state.selectedYear);
       state.setIsProjectModalOpen(false);
+      state.setProjectTeamTemplateId('');
       state.setProjectCode((prev) => {
         const match = prev.match(/(\d+)$/);
         if (!match) return `${prev}-1`;
@@ -741,7 +794,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
 
   async function handleAutoSaveProjectMeta(
     projectId: string,
-    payload: { code: string; name: string; startDate: string; endDate: string },
+    payload: { code: string; name: string; startDate: string; endDate: string; teamTemplateId?: string | null },
   ) {
     if (!state.token) return;
 
@@ -753,6 +806,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
           name: payload.name,
           startDate: payload.startDate,
           endDate: payload.endDate,
+          teamTemplateId: payload.teamTemplateId === undefined ? undefined : payload.teamTemplateId || '',
         },
         state.token,
       );
@@ -966,6 +1020,9 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     handleCreateDepartment,
     handleUpdateDepartment,
     handleDeleteDepartment,
+    handleCreateTeamTemplate,
+    handleUpdateTeamTemplate,
+    handleDeleteTeamTemplate,
     handleImportEmployeesCsv,
     handleCreateVacation,
     handleAssignVacationFromEmployeeModal,

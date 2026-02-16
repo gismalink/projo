@@ -42,6 +42,11 @@ export type ProjectListItem = {
   endDate: string;
   status: string;
   priority: number;
+  teamTemplateId?: string | null;
+  teamTemplate?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 export type CreateProjectPayload = {
@@ -53,6 +58,7 @@ export type CreateProjectPayload = {
   startDate: string;
   endDate: string;
   links?: string[];
+  teamTemplateId?: string;
 };
 export type UpdateProjectPayload = Partial<CreateProjectPayload>;
 
@@ -102,6 +108,30 @@ export type CreateDepartmentPayload = {
 };
 
 export type UpdateDepartmentPayload = Partial<CreateDepartmentPayload>;
+
+export type TeamTemplateRoleItem = {
+  id: string;
+  roleId: string;
+  position: number;
+  role: {
+    id: string;
+    name: string;
+    shortName?: string | null;
+  };
+};
+
+export type TeamTemplateItem = {
+  id: string;
+  name: string;
+  roles: TeamTemplateRoleItem[];
+};
+
+export type CreateTeamTemplatePayload = {
+  name: string;
+  roleIds: string[];
+};
+
+export type UpdateTeamTemplatePayload = Partial<CreateTeamTemplatePayload>;
 
 export type GradeItem = {
   id: string;
@@ -211,6 +241,21 @@ export type ProjectDetail = {
   priority: number;
   startDate: string;
   endDate: string;
+  teamTemplateId?: string | null;
+  teamTemplate?: {
+    id: string;
+    name: string;
+    roles: Array<{
+      id: string;
+      roleId: string;
+      position: number;
+      role: {
+        id: string;
+        name: string;
+        shortName?: string | null;
+      };
+    }>;
+  } | null;
   costSummary?: {
     totalPlannedHours: number;
     totalActualHours: number;
@@ -235,6 +280,7 @@ export type ProjectDetail = {
       id: string;
       fullName: string;
       email: string;
+      roleId: string;
       grade?: string | null;
       role: { name: string };
     };
@@ -316,6 +362,7 @@ export const api = {
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
   getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),
+  getTeamTemplates: (token: string) => request<TeamTemplateItem[]>('/team-templates', {}, token),
   getGrades: (token: string) => request<GradeItem[]>('/grades', {}, token),
   getSkills: (token: string) => request<SkillItem[]>('/skills', {}, token),
   createRole: (payload: CreateRolePayload, token: string) =>
@@ -332,9 +379,14 @@ export const api = {
     request(`/employees/${employeeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createDepartment: (payload: CreateDepartmentPayload, token: string) =>
     request('/departments', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createTeamTemplate: (payload: CreateTeamTemplatePayload, token: string) =>
+    request<TeamTemplateItem>('/team-templates', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateDepartment: (departmentId: string, payload: UpdateDepartmentPayload, token: string) =>
     request(`/departments/${departmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  updateTeamTemplate: (templateId: string, payload: UpdateTeamTemplatePayload, token: string) =>
+    request<TeamTemplateItem>(`/team-templates/${templateId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   deleteDepartment: (departmentId: string, token: string) => request(`/departments/${departmentId}`, { method: 'DELETE' }, token),
+  deleteTeamTemplate: (templateId: string, token: string) => request(`/team-templates/${templateId}`, { method: 'DELETE' }, token),
   createGrade: (payload: CreateGradePayload, token: string) =>
     request<GradeItem>('/grades', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateGrade: (gradeId: string, payload: UpdateGradePayload, token: string) =>
