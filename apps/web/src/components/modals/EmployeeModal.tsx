@@ -319,9 +319,16 @@ export function EmployeeModal(props: EmployeeModalProps) {
             <input
               type="number"
               min={0}
-              step="50"
+              step="1"
               value={salary}
               onChange={(e) => setSalary(e.target.value)}
+              onBlur={(e) => {
+                const normalized = e.target.value.replace(',', '.').trim();
+                if (!normalized) return;
+                const parsed = Number(normalized);
+                if (!Number.isFinite(parsed) || parsed <= 0) return;
+                setSalary(String(Math.round(parsed)));
+              }}
             />
           </label>
 

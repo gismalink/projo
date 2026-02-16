@@ -185,41 +185,63 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
               {row.code} · {row.name}
             </strong>
             <div className="timeline-kpi-row">
-              <span>{row.assignmentsCount} {t.assignmentsWord}</span>
-              <span>
-                {detail?.costSummary
-                  ? `${Number(detail.costSummary.totalPlannedHours).toFixed(2)} ${t.hoursWord}`
-                  : `— ${t.hoursWord}`}
+              <span className="timeline-kpi-item" title={`${row.assignmentsCount} ${t.assignmentsWord}`}>
+                <Icon name="users" size={13} />
+                <span>{row.assignmentsCount}</span>
               </span>
-              <span>{t.factHoursShort}: {(projectHourStats?.actualHours ?? 0).toFixed(1)}</span>
-              <span>{t.lostHoursShort}: {(projectHourStats?.lostHours ?? 0).toFixed(1)}</span>
-              <span>
-                {detail?.costSummary
-                  ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)
-                  : '—'}
+              <span
+                className="timeline-kpi-item"
+                title={detail?.costSummary ? `${t.plannedHoursLabel}: ${Number(detail.costSummary.totalPlannedHours).toFixed(1)} ${t.hoursWord}` : t.plannedHoursLabel}
+              >
+                <Icon name="clock" size={13} />
+                <span>{detail?.costSummary ? Number(detail.costSummary.totalPlannedHours).toFixed(1) : '—'}</span>
               </span>
-              <span>
-                {detail?.costSummary
-                  ? `${t.factCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency)}`
-                  : `${t.factCostLabel}: —`}
+              <span className="timeline-kpi-item" title={`${t.factHoursShort}: ${(projectHourStats?.actualHours ?? 0).toFixed(1)} ${t.hoursWord}`}>
+                <Icon name="check" size={13} />
+                <span>{(projectHourStats?.actualHours ?? 0).toFixed(1)}</span>
               </span>
-              <span>
-                {detail?.costSummary
-                  ? `${t.lostCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency)}`
-                  : `${t.lostCostLabel}: —`}
+              <span className="timeline-kpi-item" title={`${t.lostHoursShort}: ${(projectHourStats?.lostHours ?? 0).toFixed(1)} ${t.hoursWord}`}>
+                <Icon name="x" size={13} />
+                <span>{(projectHourStats?.lostHours ?? 0).toFixed(1)}</span>
               </span>
-              <span>
-                {detail?.costSummary
-                  ? `${t.missingRateDaysLabel}: ${detail.costSummary.missingRateDays}`
-                  : `${t.missingRateDaysLabel}: 0`}
+              <span
+                className="timeline-kpi-item"
+                title={detail?.costSummary ? `${t.plannedCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)}` : t.plannedCostLabel}
+              >
+                <Icon name="coins" size={13} />
+                <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency) : '—'}</span>
               </span>
-              <span>
-                {detail?.costSummary
-                  ? `${t.missingRateHoursLabel}: ${Number(detail.costSummary.missingRateHours).toFixed(1)}`
-                  : `${t.missingRateHoursLabel}: 0.0`}
+              <span
+                className="timeline-kpi-item"
+                title={detail?.costSummary ? `${t.factCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency)}` : t.factCostLabel}
+              >
+                <Icon name="check" size={13} />
+                <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency) : '—'}</span>
               </span>
-              <span>
-                {formatTimelineDate(row.startDate)} {t.fromTo} {formatTimelineDate(row.endDate)}
+              <span
+                className="timeline-kpi-item"
+                title={detail?.costSummary ? `${t.lostCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency)}` : t.lostCostLabel}
+              >
+                <Icon name="alert" size={13} />
+                <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency) : '—'}</span>
+              </span>
+              <span
+                className="timeline-kpi-item"
+                title={detail?.costSummary ? `${t.missingRateDaysLabel}: ${detail.costSummary.missingRateDays}` : t.missingRateDaysLabel}
+              >
+                <Icon name="calendar" size={13} />
+                <span>{detail?.costSummary ? detail.costSummary.missingRateDays : 0}</span>
+              </span>
+              <span
+                className="timeline-kpi-item"
+                title={detail?.costSummary ? `${t.missingRateHoursLabel}: ${Number(detail.costSummary.missingRateHours).toFixed(1)} ${t.hoursWord}` : t.missingRateHoursLabel}
+              >
+                <Icon name="clock" size={13} />
+                <span>{detail?.costSummary ? Number(detail.costSummary.missingRateHours).toFixed(1) : '0.0'}</span>
+              </span>
+              <span className="timeline-kpi-item" title={`${formatTimelineDate(row.startDate)} ${t.fromTo} ${formatTimelineDate(row.endDate)}`}>
+                <Icon name="calendar" size={13} />
+                <span>{formatTimelineDate(row.startDate)}–{formatTimelineDate(row.endDate)}</span>
               </span>
             </div>
           </div>

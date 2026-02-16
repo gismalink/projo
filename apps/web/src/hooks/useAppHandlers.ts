@@ -6,6 +6,13 @@ import { AppState } from './useAppState';
 
 const MONTHLY_HOURS = 168;
 
+function parseSalaryInput(value: string): number | null {
+  const normalized = value.replace(',', '.').trim();
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+}
+
 type Params = {
   state: AppState;
   t: Record<string, string>;
@@ -138,7 +145,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
       if (employeeSalaryById[employeeId] !== undefined) continue;
       const hourly = Number(rate.amountPerHour);
       if (!Number.isFinite(hourly) || hourly <= 0) continue;
-      employeeSalaryById[employeeId] = Number((hourly * MONTHLY_HOURS).toFixed(2));
+      employeeSalaryById[employeeId] = Math.round(hourly * MONTHLY_HOURS);
       employeeActiveRateIdByEmployeeId[employeeId] = rate.id;
     }
 
@@ -317,8 +324,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
     event.preventDefault();
     if (!state.token || !state.employeeRoleId) return;
 
-    const parsedSalary = Number(state.employeeSalary);
-    const salaryMonthly = Number.isFinite(parsedSalary) && parsedSalary > 0 ? parsedSalary : null;
+    const salaryMonthly = parseSalaryInput(state.employeeSalary);
 
     try {
       if (state.editEmployeeId) {
@@ -427,14 +433,19 @@ export function useAppHandlers({ state, t, errorText }: Params) {
       );
 
       const currentSalary = state.employeeSalaryById[state.editEmployeeId];
+      const normalizedSalary =
+        payload.salaryMonthly !== undefined && Number.isFinite(payload.salaryMonthly)
+          ? Math.round(payload.salaryMonthly)
+          : undefined;
       const shouldUpdateSalary =
         payload.salaryMonthly !== undefined &&
         Number.isFinite(payload.salaryMonthly) &&
         payload.salaryMonthly > 0 &&
-        (currentSalary === undefined || Math.abs(currentSalary - payload.salaryMonthly) >= 0.01);
+        normalizedSalary !== undefined &&
+        (currentSalary === undefined || Math.abs(currentSalary - normalizedSalary) >= 1);
 
       if (shouldUpdateSalary) {
-        const amountPerHour = Number((payload.salaryMonthly / MONTHLY_HOURS).toFixed(2));
+        const amountPerHour = Number(((normalizedSalary as number) / MONTHLY_HOURS).toFixed(2));
         const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
         if (existingRateId) {
           await api.updateCostRate(

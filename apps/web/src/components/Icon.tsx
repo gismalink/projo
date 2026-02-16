@@ -14,7 +14,11 @@ type IconName =
   | 'chevron-right'
   | 'check'
   | 'x'
-  | 'copy';
+  | 'copy'
+  | 'users'
+  | 'clock'
+  | 'coins'
+  | 'alert';
 
 type IconProps = {
   name: IconName;
@@ -119,6 +123,38 @@ export function Icon({ name, size = 16, className }: IconProps) {
         <>
           <rect {...common} x="9" y="9" width="10" height="10" rx="2" />
           <path {...common} d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1" />
+        </>
+      ) : null}
+
+      {name === 'users' ? (
+        <>
+          <circle {...common} cx="9" cy="9" r="3" />
+          <circle {...common} cx="16" cy="8" r="2.5" />
+          <path {...common} d="M3.5 19c0-2.6 2.2-4.5 5.5-4.5s5.5 1.9 5.5 4.5" />
+          <path {...common} d="M13 18.5c.5-1.7 2-3 4.2-3 1.5 0 2.6.5 3.3 1.4" />
+        </>
+      ) : null}
+
+      {name === 'clock' ? (
+        <>
+          <circle {...common} cx="12" cy="12" r="8" />
+          <path {...common} d="M12 8v4l3 2" />
+        </>
+      ) : null}
+
+      {name === 'coins' ? (
+        <>
+          <ellipse {...common} cx="12" cy="7" rx="6" ry="2.5" />
+          <path {...common} d="M6 7v6c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V7" />
+          <path {...common} d="M6 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5" />
+        </>
+      ) : null}
+
+      {name === 'alert' ? (
+        <>
+          <path {...common} d="M12 4 3.8 18h16.4L12 4z" />
+          <path {...common} d="M12 9v4" />
+          <path {...common} d="M12 16h.01" />
         </>
       ) : null}
     </svg>

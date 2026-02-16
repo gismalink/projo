@@ -116,9 +116,16 @@ export function EmployeeCreateModal(props: EmployeeCreateModalProps) {
             <input
               type="number"
               min={0}
-              step="50"
+              step="1"
               value={employeeSalary}
               onChange={(e) => setEmployeeSalary(e.target.value)}
+              onBlur={(e) => {
+                const normalized = e.target.value.replace(',', '.').trim();
+                if (!normalized) return;
+                const parsed = Number(normalized);
+                if (!Number.isFinite(parsed) || parsed <= 0) return;
+                setEmployeeSalary(String(Math.round(parsed)));
+              }}
             />
           </label>
           <button type="submit">{t.createWorker}</button>
