@@ -12,6 +12,7 @@ type RoleStat = {
 
 type PersonnelTabProps = {
   t: Record<string, string>;
+  locale: 'ru-RU' | 'en-US';
   departments: DepartmentItem[];
   grades: GradeItem[];
   departmentGroups: [string, Employee[]][];
@@ -35,6 +36,7 @@ type PersonnelTabProps = {
 export function PersonnelTab(props: PersonnelTabProps) {
   const {
     t,
+    locale,
     departments,
     grades,
     departmentGroups,
@@ -55,7 +57,6 @@ export function PersonnelTab(props: PersonnelTabProps) {
     utilizationColor,
   } = props;
 
-  const locale = t.prev === 'Назад' ? 'ru-RU' : 'en-US';
   const vacationDateFormatter = new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'long',

@@ -19,6 +19,7 @@ export function App() {
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
   const t = TEXT[lang];
+  const locale: 'ru-RU' | 'en-US' = lang === 'ru' ? 'ru-RU' : 'en-US';
 
   const gradeOptions = grades.map((grade) => grade.name);
 
@@ -97,6 +98,7 @@ export function App() {
           {app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
+              locale={locale}
               departments={app.departments}
               departmentGroups={app.departmentGroups}
               roleStats={app.roleStats}
@@ -261,6 +263,7 @@ export function App() {
           {app.activeTab === 'timeline' ? (
             <TimelineTab
               t={t}
+              locale={locale}
               months={MONTHS_BY_LANG[lang]}
               canManageTimeline={app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM'}
               selectedYear={app.selectedYear}
@@ -345,6 +348,7 @@ export function App() {
 
           <EmployeeModal
             t={t}
+            locale={locale}
             roles={app.roles}
             departments={app.departments}
             isOpen={app.isEmployeeModalOpen}

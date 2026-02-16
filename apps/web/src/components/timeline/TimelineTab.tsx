@@ -11,6 +11,7 @@ import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
 type TimelineTabProps = {
   t: Record<string, string>;
+  locale: 'ru-RU' | 'en-US';
   months: string[];
   canManageTimeline: boolean;
   selectedYear: number;
@@ -61,6 +62,7 @@ type TimelineTabProps = {
 export function TimelineTab(props: TimelineTabProps) {
   const {
     t,
+    locale,
     months,
     canManageTimeline,
     selectedYear,
@@ -161,7 +163,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const formatHealthDateTime = (value: string | null) => {
     if (!value) return t.calendarHealthMissing;
     try {
-      return new Date(value).toLocaleString(t.prev === 'Назад' ? 'ru-RU' : 'en-US');
+      return new Date(value).toLocaleString(locale);
     } catch {
       return value;
     }
@@ -331,7 +333,6 @@ export function TimelineTab(props: TimelineTabProps) {
   };
 
   const toApiDate = (value: Date) => toUtcDay(value).toISOString();
-  const locale = t.prev === 'Назад' ? 'ru-RU' : 'en-US';
   const tooltipDateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {

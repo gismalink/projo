@@ -5,6 +5,7 @@ import { Icon } from '../Icon';
 
 type EmployeeModalProps = {
   t: Record<string, string>;
+  locale: 'ru-RU' | 'en-US';
   roles: Role[];
   departments: DepartmentItem[];
   isOpen: boolean;
@@ -36,6 +37,7 @@ type EmployeeModalProps = {
 export function EmployeeModal(props: EmployeeModalProps) {
   const {
     t,
+    locale,
     roles,
     departments,
     isOpen,
@@ -213,11 +215,11 @@ export function EmployeeModal(props: EmployeeModalProps) {
       const monthDate = new Date(Date.UTC(selectedYear, monthIndex, 1));
       const offsetDays = Math.floor((monthDate.getTime() - yearStart.getTime()) / 86400000);
       const left = `${(offsetDays / totalDays) * 100}%`;
-      const label = monthDate.toLocaleString(t.prev === 'Назад' ? 'ru-RU' : 'en-US', { month: 'short' });
+      const label = monthDate.toLocaleString(locale, { month: 'short' });
       items.push({ key: `${selectedYear}-${monthIndex}`, left, label });
     }
     return items;
-  }, [selectedYear, t.prev, totalDays, yearStart]);
+  }, [locale, selectedYear, totalDays, yearStart]);
 
   useEffect(() => {
     if (!isOpen) return;
