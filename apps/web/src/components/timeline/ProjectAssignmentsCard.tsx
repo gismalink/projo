@@ -65,6 +65,7 @@ type ProjectAssignmentsCardProps = {
   ) => void;
   vacationsByEmployeeId: Map<string, Array<{ startDate: string; endDate: string }>>;
   isoToInputDate: (value: string) => string;
+  highlightedEmployeeId?: string;
 };
 
 export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
@@ -92,6 +93,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     beginAssignmentDrag,
     vacationsByEmployeeId,
     isoToInputDate,
+    highlightedEmployeeId,
   } = props;
 
   const sortedAssignments = useMemo(
@@ -177,7 +179,13 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
           sortedAssignments.map((assignment) => (
             <div
               key={assignment.id}
-              className="assignment-item"
+              className={
+                highlightedEmployeeId
+                  ? assignment.employeeId === highlightedEmployeeId
+                    ? 'assignment-item highlighted'
+                    : 'assignment-item muted'
+                  : 'assignment-item'
+              }
             >
               <div className="assignment-item-header">
                 <div className="assignment-employee-name">

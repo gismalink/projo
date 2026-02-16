@@ -17,12 +17,22 @@ type BenchColumnProps = {
   t: Record<string, string>;
   benchGroups: BenchGroup[];
   canDragMembers: boolean;
+  selectedEmployeeId: string;
+  onToggleEmployeeFilter: (employeeId: string) => void;
   onMemberDragStart: (employeeId: string) => void;
   onMemberDragEnd: () => void;
 };
 
 export function BenchColumn(props: BenchColumnProps) {
-  const { t, benchGroups, canDragMembers, onMemberDragStart, onMemberDragEnd } = props;
+  const {
+    t,
+    benchGroups,
+    canDragMembers,
+    selectedEmployeeId,
+    onToggleEmployeeFilter,
+    onMemberDragStart,
+    onMemberDragEnd,
+  } = props;
 
   const toInitials = (fullName: string) => {
     const parts = fullName
@@ -38,7 +48,19 @@ export function BenchColumn(props: BenchColumnProps) {
 
   return (
     <aside className="bench-column">
-      <div className="bench-header">{t.bench}</div>
+      <div className="bench-header-row">
+        <div className="bench-header">{t.bench}</div>
+        {selectedEmployeeId ? (
+          <button
+            type="button"
+            className="bench-filter-clear-btn"
+            onClick={() => onToggleEmployeeFilter(selectedEmployeeId)}
+            aria-label={t.clearFilter}
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
       {benchGroups.length === 0 ? (
         <p className="muted">—</p>
       ) : (
@@ -50,9 +72,10 @@ export function BenchColumn(props: BenchColumnProps) {
                 <button
                   type="button"
                   key={member.id}
-                  className="bench-member"
+                  className={selectedEmployeeId === member.id ? 'bench-member active' : 'bench-member'}
                   draggable={canDragMembers}
                   title={`${member.fullName}${member.grade ? ` · ${member.grade}` : ''} · ${member.roleName} · ${member.annualLoadPercent}%`}
+                  onClick={() => onToggleEmployeeFilter(member.id)}
                   onDragStart={() => {
                     if (!canDragMembers) return;
                     onMemberDragStart(member.id);

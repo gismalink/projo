@@ -122,6 +122,7 @@ export function TimelineTab(props: TimelineTabProps) {
   );
   const [draggedBenchEmployeeId, setDraggedBenchEmployeeId] = useState<string | null>(null);
   const [hoverProjectDropId, setHoverProjectDropId] = useState<string | null>(null);
+  const [selectedBenchEmployeeId, setSelectedBenchEmployeeId] = useState<string>('');
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -835,6 +836,15 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [projectDetails, projectFactByProjectId, sortedTimeline, t.timelineErrorFactRange, t.timelineErrorMissingRates, t.timelineErrorVacations, toUtcDay, vacationsByEmployeeId]);
 
+  const visibleTimeline = useMemo(() => {
+    if (!selectedBenchEmployeeId) return sortedTimeline;
+
+    return sortedTimeline.filter((row) => {
+      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+      return projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId);
+    });
+  }, [assignmentsByProjectId, selectedBenchEmployeeId, sortedTimeline]);
+
   const {
     dragState,
     pendingPlanPreview,
@@ -941,10 +951,10 @@ export function TimelineTab(props: TimelineTabProps) {
             />
 
             <div className="timeline-rows">
-              {sortedTimeline.length === 0 ? (
+              {visibleTimeline.length === 0 ? (
                 <p className="muted">{t.noProjectsForYear}</p>
               ) : (
-                sortedTimeline.map((row, rowIndex) => {
+                visibleTimeline.map((row, rowIndex) => {
                   const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
                   const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
                   const style =
@@ -992,7 +1002,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       t={t}
                       row={row}
                       rowIndex={rowIndex}
-                      rowCount={sortedTimeline.length}
+                      rowCount={visibleTimeline.length}
                       isExpanded={isExpanded}
                       detail={detail}
                       style={style}
@@ -1046,6 +1056,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           beginAssignmentDrag={beginAssignmentDrag}
                           vacationsByEmployeeId={vacationsByEmployeeId}
                           isoToInputDate={isoToInputDate}
+                          highlightedEmployeeId={selectedBenchEmployeeId || undefined}
                         />
                       ) : null}
                     </ProjectTimelineItem>
@@ -1059,6 +1070,10 @@ export function TimelineTab(props: TimelineTabProps) {
             t={t}
             benchGroups={benchGroups}
             canDragMembers={canManageTimeline}
+            selectedEmployeeId={selectedBenchEmployeeId}
+            onToggleEmployeeFilter={(employeeId) =>
+              setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
+            }
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {
               setDraggedBenchEmployeeId(null);
