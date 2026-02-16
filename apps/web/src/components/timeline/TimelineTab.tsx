@@ -519,6 +519,14 @@ export function TimelineTab(props: TimelineTabProps) {
 
   const handleProjectRowDragOver = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
     if (!canManageTimeline || !draggedBenchEmployeeId) return;
+
+    const projectAssignments = assignmentsByProjectId.get(projectId) ?? [];
+    const alreadyAssigned = projectAssignments.some((assignment) => assignment.employeeId === draggedBenchEmployeeId);
+    if (alreadyAssigned) {
+      setHoverProjectDropId((prev) => (prev === projectId ? null : prev));
+      return;
+    }
+
     event.preventDefault();
     setHoverProjectDropId(projectId);
   };
@@ -531,6 +539,14 @@ export function TimelineTab(props: TimelineTabProps) {
 
   const handleProjectRowDrop = (event: ReactDragEvent<HTMLDivElement>, projectId: string) => {
     if (!canManageTimeline || !draggedBenchEmployeeId) return;
+
+    const projectAssignments = assignmentsByProjectId.get(projectId) ?? [];
+    const alreadyAssigned = projectAssignments.some((assignment) => assignment.employeeId === draggedBenchEmployeeId);
+    if (alreadyAssigned) {
+      setHoverProjectDropId(null);
+      return;
+    }
+
     event.preventDefault();
     setHoverProjectDropId(null);
     onOpenAssignmentModal(projectId, draggedBenchEmployeeId);
@@ -836,15 +852,6 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [projectDetails, projectFactByProjectId, sortedTimeline, t.timelineErrorFactRange, t.timelineErrorMissingRates, t.timelineErrorVacations, toUtcDay, vacationsByEmployeeId]);
 
-  const visibleTimeline = useMemo(() => {
-    if (!selectedBenchEmployeeId) return sortedTimeline;
-
-    return sortedTimeline.filter((row) => {
-      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
-      return projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId);
-    });
-  }, [assignmentsByProjectId, selectedBenchEmployeeId, sortedTimeline]);
-
   const {
     dragState,
     pendingPlanPreview,
@@ -951,10 +958,21 @@ export function TimelineTab(props: TimelineTabProps) {
             />
 
             <div className="timeline-rows">
-              {visibleTimeline.length === 0 ? (
+              {sortedTimeline.length === 0 ? (
                 <p className="muted">{t.noProjectsForYear}</p>
               ) : (
-                visibleTimeline.map((row, rowIndex) => {
+                sortedTimeline.map((row, rowIndex) => {
+                  const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+                  const selectedEmployeeAssigned = selectedBenchEmployeeId
+                    ? projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId)
+                    : true;
+                  const draggedEmployeeAssigned = draggedBenchEmployeeId
+                    ? projectAssignments.some((assignment) => assignment.employeeId === draggedBenchEmployeeId)
+                    : false;
+                  const isDimmedBySelection = Boolean(selectedBenchEmployeeId) && !selectedEmployeeAssigned;
+                  const isDimmedByDrag = Boolean(draggedBenchEmployeeId) && draggedEmployeeAssigned;
+                  const isRowDimmed = isDimmedBySelection || isDimmedByDrag;
+
                   const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
                   const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
                   const style =
@@ -1002,9 +1020,10 @@ export function TimelineTab(props: TimelineTabProps) {
                       t={t}
                       row={row}
                       rowIndex={rowIndex}
-                      rowCount={visibleTimeline.length}
+                      rowCount={sortedTimeline.length}
                       isExpanded={isExpanded}
                       detail={detail}
+                      isDimmed={isRowDimmed}
                       style={style}
                       dragStepDays={dragStepDays}
                       dayStep={dayStep}
@@ -1019,7 +1038,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       displayTooltipText={displayTooltipText}
                       formatTimelineDate={formatTimelineDate}
                       formatPlannedCost={formatPlannedCost}
-                      isDropTarget={hoverProjectDropId === row.id}
+                      isDropTarget={hoverProjectDropId === row.id && !draggedEmployeeAssigned}
                       onRowDragOver={handleProjectRowDragOver}
                       onRowDragLeave={handleProjectRowDragLeave}
                       onRowDrop={handleProjectRowDrop}

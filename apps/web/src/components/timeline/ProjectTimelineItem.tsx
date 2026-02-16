@@ -19,6 +19,7 @@ type ProjectTimelineItemProps = {
   rowIndex: number;
   rowCount: number;
   isExpanded: boolean;
+  isDimmed?: boolean;
   detail?: ProjectDetail;
   style: { left: string; width: string };
   dragStepDays: 1 | 7 | 30;
@@ -62,6 +63,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     rowIndex,
     rowCount,
     isExpanded,
+    isDimmed,
     detail,
     style,
     dragStepDays,
@@ -155,7 +157,15 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
 
   return (
     <div
-      className={isDropTarget ? 'timeline-project-item drop-target' : 'timeline-project-item'}
+      className={
+        isDropTarget
+          ? isDimmed
+            ? 'timeline-project-item drop-target dimmed'
+            : 'timeline-project-item drop-target'
+          : isDimmed
+            ? 'timeline-project-item dimmed'
+            : 'timeline-project-item'
+      }
       onDragOver={(event) => onRowDragOver(event, row.id)}
       onDragLeave={(event) => onRowDragLeave(event, row.id)}
       onDrop={(event) => onRowDrop(event, row.id)}
