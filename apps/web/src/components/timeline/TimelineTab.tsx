@@ -808,10 +808,23 @@ export function TimelineTab(props: TimelineTabProps) {
         const presentRoleKeys = new Set(
           detail.assignments.map((assignment) => assignment.employee.role.name.toLowerCase()),
         );
-        const missingRequiredRoles = DEFAULT_REQUIRED_PROJECT_ROLES.filter(
+        const missingRequiredRoleKeys = DEFAULT_REQUIRED_PROJECT_ROLES.filter(
           (requiredRole) =>
             !Array.from(presentRoleKeys).some((roleName) => roleName.includes(requiredRole)),
         );
+
+        const missingRequiredRoles = missingRequiredRoleKeys.map((requiredRole) => {
+          const matchedRole = roles.find((role) => {
+            const roleName = role.name.toLowerCase();
+            const roleShortName = role.shortName?.toLowerCase() ?? '';
+            return roleName.includes(requiredRole) || roleShortName === requiredRole;
+          });
+
+          if (!matchedRole) return requiredRole.toUpperCase();
+          const shortName = matchedRole.shortName?.trim();
+          return shortName && shortName.length > 0 ? shortName : matchedRole.name;
+        });
+
         if (missingRequiredRoles.length > 0) {
           issues.push({
             key: 'missing-template-roles',
@@ -885,6 +898,7 @@ export function TimelineTab(props: TimelineTabProps) {
     t.timelineErrorMissingRates,
     t.timelineErrorMissingTemplateRoles,
     t.timelineErrorVacations,
+    roles,
     toUtcDay,
     vacationsByEmployeeId,
   ]);
