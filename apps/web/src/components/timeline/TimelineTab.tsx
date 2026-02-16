@@ -790,6 +790,11 @@ export function TimelineTab(props: TimelineTabProps) {
 
   const projectErrorsById = useMemo(() => {
     const result = new Map<string, Array<{ key: string; message: string }>>();
+    const priorityByKey: Record<string, number> = {
+      'missing-rates': 1,
+      'fact-range': 2,
+      vacations: 3,
+    };
 
     const hasOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => startA <= endB && endA >= startB;
 
@@ -845,6 +850,12 @@ export function TimelineTab(props: TimelineTabProps) {
       }
 
       if (issues.length > 0) {
+        issues.sort((left, right) => {
+          const leftPriority = priorityByKey[left.key] ?? 99;
+          const rightPriority = priorityByKey[right.key] ?? 99;
+          if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+          return left.key.localeCompare(right.key);
+        });
         result.set(row.id, issues);
       }
     }
