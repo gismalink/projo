@@ -20,6 +20,7 @@ import { Lang } from './app-types';
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
+  const [isAccountPageOpen, setIsAccountPageOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerFullName, setRegisterFullName] = useState('');
@@ -65,6 +66,12 @@ export function App() {
     setAccountFullNameDraft(app.currentUserFullName || '');
   }, [app.currentUserFullName, app.token]);
 
+  useEffect(() => {
+    if (!app.token) {
+      setIsAccountPageOpen(false);
+    }
+  }, [app.token]);
+
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
       event.preventDefault();
@@ -97,6 +104,11 @@ export function App() {
     setNewPasswordConfirm('');
   };
 
+  const handleLogoutClick = async () => {
+    await app.handleLogout();
+    setIsAccountPageOpen(false);
+  };
+
   return (
     <main className="container">
       <div className="section-header">
@@ -110,19 +122,29 @@ export function App() {
           <button type="button" className={lang === 'en' ? 'tab active' : 'tab'} onClick={() => setLang('en')}>
             EN
           </button>
+          {app.token ? (
+            <button
+              type="button"
+              className={isAccountPageOpen ? 'tab active' : 'tab'}
+              onClick={() => setIsAccountPageOpen((prev) => !prev)}
+            >
+              {t.account}
+            </button>
+          ) : null}
         </div>
       </div>
 
       {!app.token ? (
-        <article className="card">
-          <div className="tabs" style={{ marginBottom: 12 }}>
+        <div className="modal-backdrop">
+          <article className="modal-card auth-modal">
+            <div className="tabs auth-tabs" style={{ marginBottom: 12 }}>
             <button type="button" className={authMode === 'login' ? 'tab active' : 'tab'} onClick={() => setAuthMode('login')}>
               {t.login}
             </button>
             <button type="button" className={authMode === 'register' ? 'tab active' : 'tab'} onClick={() => setAuthMode('register')}>
               {t.register}
             </button>
-          </div>
+            </div>
 
           {authMode === 'login' ? (
             <form onSubmit={app.handleLogin} className="timeline-form">
@@ -159,62 +181,70 @@ export function App() {
               <button type="submit">{t.createAccount}</button>
             </form>
           )}
-        </article>
+          </article>
+        </div>
       ) : (
         <>
-          <article className="card" style={{ marginBottom: 12 }}>
-            <div className="section-header">
-              <h3>{t.account}</h3>
-              <button type="button" className="ghost-btn" onClick={() => void app.handleLogout()}>
-                {t.logout}
-              </button>
-            </div>
-            <div className="timeline-form">
-              <label>
-                {t.email}
-                <input value={app.currentUserEmail} readOnly />
-              </label>
-              <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
+          {isAccountPageOpen ? (
+            <article className="card" style={{ marginBottom: 12 }}>
+              <div className="section-header">
+                <h3>{t.account}</h3>
+                <div className="lang-toggle">
+                  <button type="button" className="ghost-btn" onClick={() => setIsAccountPageOpen(false)}>
+                    {t.backToApp}
+                  </button>
+                  <button type="button" className="ghost-btn" onClick={() => void handleLogoutClick()}>
+                    {t.logout}
+                  </button>
+                </div>
+              </div>
+              <div className="timeline-form">
                 <label>
-                  {t.fullName}
-                  <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
+                  {t.email}
+                  <input value={app.currentUserEmail} readOnly />
                 </label>
-                <button type="submit">{t.saveProfile}</button>
-              </form>
-              <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
-                <label>
-                  {t.currentPassword}
-                  <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                </label>
-                <label>
-                  {t.newPassword}
-                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                </label>
-                <label>
-                  {t.confirmPassword}
-                  <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
-                </label>
-                <button type="submit">{t.changePassword}</button>
-              </form>
-            </div>
-          </article>
+                <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
+                  <label>
+                    {t.fullName}
+                    <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
+                  </label>
+                  <button type="submit">{t.saveProfile}</button>
+                </form>
+                <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
+                  <label>
+                    {t.currentPassword}
+                    <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                  </label>
+                  <label>
+                    {t.newPassword}
+                    <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  </label>
+                  <label>
+                    {t.confirmPassword}
+                    <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
+                  </label>
+                  <button type="submit">{t.changePassword}</button>
+                </form>
+              </div>
+            </article>
+          ) : (
+            <>
+              <div className="tabs">
+                <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
+                  {t.tabTimeline}
+                </button>
+                <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
+                  {t.tabPersonnel}
+                </button>
+                <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
+                  {t.tabRoles}
+                </button>
+                <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
+                  {t.tabInstruction}
+                </button>
+              </div>
 
-          <div className="tabs">
-            <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
-              {t.tabTimeline}
-            </button>
-            <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
-              {t.tabPersonnel}
-            </button>
-            <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
-              {t.tabRoles}
-            </button>
-            <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
-              {t.tabInstruction}
-            </button>
-          </div>
-
-          {app.activeTab === 'personnel' ? (
+              {app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
               locale={locale}
@@ -264,9 +294,9 @@ export function App() {
               utilizationColor={utilizationColor}
               grades={grades}
             />
-          ) : null}
+              ) : null}
 
-          <EmployeeCreateModal
+              <EmployeeCreateModal
             t={t}
             roles={app.roles}
             departments={app.departments}
@@ -288,9 +318,9 @@ export function App() {
             setEmployeeGrade={app.setEmployeeGrade}
             setEmployeeStatus={app.setEmployeeStatus}
             setEmployeeSalary={app.setEmployeeSalary}
-          />
+              />
 
-          {app.activeTab === 'roles' ? (
+              {app.activeTab === 'roles' ? (
             <RolesTab
               t={t}
               roles={app.roles}
@@ -375,11 +405,11 @@ export function App() {
                 });
               }}
             />
-          ) : null}
+              ) : null}
 
-          {app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
+              {app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
 
-          {app.activeTab === 'timeline' ? (
+              {app.activeTab === 'timeline' ? (
             <TimelineTab
               t={t}
               locale={locale}
@@ -415,9 +445,9 @@ export function App() {
               timelineStyle={timelineStyle}
               isoToInputDate={isoToInputDate}
             />
-          ) : null}
+              ) : null}
 
-          <ProjectModal
+              <ProjectModal
             t={t}
             isOpen={app.isProjectModalOpen}
             projectCode={app.projectCode}
@@ -433,9 +463,9 @@ export function App() {
             setProjectStartDate={app.setProjectStartDate}
             setProjectEndDate={app.setProjectEndDate}
             setProjectTeamTemplateId={app.setProjectTeamTemplateId}
-          />
+              />
 
-          <ProjectDatesModal
+              <ProjectDatesModal
             t={t}
             isOpen={app.isProjectDatesModalOpen}
             startDate={app.editProjectStartDate}
@@ -444,9 +474,9 @@ export function App() {
             onSubmit={app.handleUpdateProjectDates}
             setStartDate={app.setEditProjectStartDate}
             setEndDate={app.setEditProjectEndDate}
-          />
+              />
 
-          <AssignmentModal
+              <AssignmentModal
             t={t}
             isOpen={app.isAssignmentModalOpen}
             projects={app.projects}
@@ -463,9 +493,9 @@ export function App() {
             setAssignmentStartDate={app.setAssignmentStartDate}
             setAssignmentEndDate={app.setAssignmentEndDate}
             setAssignmentPercent={app.setAssignmentPercent}
-          />
+              />
 
-          <EmployeeModal
+              <EmployeeModal
             t={t}
             locale={locale}
             roles={app.roles}
@@ -489,16 +519,18 @@ export function App() {
             onCreateVacation={app.handleCreateVacationFromEmployeeModal}
             onUpdateVacation={app.handleUpdateVacationFromEmployeeModal}
             onDeleteVacation={app.handleDeleteVacationFromEmployeeModal}
-          />
+              />
 
-          <EmployeeImportModal
+              <EmployeeImportModal
             t={t}
             isOpen={app.isEmployeeImportModalOpen}
             csv={app.employeeCsv}
             onClose={() => app.setIsEmployeeImportModalOpen(false)}
             onSubmit={app.handleImportEmployeesCsv}
             setCsv={app.setEmployeeCsv}
-          />
+              />
+            </>
+          )}
 
           <ToastStack toasts={app.toasts} />
         </>

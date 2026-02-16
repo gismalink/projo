@@ -122,6 +122,15 @@
   box-shadow: var(--ios-shadow);
 }
 
+.auth-modal {
+  width: min(420px, 100%);
+}
+
+.auth-tabs {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .employee-meta-compact {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
