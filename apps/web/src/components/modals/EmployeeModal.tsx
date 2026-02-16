@@ -1,5 +1,6 @@
 import { MouseEvent, useEffect, useMemo, useState } from 'react';
 import { DepartmentItem, VacationItem } from '../../api/client';
+import { DEFAULT_VACATION_TYPE, PROFILE_AUTOSAVE_DEBOUNCE_MS } from '../../constants/app.constants';
 import { Role } from '../../pages/app-types';
 import { Icon } from '../Icon';
 
@@ -67,7 +68,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
   const [salary, setSalary] = useState(employeeSalary);
   const [newVacationStart, setNewVacationStart] = useState(`${new Date().getFullYear()}-07-01`);
   const [newVacationEnd, setNewVacationEnd] = useState(`${new Date().getFullYear()}-07-14`);
-  const [newVacationType, setNewVacationType] = useState('vacation');
+  const [newVacationType, setNewVacationType] = useState(DEFAULT_VACATION_TYPE);
 
   const shiftDate = (dateValue: string, days: number) => {
     const date = new Date(dateValue);
@@ -244,7 +245,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
         status,
         salaryMonthly: salary.trim() ? Number(salary) : undefined,
       });
-    }, 350);
+    }, PROFILE_AUTOSAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [isOpen, fullName, email, roleId, departmentId, grade, status, salary, onProfileAutoSave]);
 

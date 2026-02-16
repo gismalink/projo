@@ -20,9 +20,10 @@
    - оставить безопасные dev defaults только через `.env`.
 2. [x] Устранить `as any` в `apps/api/src/team-templates/team-templates.service.ts`:
    - восстановить строгую типизацию Prisma delegate после полной регенерации/проверки типов.
-3. [~] Централизовать магические числа и дефолты UI/API:
+3. [x] Централизовать магические числа и дефолты UI/API:
    - `MONTHLY_HOURS = 168`, `setTimeout(..., 4500/420)`, дефолтные цвета и статусы.
-   - сделано частично: `TimelineTab` переведен на именованные constants (`MS_PER_DAY`, fallback color, drag thresholds).
+   - вынесены shared constants для web (`app.constants.ts`, `seed-defaults.constants.ts`) и ключевые API constants (`app-constants.ts`);
+   - `TimelineTab`, `useAppHandlers`, `useAppState`, `RolesTab`, `ProjectTimelineItem`, `EmployeeModal`, `PersonnelTab`, `BenchColumn`, `app-helpers`, `calendar.service`, `roles.service` переведены на именованные константы.
 4. [x] Убрать локализацию через косвенные хардкоды вида `t.prev === 'Назад'` в пользу явного `lang`/locale state.
 
 ### P2 — стабильность и покрытие

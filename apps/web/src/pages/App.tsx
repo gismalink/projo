@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, GradeItem } from '../api/client';
+import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
+import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { EmployeeCreateModal } from '../components/modals/EmployeeCreateModal';
@@ -119,14 +121,14 @@ export function App() {
                 app.setEmployeeRoleId(foundRole?.id ?? '');
                 app.setEmployeeDepartmentId(employee.department?.id ?? '');
                 app.setEmployeeGrade(employee.grade ?? '');
-                app.setEmployeeStatus(employee.status ?? 'active');
+                app.setEmployeeStatus(employee.status ?? DEFAULT_EMPLOYEE_STATUS);
                 app.setEmployeeSalary(
                   app.employeeSalaryById[employee.id] !== undefined ? String(app.employeeSalaryById[employee.id]) : '',
                 );
                 app.setVacationEmployeeId(employee.id);
-                app.setVacationStartDate(`${new Date().getFullYear()}-07-01`);
-                app.setVacationEndDate(`${new Date().getFullYear()}-07-14`);
-                app.setVacationType('vacation');
+                app.setVacationStartDate(DEFAULT_DATE_INPUTS.vacationStart);
+                app.setVacationEndDate(DEFAULT_DATE_INPUTS.vacationEnd);
+                app.setVacationType(DEFAULT_VACATION_TYPE);
                 app.setIsEmployeeModalOpen(true);
               }}
               openEmployeeCreateModal={() => {
@@ -136,7 +138,7 @@ export function App() {
                 app.setEmployeeRoleId('');
                 app.setEmployeeDepartmentId('');
                 app.setEmployeeGrade('');
-                app.setEmployeeStatus('active');
+                app.setEmployeeStatus(DEFAULT_EMPLOYEE_STATUS);
                 app.setEmployeeSalary('');
                 app.setIsEmployeeCreateModalOpen(true);
               }}

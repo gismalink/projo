@@ -1,5 +1,6 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { ProjectDetail, ProjectTimelineRow } from '../../api/client';
+import { AUTOSAVE_DEBOUNCE_MS } from '../../constants/app.constants';
 import { Icon } from '../Icon';
 
 function TooltipAnchor({ text, children, className }: { text: string; children: ReactNode; className?: string }) {
@@ -157,7 +158,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
         endDate: new Date(draftEndDate).toISOString(),
         teamTemplateId: draftTeamTemplateId || null,
       });
-    }, 420);
+    }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
   }, [detail?.teamTemplate?.id, draftCode, draftEndDate, draftName, draftStartDate, draftTeamTemplateId, isProjectEditOpen, onAutoSaveProjectMeta, row.code, row.endDate, row.id, row.name, row.startDate]);

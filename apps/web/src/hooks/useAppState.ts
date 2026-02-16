@@ -11,6 +11,15 @@ import {
   TeamTemplateItem,
   VacationItem,
 } from '../api/client';
+import { DEFAULT_VACATION_TYPE } from '../constants/app.constants';
+import {
+  DEFAULT_DATE_INPUTS,
+  DEFAULT_EMPLOYEE_FORM,
+  DEFAULT_EMPLOYEE_IMPORT_CSV,
+  DEFAULT_PROJECT_FORM,
+  DEFAULT_ROLE_FORM,
+  DEFAULT_SKILL_FORM,
+} from '../constants/seed-defaults.constants';
 import { ActiveTab, Employee, Role, Toast } from '../pages/app-types';
 
 const WEB_DEFAULT_LOGIN_EMAIL = import.meta.env.VITE_WEB_DEFAULT_LOGIN_EMAIL ?? '';
@@ -29,12 +38,12 @@ export function useAppState() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [roleColorDrafts, setRoleColorDrafts] = useState<Record<string, string>>({});
-  const [roleName, setRoleName] = useState('Analyst');
-  const [roleShortName, setRoleShortName] = useState('ANLST');
-  const [roleDescription, setRoleDescription] = useState('Business analyst role');
-  const [roleLevel, setRoleLevel] = useState(3);
-  const [skillName, setSkillName] = useState('TypeScript');
-  const [skillDescription, setSkillDescription] = useState('Frontend and backend development');
+  const [roleName, setRoleName] = useState(DEFAULT_ROLE_FORM.name);
+  const [roleShortName, setRoleShortName] = useState(DEFAULT_ROLE_FORM.shortName);
+  const [roleDescription, setRoleDescription] = useState(DEFAULT_ROLE_FORM.description);
+  const [roleLevel, setRoleLevel] = useState(DEFAULT_ROLE_FORM.level);
+  const [skillName, setSkillName] = useState(DEFAULT_SKILL_FORM.name);
+  const [skillDescription, setSkillDescription] = useState(DEFAULT_SKILL_FORM.description);
 
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [teamTemplates, setTeamTemplates] = useState<TeamTemplateItem[]>([]);
@@ -53,27 +62,25 @@ export function useAppState() {
   const [isProjectDatesModalOpen, setIsProjectDatesModalOpen] = useState(false);
   const [vacationEmployeeName, setVacationEmployeeName] = useState('');
 
-  const [employeeFullName, setEmployeeFullName] = useState('Jane Smith');
-  const [employeeEmail, setEmployeeEmail] = useState('jane.smith@projo.local');
+  const [employeeFullName, setEmployeeFullName] = useState(DEFAULT_EMPLOYEE_FORM.fullName);
+  const [employeeEmail, setEmployeeEmail] = useState(DEFAULT_EMPLOYEE_FORM.email);
   const [employeeRoleId, setEmployeeRoleId] = useState('');
   const [employeeDepartmentId, setEmployeeDepartmentId] = useState('');
-  const [employeeStatus, setEmployeeStatus] = useState('active');
-  const [employeeGrade, setEmployeeGrade] = useState('мидл');
+  const [employeeStatus, setEmployeeStatus] = useState(DEFAULT_EMPLOYEE_FORM.status);
+  const [employeeGrade, setEmployeeGrade] = useState(DEFAULT_EMPLOYEE_FORM.grade);
   const [employeeSalary, setEmployeeSalary] = useState('');
   const [employeeSalaryById, setEmployeeSalaryById] = useState<Record<string, number>>({});
   const [employeeActiveRateIdByEmployeeId, setEmployeeActiveRateIdByEmployeeId] = useState<Record<string, string>>({});
-  const [employeeCsv, setEmployeeCsv] = useState(
-    'fullName,email,role,department,grade,status,defaultCapacityHoursPerDay\nJohn Doe,john.doe@projo.local,Backend Developer,Engineering,мидл,active,8',
-  );
+  const [employeeCsv, setEmployeeCsv] = useState(DEFAULT_EMPLOYEE_IMPORT_CSV);
   const [editEmployeeId, setEditEmployeeId] = useState('');
   const [editEmployeeName, setEditEmployeeName] = useState('');
   const [editEmployeeRoleName, setEditEmployeeRoleName] = useState('');
   const [editEmployeeDepartmentId, setEditEmployeeDepartmentId] = useState('');
 
   const [vacationEmployeeId, setVacationEmployeeId] = useState('');
-  const [vacationStartDate, setVacationStartDate] = useState(`${new Date().getFullYear()}-07-01`);
-  const [vacationEndDate, setVacationEndDate] = useState(`${new Date().getFullYear()}-07-14`);
-  const [vacationType, setVacationType] = useState('vacation');
+  const [vacationStartDate, setVacationStartDate] = useState(DEFAULT_DATE_INPUTS.vacationStart);
+  const [vacationEndDate, setVacationEndDate] = useState(DEFAULT_DATE_INPUTS.vacationEnd);
+  const [vacationType, setVacationType] = useState(DEFAULT_VACATION_TYPE);
 
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
@@ -86,10 +93,10 @@ export function useAppState() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedProjectDetail, setSelectedProjectDetail] = useState<ProjectDetail | null>(null);
 
-  const [projectCode, setProjectCode] = useState('PRJ-001');
-  const [projectName, setProjectName] = useState('Pilot CRM Rollout');
-  const [projectStartDate, setProjectStartDate] = useState(`${new Date().getFullYear()}-02-01`);
-  const [projectEndDate, setProjectEndDate] = useState(`${new Date().getFullYear()}-06-30`);
+  const [projectCode, setProjectCode] = useState(DEFAULT_PROJECT_FORM.code);
+  const [projectName, setProjectName] = useState(DEFAULT_PROJECT_FORM.name);
+  const [projectStartDate, setProjectStartDate] = useState(DEFAULT_DATE_INPUTS.projectStart);
+  const [projectEndDate, setProjectEndDate] = useState(DEFAULT_DATE_INPUTS.projectEnd);
   const [projectTeamTemplateId, setProjectTeamTemplateId] = useState('');
   const [editProjectId, setEditProjectId] = useState('');
   const [editProjectStartDate, setEditProjectStartDate] = useState('');
@@ -97,8 +104,8 @@ export function useAppState() {
 
   const [assignmentProjectId, setAssignmentProjectId] = useState('');
   const [assignmentEmployeeId, setAssignmentEmployeeId] = useState('');
-  const [assignmentStartDate, setAssignmentStartDate] = useState(`${new Date().getFullYear()}-03-01`);
-  const [assignmentEndDate, setAssignmentEndDate] = useState(`${new Date().getFullYear()}-04-30`);
+  const [assignmentStartDate, setAssignmentStartDate] = useState(DEFAULT_DATE_INPUTS.assignmentStart);
+  const [assignmentEndDate, setAssignmentEndDate] = useState(DEFAULT_DATE_INPUTS.assignmentEnd);
   const [assignmentPercent, setAssignmentPercent] = useState(50);
 
   const [editAssignmentId, setEditAssignmentId] = useState('');

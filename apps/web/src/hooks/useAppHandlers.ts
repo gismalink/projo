@@ -1,10 +1,9 @@
 import { FormEvent } from 'react';
 import { api, ProjectDetail } from '../api/client';
+import { DEFAULT_EMPLOYEE_STATUS, MONTHLY_HOURS, TOAST_AUTO_DISMISS_MS, TOAST_ID_RANDOM_RANGE } from '../constants/app.constants';
 import { Employee, Toast } from '../pages/app-types';
 import { STANDARD_DAY_HOURS, isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
 import { AppState } from './useAppState';
-
-const MONTHLY_HOURS = 168;
 
 function parseSalaryInput(value: string): number | null {
   const normalized = value.replace(',', '.').trim();
@@ -49,11 +48,11 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   }
 
   function pushToast(message: string) {
-    const toast: Toast = { id: Date.now() + Math.floor(Math.random() * 1000), message };
+    const toast: Toast = { id: Date.now() + Math.floor(Math.random() * TOAST_ID_RANDOM_RANGE), message };
     state.setToasts((prev) => [...prev, toast]);
     setTimeout(() => {
       state.setToasts((prev) => prev.filter((item) => item.id !== toast.id));
-    }, 4500);
+    }, TOAST_AUTO_DISMISS_MS);
   }
 
   function setAssignmentEditorFromDetail(detail: ProjectDetail, assignmentId?: string) {
@@ -478,7 +477,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
       state.setEmployeeRoleId(payload.roleId);
       state.setEmployeeDepartmentId(payload.departmentId ?? '');
       state.setEmployeeGrade(payload.grade ?? '');
-      state.setEmployeeStatus(payload.status ?? 'active');
+      state.setEmployeeStatus(payload.status ?? DEFAULT_EMPLOYEE_STATUS);
       await refreshData(state.token, state.selectedYear);
     } catch (e) {
       pushToast(resolveErrorMessage(e, t.uiCreateEmployeeFailed, errorText));

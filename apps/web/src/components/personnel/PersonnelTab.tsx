@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Employee, Role } from '../../pages/app-types';
 import { DepartmentItem, GradeItem, VacationItem } from '../../api/client';
+import { DEFAULT_FALLBACK_COLOR_HEX, DEFAULT_MUTED_BORDER_COLOR_HEX, DEFAULT_SURFACE_COLOR_HEX } from '../../constants/app.constants';
 import { Icon } from '../Icon';
 
 type RoleStat = {
@@ -142,9 +143,12 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 key={department}
                 className={selectedDepartment === department ? 'role-tag active' : 'role-tag'}
                 style={{
-                  borderColor: departmentColorByName.get(department) ?? '#B6BDC6',
-                  background: selectedDepartment === department ? (departmentColorByName.get(department) ?? '#B6BDC6') : '#fff',
-                  color: selectedDepartment === department ? '#fff' : (departmentColorByName.get(department) ?? '#6E7B8A'),
+                  borderColor: departmentColorByName.get(department) ?? DEFAULT_MUTED_BORDER_COLOR_HEX,
+                  background:
+                    selectedDepartment === department
+                      ? (departmentColorByName.get(department) ?? DEFAULT_MUTED_BORDER_COLOR_HEX)
+                      : DEFAULT_SURFACE_COLOR_HEX,
+                  color: selectedDepartment === department ? DEFAULT_SURFACE_COLOR_HEX : (departmentColorByName.get(department) ?? DEFAULT_FALLBACK_COLOR_HEX),
                 }}
                 onClick={() => setSelectedDepartment(department)}
                 title={`${department} (${departmentEmployees.length})`}
@@ -166,14 +170,14 @@ export function PersonnelTab(props: PersonnelTabProps) {
                 className={active ? 'role-tag active' : 'role-tag'}
                 style={{
                   borderColor: tag.colorHex,
-                  background: active ? tag.colorHex : '#fff',
-                  color: active ? '#fff' : tag.colorHex,
+                  background: active ? tag.colorHex : DEFAULT_SURFACE_COLOR_HEX,
+                  color: active ? DEFAULT_SURFACE_COLOR_HEX : tag.colorHex,
                 }}
                 onClick={() => toggleRoleFilter(tag.roleName)}
                 title={`${tag.roleName} (${tag.count})`}
                 aria-label={`${tag.roleName} (${tag.count})`}
               >
-                <span className="dot" style={{ background: active ? '#fff' : tag.colorHex }} />
+                <span className="dot" style={{ background: active ? DEFAULT_SURFACE_COLOR_HEX : tag.colorHex }} />
                 {tag.roleShortName} ({tag.count})
               </button>
             );
@@ -226,8 +230,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
                         <span
                           className="grade-badge"
                           style={{
-                            background: `${gradeColorByName.get(employee.grade) ?? '#6E7B8A'}22`,
-                            color: gradeColorByName.get(employee.grade) ?? '#6E7B8A',
+                            background: `${gradeColorByName.get(employee.grade) ?? DEFAULT_FALLBACK_COLOR_HEX}22`,
+                            color: gradeColorByName.get(employee.grade) ?? DEFAULT_FALLBACK_COLOR_HEX,
                           }}
                         >
                           {employee.grade}

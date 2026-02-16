@@ -1,4 +1,5 @@
 import { BadGatewayException, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { CALENDAR_REQUEST_TIMEOUT_MS } from '../common/app-constants';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 
@@ -69,7 +70,7 @@ export class CalendarService implements OnModuleInit, OnModuleDestroy {
 
   private async fetchYearHolidays(year: number): Promise<ExternalHolidaysResponse> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const timeout = setTimeout(() => controller.abort(), CALENDAR_REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/calendar/${year}/holidays`, {

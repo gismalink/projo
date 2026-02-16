@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_DEBOUNCE_MS_SLOW } from '../../constants/app.constants';
 import { Icon } from '../Icon';
 import { Role } from '../../pages/app-types';
 import { DepartmentItem, GradeItem, TeamTemplateItem } from '../../api/client';
@@ -221,7 +222,7 @@ export function RolesTab(props: RolesTabProps) {
 
       if (unchanged) return;
       void onUpdateRole(roleId, payload);
-    }, 420);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   const updateRoleDraft = (roleId: string, patch: Partial<RoleDraft>) => {
@@ -259,7 +260,7 @@ export function RolesTab(props: RolesTabProps) {
       if (unchanged) return;
 
       void onUpdateDepartment(departmentId, trimmedName, normalizedColor);
-    }, 420);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   const updateDepartmentDraft = (departmentId: string, patch: Partial<{ name: string; colorHex: string }>) => {
@@ -300,7 +301,7 @@ export function RolesTab(props: RolesTabProps) {
         name: trimmedName,
         colorHex: normalizedColor,
       });
-    }, 420);
+    }, AUTOSAVE_DEBOUNCE_MS);
   };
 
   const updateGradeDraft = (gradeId: string, patch: Partial<GradeDraft>) => {
@@ -341,7 +342,7 @@ export function RolesTab(props: RolesTabProps) {
         name: nextName,
         roleIds: draft.roleIds,
       });
-    }, 450);
+    }, AUTOSAVE_DEBOUNCE_MS_SLOW);
   };
 
   const updateTeamTemplateDraft = (templateId: string, patch: Partial<TeamTemplateDraft>) => {

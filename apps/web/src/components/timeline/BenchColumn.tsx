@@ -1,3 +1,5 @@
+import { DEFAULT_FALLBACK_COLOR_HEX } from '../../constants/app.constants';
+
 type BenchMember = {
   id: string;
   fullName: string;
@@ -81,7 +83,7 @@ export function BenchColumn(props: BenchColumnProps) {
                       {member.roleName}
                     </span>
                     {member.grade ? (
-                      <span className="timeline-role-chip" style={{ background: member.gradeColorHex ?? '#6E7B8A' }}>
+                      <span className="timeline-role-chip" style={{ background: member.gradeColorHex ?? DEFAULT_FALLBACK_COLOR_HEX }}>
                         {member.grade}
                       </span>
                     ) : null}

@@ -1,0 +1,3 @@
+export const CALENDAR_REQUEST_TIMEOUT_MS = 10_000;
+
+export const DEFAULT_ROLE_COLOR_HEX = '#6E7B8A';
