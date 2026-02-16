@@ -2,6 +2,17 @@ import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, ReactNode, 
 import { ProjectDetail, ProjectTimelineRow } from '../../api/client';
 import { Icon } from '../Icon';
 
+function TooltipAnchor({ text, children, className }: { text: string; children: ReactNode; className?: string }) {
+  return (
+    <span className={className ? `timeline-inline-tooltip-anchor ${className}` : 'timeline-inline-tooltip-anchor'}>
+      {children}
+      <span className="timeline-inline-tooltip" role="tooltip">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 type ProjectTimelineItemProps = {
   t: Record<string, string>;
   row: ProjectTimelineRow;
@@ -152,142 +163,146 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
       <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
         <div className="timeline-meta">
           <div className="timeline-meta-main">
-            <div className="timeline-meta-controls">
-              <button
-                type="button"
-                className="timeline-row-toggle"
-                onClick={() => onMoveProject(row.id, 'up')}
-                disabled={rowIndex === 0}
-                aria-label={t.moveProjectUp}
-                title={t.moveUp}
-              >
-                <Icon name="arrow-up" />
-              </button>
-              <button
-                type="button"
-                className="timeline-row-toggle"
-                onClick={() => onMoveProject(row.id, 'down')}
-                disabled={rowIndex === rowCount - 1}
-                aria-label={t.moveProjectDown}
-                title={t.moveDown}
-              >
-                <Icon name="arrow-down" />
-              </button>
-              <button
-                type="button"
-                className={isExpanded ? 'timeline-row-toggle active' : 'timeline-row-toggle'}
-                onClick={(event) => onToggleProject(event, row.id)}
-                aria-label={isExpanded ? t.collapseProjectRow : t.expandProjectRow}
-                title={isExpanded ? t.collapse : t.expand}
-              >
-                <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
-              </button>
+            <div className="timeline-meta-topline">
+              <div className="timeline-meta-controls">
+                <TooltipAnchor text={t.moveUp}>
+                  <button
+                    type="button"
+                    className="timeline-row-toggle"
+                    onClick={() => onMoveProject(row.id, 'up')}
+                    disabled={rowIndex === 0}
+                    aria-label={t.moveProjectUp}
+                  >
+                    <Icon name="arrow-up" />
+                  </button>
+                </TooltipAnchor>
+                <TooltipAnchor text={t.moveDown}>
+                  <button
+                    type="button"
+                    className="timeline-row-toggle"
+                    onClick={() => onMoveProject(row.id, 'down')}
+                    disabled={rowIndex === rowCount - 1}
+                    aria-label={t.moveProjectDown}
+                  >
+                    <Icon name="arrow-down" />
+                  </button>
+                </TooltipAnchor>
+                <TooltipAnchor text={isExpanded ? t.collapse : t.expand}>
+                  <button
+                    type="button"
+                    className={isExpanded ? 'timeline-row-toggle active' : 'timeline-row-toggle'}
+                    onClick={(event) => onToggleProject(event, row.id)}
+                    aria-label={isExpanded ? t.collapseProjectRow : t.expandProjectRow}
+                  >
+                    <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
+                  </button>
+                </TooltipAnchor>
+                <strong>
+                  {row.code} · {row.name}
+                </strong>
+              </div>
+
+              <div className="timeline-meta-trailing">
+                {projectErrors && projectErrors.length > 0 ? (
+                  <div className="timeline-error-inline-list">
+                    {projectErrors.map((item) => (
+                      <span key={item.key} className="timeline-error-chip" aria-label={item.message}>
+                        <Icon name="alert" size={12} />
+                        <span className="timeline-inline-tooltip" role="tooltip">
+                          {item.message}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="timeline-meta-actions" ref={editPopoverRef}>
+                  <TooltipAnchor text={t.editProjectDates}>
+                    <button
+                      type="button"
+                      className="timeline-meta-icon-btn"
+                      onClick={() => setIsProjectEditOpen((prev) => !prev)}
+                      aria-label={t.editProjectDates}
+                    >
+                      <Icon name="edit" />
+                    </button>
+                  </TooltipAnchor>
+                  {isProjectEditOpen ? (
+                    <div className="project-edit-popover">
+                      <div className="project-edit-row">
+                        <input aria-label={t.code} value={draftCode} onChange={(event) => setDraftCode(event.target.value)} />
+                        <input aria-label={t.name} value={draftName} onChange={(event) => setDraftName(event.target.value)} />
+                        <input aria-label={t.start} type="date" value={draftStartDate} onChange={(event) => setDraftStartDate(event.target.value)} />
+                        <input aria-label={t.end} type="date" value={draftEndDate} onChange={(event) => setDraftEndDate(event.target.value)} />
+                      </div>
+                    </div>
+                  ) : null}
+                  <TooltipAnchor text={t.assignEmployee}>
+                    <button
+                      type="button"
+                      className="timeline-meta-icon-btn"
+                      onClick={() => onOpenAssignmentModal(row.id)}
+                      aria-label={t.assignEmployee}
+                    >
+                      <Icon name="user-plus" />
+                    </button>
+                  </TooltipAnchor>
+                </div>
+              </div>
             </div>
-            <strong>
-              {row.code} · {row.name}
-            </strong>
+
             <div className="timeline-kpi-row">
-              <span className="timeline-kpi-item" title={`${row.assignmentsCount} ${t.assignmentsWord}`}>
+              <span className="timeline-kpi-item">
                 <Icon name="users" size={13} />
                 <span>{row.assignmentsCount}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.assignmentsWord}</span>
               </span>
-              <span
-                className="timeline-kpi-item"
-                title={detail?.costSummary ? `${t.plannedHoursLabel}: ${Number(detail.costSummary.totalPlannedHours).toFixed(1)} ${t.hoursWord}` : t.plannedHoursLabel}
-              >
+              <span className="timeline-kpi-item">
                 <Icon name="clock" size={13} />
                 <span>{detail?.costSummary ? Number(detail.costSummary.totalPlannedHours).toFixed(1) : '—'}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.plannedHoursLabel}</span>
               </span>
-              <span className="timeline-kpi-item" title={`${t.factHoursShort}: ${(projectHourStats?.actualHours ?? 0).toFixed(1)} ${t.hoursWord}`}>
+              <span className="timeline-kpi-item">
                 <Icon name="check" size={13} />
                 <span>{(projectHourStats?.actualHours ?? 0).toFixed(1)}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.factHoursShort}</span>
               </span>
-              <span className="timeline-kpi-item" title={`${t.lostHoursShort}: ${(projectHourStats?.lostHours ?? 0).toFixed(1)} ${t.hoursWord}`}>
+              <span className="timeline-kpi-item">
                 <Icon name="x" size={13} />
                 <span>{(projectHourStats?.lostHours ?? 0).toFixed(1)}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.lostHoursShort}</span>
               </span>
-              <span
-                className="timeline-kpi-item"
-                title={detail?.costSummary ? `${t.plannedCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency)}` : t.plannedCostLabel}
-              >
+              <span className="timeline-kpi-item">
                 <Icon name="coins" size={13} />
                 <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency) : '—'}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.plannedCostLabel}</span>
               </span>
-              <span
-                className="timeline-kpi-item"
-                title={detail?.costSummary ? `${t.factCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency)}` : t.factCostLabel}
-              >
+              <span className="timeline-kpi-item">
                 <Icon name="check" size={13} />
                 <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency) : '—'}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.factCostLabel}</span>
               </span>
-              <span
-                className="timeline-kpi-item"
-                title={detail?.costSummary ? `${t.lostCostLabel}: ${formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency)}` : t.lostCostLabel}
-              >
+              <span className="timeline-kpi-item">
                 <Icon name="alert" size={13} />
                 <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency) : '—'}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.lostCostLabel}</span>
               </span>
-              <span
-                className="timeline-kpi-item"
-                title={detail?.costSummary ? `${t.missingRateDaysLabel}: ${detail.costSummary.missingRateDays}` : t.missingRateDaysLabel}
-              >
+              <span className="timeline-kpi-item">
                 <Icon name="calendar" size={13} />
                 <span>{detail?.costSummary ? detail.costSummary.missingRateDays : 0}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.missingRateDaysLabel}</span>
               </span>
-              <span
-                className="timeline-kpi-item"
-                title={detail?.costSummary ? `${t.missingRateHoursLabel}: ${Number(detail.costSummary.missingRateHours).toFixed(1)} ${t.hoursWord}` : t.missingRateHoursLabel}
-              >
+              <span className="timeline-kpi-item">
                 <Icon name="clock" size={13} />
                 <span>{detail?.costSummary ? Number(detail.costSummary.missingRateHours).toFixed(1) : '0.0'}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.missingRateHoursLabel}</span>
               </span>
-              <span className="timeline-kpi-item" title={`${formatTimelineDate(row.startDate)} ${t.fromTo} ${formatTimelineDate(row.endDate)}`}>
+              <span className="timeline-kpi-item">
                 <Icon name="calendar" size={13} />
                 <span>{formatTimelineDate(row.startDate)}–{formatTimelineDate(row.endDate)}</span>
+                <span className="timeline-inline-tooltip" role="tooltip">{t.start} {t.fromTo} {t.end}</span>
               </span>
             </div>
-            {projectErrors && projectErrors.length > 0 ? (
-              <div className="timeline-error-row" aria-label={t.timelineErrorsLabel}>
-                <span className="timeline-error-title">{t.timelineErrorsLabel}</span>
-                <div className="timeline-error-list">
-                  {projectErrors.map((item) => (
-                    <span key={item.key} className="timeline-error-chip" title={item.message} aria-label={item.message}>
-                      <Icon name="alert" size={12} />
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-          <div className="timeline-meta-actions" ref={editPopoverRef}>
-            <button
-              type="button"
-              className="timeline-meta-icon-btn"
-              onClick={() => setIsProjectEditOpen((prev) => !prev)}
-              title={t.editProjectDates}
-              aria-label={t.editProjectDates}
-            >
-              <Icon name="edit" />
-            </button>
-            {isProjectEditOpen ? (
-              <div className="project-edit-popover">
-                <div className="project-edit-row">
-                  <input aria-label={t.code} value={draftCode} onChange={(event) => setDraftCode(event.target.value)} />
-                  <input aria-label={t.name} value={draftName} onChange={(event) => setDraftName(event.target.value)} />
-                  <input aria-label={t.start} type="date" value={draftStartDate} onChange={(event) => setDraftStartDate(event.target.value)} />
-                  <input aria-label={t.end} type="date" value={draftEndDate} onChange={(event) => setDraftEndDate(event.target.value)} />
-                </div>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="timeline-meta-icon-btn"
-              onClick={() => onOpenAssignmentModal(row.id)}
-              title={t.assignEmployee}
-              aria-label={t.assignEmployee}
-            >
-              <Icon name="user-plus" />
-            </button>
           </div>
         </div>
         <div className={`track project-track step-${dragStepDays}`}>
@@ -300,11 +315,12 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
           ))}
           <span className="track-day-grid" style={{ ['--day-step' as string]: dayStep }} />
           {projectFact ? (
-            <span
-              className="project-fact-bar"
-              style={projectFact.style}
-              title={`${t.factLabel}: ${formatTimelineDate(projectFact.startIso)} ${t.fromTo} ${formatTimelineDate(projectFact.endIso)}`}
-            />
+            <span className="timeline-inline-tooltip-anchor project-fact-tooltip-anchor" style={projectFact.style}>
+              <span className="project-fact-bar" style={{ left: '0', width: '100%' }} />
+              <span className="timeline-inline-tooltip" role="tooltip">
+                {t.factLabel}: {formatTimelineDate(projectFact.startIso)} {t.fromTo} {formatTimelineDate(projectFact.endIso)}
+              </span>
+            </span>
           ) : null}
           {dragStepDays === 30 ? (
             <span className="project-month-grid" aria-hidden>

@@ -188,7 +188,6 @@
   height: 82px;
   border: 1px solid var(--ios-border);
   border-radius: 12px;
-  padding: 2px;
   background: linear-gradient(180deg, rgba(10, 132, 255, 0.1) 0%, rgba(10, 132, 255, 0.02) 100%);
   overflow: hidden;
 }
@@ -414,6 +413,28 @@
   align-items: flex-start;
   gap: 0.28rem;
   min-width: 0;
+  width: 100%;
+}
+
+.timeline-meta-topline {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.timeline-meta-trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.timeline-error-inline-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
 }
 
 .timeline-meta-main strong {
@@ -462,24 +483,6 @@
   text-overflow: ellipsis;
 }
 
-.timeline-error-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.timeline-error-title {
-  font-size: 0.72rem;
-  color: var(--ios-danger);
-  font-weight: 700;
-}
-
-.timeline-error-list {
-  display: inline-flex;
-  gap: 0.22rem;
-  align-items: center;
-}
-
 .timeline-error-chip {
   display: inline-flex;
   align-items: center;
@@ -490,6 +493,42 @@
   border: 1px solid rgba(255, 69, 58, 0.42);
   background: rgba(255, 69, 58, 0.12);
   color: var(--ios-danger);
+  position: relative;
+}
+
+.timeline-inline-tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.timeline-inline-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translate(-50%, 4px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(24, 24, 28, 0.96);
+  color: #fff;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.24rem 0.38rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 25;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.timeline-inline-tooltip-anchor:hover .timeline-inline-tooltip,
+.timeline-inline-tooltip-anchor:focus-within .timeline-inline-tooltip,
+.timeline-kpi-item:hover .timeline-inline-tooltip,
+.timeline-kpi-item:focus-within .timeline-inline-tooltip,
+.timeline-error-chip:hover .timeline-inline-tooltip,
+.timeline-error-chip:focus-within .timeline-inline-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .timeline-meta-actions {
@@ -497,6 +536,19 @@
   align-items: center;
   gap: 0.35rem;
   position: relative;
+}
+
+.project-fact-tooltip-anchor {
+  position: absolute;
+  top: 24px;
+  height: 5px;
+  border-radius: 999px;
+  z-index: 2;
+}
+
+.project-fact-tooltip-anchor .project-fact-bar {
+  top: 0;
+  height: 100%;
 }
 
 .project-edit-popover {
