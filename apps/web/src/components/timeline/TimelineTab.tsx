@@ -925,21 +925,21 @@ export function TimelineTab(props: TimelineTabProps) {
           ) : null}
         </div>
 
-        <CompanyLoadCard
-          t={t}
-          companyLoad={companyLoad}
-          companyLoadScaleMax={companyLoadScaleMax}
-          todayPosition={todayPosition}
-          dragStepDays={dragStepDays}
-          dayStep={dayStep}
-          dayMarkers={companyDayMarkers}
-          calendarSegments={calendarSegments}
-          months={months}
-          selectedYear={selectedYear}
-        />
-
         <div className="timeline-board">
           <div className="timeline-main">
+            <CompanyLoadCard
+              t={t}
+              companyLoad={companyLoad}
+              companyLoadScaleMax={companyLoadScaleMax}
+              todayPosition={todayPosition}
+              dragStepDays={dragStepDays}
+              dayStep={dayStep}
+              dayMarkers={companyDayMarkers}
+              calendarSegments={calendarSegments}
+              months={months}
+              selectedYear={selectedYear}
+            />
+
             <div className="timeline-rows">
               {sortedTimeline.length === 0 ? (
                 <p className="muted">{t.noProjectsForYear}</p>
