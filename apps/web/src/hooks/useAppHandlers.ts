@@ -3,14 +3,8 @@ import { api, ProjectDetail } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, MONTHLY_HOURS, TOAST_AUTO_DISMISS_MS, TOAST_ID_RANDOM_RANGE } from '../constants/app.constants';
 import { Employee, Toast } from '../pages/app-types';
 import { STANDARD_DAY_HOURS, isoToInputDate, resolveErrorMessage, roleColorOrDefault } from './app-helpers';
+import { monthlyToHourly, parseSalaryInput } from './salary.utils';
 import { AppState } from './useAppState';
-
-function parseSalaryInput(value: string): number | null {
-  const normalized = value.replace(',', '.').trim();
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return Math.round(parsed);
-}
 
 type Params = {
   state: AppState;
@@ -345,7 +339,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         );
 
         if (salaryMonthly !== null) {
-          const amountPerHour = Number((salaryMonthly / MONTHLY_HOURS).toFixed(2));
+          const amountPerHour = monthlyToHourly(salaryMonthly, MONTHLY_HOURS);
           const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
           if (existingRateId) {
             await api.updateCostRate(
@@ -386,7 +380,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
           await api.createCostRate(
             {
               employeeId: createdEmployee.id,
-              amountPerHour: Number((salaryMonthly / MONTHLY_HOURS).toFixed(2)),
+              amountPerHour: monthlyToHourly(salaryMonthly, MONTHLY_HOURS),
               currency: 'USD',
               validFrom: new Date().toISOString(),
             },
@@ -448,7 +442,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
         (currentSalary === undefined || Math.abs(currentSalary - normalizedSalary) >= 1);
 
       if (shouldUpdateSalary) {
-        const amountPerHour = Number(((normalizedSalary as number) / MONTHLY_HOURS).toFixed(2));
+        const amountPerHour = monthlyToHourly(normalizedSalary as number, MONTHLY_HOURS);
         const existingRateId = state.employeeActiveRateIdByEmployeeId[state.editEmployeeId];
         if (existingRateId) {
           await api.updateCostRate(

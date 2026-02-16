@@ -14,6 +14,7 @@
 - Проверка missing roles в Timeline переведена на выбранный шаблон проекта.
 - Добавлен чип выбранного шаблона в строке проекта.
 - Продолжен безопасный рефакторинг Timeline: date/marker утилиты вынесены в `apps/web/src/components/timeline/timeline-date.utils.ts`.
+- Продолжена декомпозиция web-hooks: salary parsing/conversion вынесены в `apps/web/src/hooks/salary.utils.ts`.
 
 ### P1 — техдолг и срочный рефакторинг
 1. [x] Убрать хардкод bootstrap-учеток из web state и API service:
