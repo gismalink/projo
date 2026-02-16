@@ -35,6 +35,7 @@ type ProjectTimelineItemProps = {
   displayTooltipText: string;
   formatTimelineDate: (value: string) => string;
   formatPlannedCost: (amount: number, currency: string) => string;
+  teamTemplates: Array<{ id: string; name: string }>;
   isDropTarget: boolean;
   onRowDragOver: (event: ReactDragEvent<HTMLDivElement>, rowId: string) => void;
   onRowDragLeave: (event: ReactDragEvent<HTMLDivElement>, rowId: string) => void;
@@ -43,7 +44,7 @@ type ProjectTimelineItemProps = {
   onToggleProject: (event: ReactMouseEvent, projectId: string) => void;
   onAutoSaveProjectMeta: (
     projectId: string,
-    payload: { code: string; name: string; startDate: string; endDate: string },
+    payload: { code: string; name: string; startDate: string; endDate: string; teamTemplateId?: string | null },
   ) => Promise<void>;
   onOpenAssignmentModal: (projectId: string, employeeId?: string) => void;
   onPlanBarHover: (event: ReactMouseEvent<HTMLElement>, row: ProjectTimelineRow) => void;
@@ -79,6 +80,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     displayTooltipText,
     formatTimelineDate,
     formatPlannedCost,
+    teamTemplates,
     isDropTarget,
     onRowDragOver,
     onRowDragLeave,
@@ -98,6 +100,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
   const [draftName, setDraftName] = useState(row.name);
   const [draftStartDate, setDraftStartDate] = useState(row.startDate.slice(0, 10));
   const [draftEndDate, setDraftEndDate] = useState(row.endDate.slice(0, 10));
+  const [draftTeamTemplateId, setDraftTeamTemplateId] = useState(detail?.teamTemplate?.id ?? '');
   const editPopoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -105,7 +108,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     setDraftName(row.name);
     setDraftStartDate(row.startDate.slice(0, 10));
     setDraftEndDate(row.endDate.slice(0, 10));
-  }, [row.code, row.endDate, row.name, row.startDate]);
+    setDraftTeamTemplateId(detail?.teamTemplate?.id ?? '');
+  }, [detail?.teamTemplate?.id, row.code, row.endDate, row.name, row.startDate]);
 
   useEffect(() => {
     if (!isProjectEditOpen) return;
@@ -135,11 +139,13 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     const baselineName = row.name.trim();
     const baselineStart = row.startDate.slice(0, 10);
     const baselineEnd = row.endDate.slice(0, 10);
+    const baselineTeamTemplateId = detail?.teamTemplate?.id ?? '';
     const unchanged =
       nextCode === baselineCode &&
       nextName === baselineName &&
       draftStartDate === baselineStart &&
-      draftEndDate === baselineEnd;
+      draftEndDate === baselineEnd &&
+      draftTeamTemplateId === baselineTeamTemplateId;
 
     if (unchanged) return;
 
@@ -149,11 +155,12 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
         name: nextName,
         startDate: new Date(draftStartDate).toISOString(),
         endDate: new Date(draftEndDate).toISOString(),
+        teamTemplateId: draftTeamTemplateId || null,
       });
     }, 420);
 
     return () => window.clearTimeout(timer);
-  }, [draftCode, draftEndDate, draftName, draftStartDate, isProjectEditOpen, onAutoSaveProjectMeta, row.code, row.endDate, row.id, row.name, row.startDate]);
+  }, [detail?.teamTemplate?.id, draftCode, draftEndDate, draftName, draftStartDate, draftTeamTemplateId, isProjectEditOpen, onAutoSaveProjectMeta, row.code, row.endDate, row.id, row.name, row.startDate]);
 
   return (
     <div
@@ -210,6 +217,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 <strong>
                   {row.code} · {row.name}
                 </strong>
+                {detail?.teamTemplate?.name ? <span className="timeline-template-chip">{detail.teamTemplate.name}</span> : null}
               </div>
 
               <div className="timeline-meta-trailing">
@@ -244,6 +252,18 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                         <input aria-label={t.name} value={draftName} onChange={(event) => setDraftName(event.target.value)} />
                         <input aria-label={t.start} type="date" value={draftStartDate} onChange={(event) => setDraftStartDate(event.target.value)} />
                         <input aria-label={t.end} type="date" value={draftEndDate} onChange={(event) => setDraftEndDate(event.target.value)} />
+                        <select
+                          aria-label={t.teamTemplate}
+                          value={draftTeamTemplateId}
+                          onChange={(event) => setDraftTeamTemplateId(event.target.value)}
+                        >
+                          <option value="">{t.noTeamTemplate}</option>
+                          {teamTemplates.map((template) => (
+                            <option key={template.id} value={template.id}>
+                              {template.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   ) : null}
