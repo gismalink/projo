@@ -264,52 +264,52 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
             <div className="timeline-kpi-row">
               <span className="timeline-kpi-item">
                 <Icon name="users" size={13} />
-                <span>{row.assignmentsCount}</span>
+                <span className="timeline-kpi-value">{row.assignmentsCount}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.assignmentsWord}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="clock" size={13} />
-                <span>{detail?.costSummary ? Number(detail.costSummary.totalPlannedHours).toFixed(1) : '—'}</span>
+                <span className="timeline-kpi-value">{detail?.costSummary ? Number(detail.costSummary.totalPlannedHours).toFixed(1) : '—'}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.plannedHoursLabel}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="check" size={13} />
-                <span>{(projectHourStats?.actualHours ?? 0).toFixed(1)}</span>
+                <span className="timeline-kpi-value">{(projectHourStats?.actualHours ?? 0).toFixed(1)}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.factHoursShort}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="x" size={13} />
-                <span>{(projectHourStats?.lostHours ?? 0).toFixed(1)}</span>
+                <span className="timeline-kpi-value">{(projectHourStats?.lostHours ?? 0).toFixed(1)}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.lostHoursShort}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="coins" size={13} />
-                <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency) : '—'}</span>
+                <span className="timeline-kpi-value">{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalPlannedCost), detail.costSummary.currency) : '—'}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.plannedCostLabel}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="check" size={13} />
-                <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency) : '—'}</span>
+                <span className="timeline-kpi-value">{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalActualCost), detail.costSummary.currency) : '—'}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.factCostLabel}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="alert" size={13} />
-                <span>{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency) : '—'}</span>
+                <span className="timeline-kpi-value">{detail?.costSummary ? formatPlannedCost(Number(detail.costSummary.totalLostCost), detail.costSummary.currency) : '—'}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.lostCostLabel}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="calendar" size={13} />
-                <span>{detail?.costSummary ? detail.costSummary.missingRateDays : 0}</span>
+                <span className="timeline-kpi-value">{detail?.costSummary ? detail.costSummary.missingRateDays : 0}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.missingRateDaysLabel}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="clock" size={13} />
-                <span>{detail?.costSummary ? Number(detail.costSummary.missingRateHours).toFixed(1) : '0.0'}</span>
+                <span className="timeline-kpi-value">{detail?.costSummary ? Number(detail.costSummary.missingRateHours).toFixed(1) : '0.0'}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.missingRateHoursLabel}</span>
               </span>
               <span className="timeline-kpi-item">
                 <Icon name="calendar" size={13} />
-                <span>{formatTimelineDate(row.startDate)}–{formatTimelineDate(row.endDate)}</span>
+                <span className="timeline-kpi-value">{formatTimelineDate(row.startDate)}–{formatTimelineDate(row.endDate)}</span>
                 <span className="timeline-inline-tooltip" role="tooltip">{t.start} {t.fromTo} {t.end}</span>
               </span>
             </div>

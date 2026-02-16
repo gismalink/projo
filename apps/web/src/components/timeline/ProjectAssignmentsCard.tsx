@@ -205,9 +205,25 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                   ) : null}
                   <strong>{assignment.employee.fullName}</strong>
                 </div>
-                <span>{Number(assignment.allocationPercent)}%</span>
-                <span>{t.factHoursShort}: {(actualHoursByAssignmentId.get(assignment.id)?.actualHours ?? 0).toFixed(1)}</span>
-                <span>{t.lostHoursShort}: {(actualHoursByAssignmentId.get(assignment.id)?.lostHours ?? 0).toFixed(1)}</span>
+
+                <div className="assignment-kpi-row">
+                  <span className="assignment-kpi-item">
+                    <Icon name="users" size={12} />
+                    <span className="assignment-kpi-value">{Number(assignment.allocationPercent)}%</span>
+                    <span className="timeline-inline-tooltip" role="tooltip">{t.allocationPercent}</span>
+                  </span>
+                  <span className="assignment-kpi-item">
+                    <Icon name="check" size={12} />
+                    <span className="assignment-kpi-value">{(actualHoursByAssignmentId.get(assignment.id)?.actualHours ?? 0).toFixed(1)}</span>
+                    <span className="timeline-inline-tooltip" role="tooltip">{t.factHoursShort}</span>
+                  </span>
+                  <span className="assignment-kpi-item">
+                    <Icon name="x" size={12} />
+                    <span className="assignment-kpi-value">{(actualHoursByAssignmentId.get(assignment.id)?.lostHours ?? 0).toFixed(1)}</span>
+                    <span className="timeline-inline-tooltip" role="tooltip">{t.lostHoursShort}</span>
+                  </span>
+                </div>
+
                 <span
                   role="button"
                   tabIndex={0}
@@ -298,6 +314,9 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                       className="assignment-bar"
                       style={{
                         ...assignmentStyle(startIso, endIso),
+                        ['--assignment-fill-height' as string]: `${Math.round(
+                          Math.max(8, Math.min(18, (Number(assignment.allocationPercent) / 100) * 18)),
+                        )}px`,
                         background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
                       }}
                       onMouseMove={(event) => handleAssignmentBarHover(event, detail.id, assignment.id)}
@@ -365,10 +384,14 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                 {(vacationsByEmployeeId.get(assignment.employeeId) ?? []).map((vacation, index) => (
                   <span
                     key={`${assignment.id}-vacation-${index}`}
-                    className="assignment-vacation-bar"
+                    className="timeline-inline-tooltip-anchor assignment-vacation-tooltip-anchor"
                     style={assignmentStyle(vacation.startDate, vacation.endDate)}
-                    title={`${isoToInputDate(vacation.startDate)} ${t.fromTo} ${isoToInputDate(vacation.endDate)}`}
-                  />
+                  >
+                    <span className="assignment-vacation-bar" style={{ left: '0', width: '100%' }} />
+                    <span className="timeline-inline-tooltip" role="tooltip">
+                      {isoToInputDate(vacation.startDate)} {t.fromTo} {isoToInputDate(vacation.endDate)}
+                    </span>
+                  </span>
                 ))}
               </div>
             </div>
