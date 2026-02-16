@@ -18,6 +18,12 @@ async function request(path, options = {}) {
   return { response, payload };
 }
 
+function shiftIsoByDays(iso, days) {
+  const date = new Date(iso);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString();
+}
+
 test('API e2e smoke: auth + timeline + calendar', async () => {
   const health = await request('/health');
   assert.equal(health.response.status, 200, 'health endpoint should return 200');
@@ -183,6 +189,128 @@ test('API e2e smoke: project member + assignment consistency', async () => {
     assert.ok(
       projectDetail.payload.assignments.some((assignment) => assignment.id === createdAssignmentId),
       'project detail should include created assignment',
+    );
+  } finally {
+    if (createdAssignmentId) {
+      await request(`/assignments/${createdAssignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (createdProjectId) {
+      await request(`/projects/${createdProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+  }
+});
+
+test('API e2e smoke: project shift/resize keeps assignment flow consistent', async () => {
+  const login = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  assert.equal(login.response.status, 201, 'login endpoint should return 201');
+  assert.equal(typeof login.payload?.accessToken, 'string', 'login should return accessToken');
+
+  const authHeaders = {
+    Authorization: `Bearer ${login.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const employees = await request('/employees', { headers: authHeaders });
+  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
+  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
+  assert.ok(employees.payload.length > 0, 'employees payload should not be empty');
+
+  const employee = employees.payload[0];
+  const projectCode = `E2E-SHIFT-${Date.now()}`;
+
+  const projectStart = `${year}-04-01T00:00:00.000Z`;
+  const projectEnd = `${year}-04-30T00:00:00.000Z`;
+  const assignmentStart = `${year}-04-07T00:00:00.000Z`;
+  const assignmentEnd = `${year}-04-18T00:00:00.000Z`;
+
+  let createdProjectId = null;
+  let createdAssignmentId = null;
+
+  try {
+    const createdProject = await request('/projects', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        code: projectCode,
+        name: `Shift ${projectCode}`,
+        startDate: projectStart,
+        endDate: projectEnd,
+        status: 'planned',
+        priority: 2,
+        links: [],
+      }),
+    });
+    assert.equal(createdProject.response.status, 201, 'project create endpoint should return 201');
+    createdProjectId = createdProject.payload.id;
+
+    const createdAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate: assignmentStart,
+        assignmentEndDate: assignmentEnd,
+        allocationPercent: 75,
+      }),
+    });
+    assert.equal(createdAssignment.response.status, 201, 'assignment create endpoint should return 201');
+    createdAssignmentId = createdAssignment.payload.id;
+
+    const shiftDays = 7;
+    const nextProjectStart = shiftIsoByDays(projectStart, shiftDays);
+    const nextProjectEnd = shiftIsoByDays(projectEnd, shiftDays + 3);
+    const nextAssignmentStart = shiftIsoByDays(assignmentStart, shiftDays);
+    const nextAssignmentEnd = shiftIsoByDays(assignmentEnd, shiftDays);
+
+    const updateProject = await request(`/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        startDate: nextProjectStart,
+        endDate: nextProjectEnd,
+      }),
+    });
+    assert.equal(updateProject.response.status, 200, 'project update endpoint should return 200');
+
+    const updateAssignment = await request(`/assignments/${createdAssignmentId}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        assignmentStartDate: nextAssignmentStart,
+        assignmentEndDate: nextAssignmentEnd,
+      }),
+    });
+    assert.equal(updateAssignment.response.status, 200, 'assignment update endpoint should return 200');
+
+    const projectDetail = await request(`/projects/${createdProjectId}`, { headers: authHeaders });
+    assert.equal(projectDetail.response.status, 200, 'project detail endpoint should return 200');
+
+    const updatedAssignment = (projectDetail.payload?.assignments ?? []).find(
+      (assignment) => assignment.id === createdAssignmentId,
+    );
+    assert.ok(updatedAssignment, 'project detail should include updated assignment');
+    assert.equal(
+      new Date(updatedAssignment.assignmentStartDate).toISOString(),
+      new Date(nextAssignmentStart).toISOString(),
+      'assignment start date should match shifted value',
+    );
+    assert.equal(
+      new Date(updatedAssignment.assignmentEndDate).toISOString(),
+      new Date(nextAssignmentEnd).toISOString(),
+      'assignment end date should match shifted value',
     );
   } finally {
     if (createdAssignmentId) {

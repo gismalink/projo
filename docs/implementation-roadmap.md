@@ -34,9 +34,11 @@
    - project member + assignment consistency.
    - сделано частично: расширен `scripts/e2e-api-smoke.test.mjs` сценарием `auth + project member + assignment consistency`,
      плюс проверки валидаций `duplicate assignment -> 409` и `invalid date range -> 400`.
+   - добавлен smoke-сценарий `project shift/resize -> assignment consistency` (через последовательные `PATCH /projects/:id` + `PATCH /assignments/:id` и проверку `GET /projects/:id`).
 2. [~] Укрепить smoke-check для CI (минимальный сценарий создания проекта и назначения).
    - добавлен runtime-smoke поток с созданием проекта, добавлением member, созданием assignment и проверкой консистентности в `GET /projects/:id`.
    - добавлены негативные проверки по error-кодам для конфликтов/валидации дат в assignments.
+   - добавлен runtime-smoke поток для project shift/resize с валидацией целостности assignment-дат после обновлений.
 
 ### P3 — консолидация модели планирования
 1. Зафиксировать и документировать жизненный цикл `ProjectMember` vs `ProjectAssignment`.
