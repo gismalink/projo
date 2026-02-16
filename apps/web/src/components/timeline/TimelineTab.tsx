@@ -659,7 +659,6 @@ export function TimelineTab(props: TimelineTabProps) {
     >();
     for (const employee of employees) {
       const annualUtilization = annualUtilizationByEmployeeId.get(employee.id) ?? 0;
-      if (annualUtilization >= 100) continue;
       const departmentName = employee.department?.name ?? t.unassignedDepartment;
       const row = {
         id: employee.id,
