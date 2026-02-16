@@ -772,6 +772,70 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignmentsByProjectId, calendarDayByIso, toUtcDay, vacationsByEmployeeId]);
 
+  const projectErrorsById = useMemo(() => {
+    const result = new Map<string, Array<{ key: string; message: string }>>();
+
+    const hasOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => startA <= endB && endA >= startB;
+
+    for (const row of sortedTimeline) {
+      const issues: Array<{ key: string; message: string }> = [];
+      const detail = projectDetails[row.id];
+
+      if (detail) {
+        const vacationOverlapEmployees = new Set<string>();
+
+        for (const assignment of detail.assignments) {
+          const assignmentStart = toUtcDay(new Date(assignment.assignmentStartDate));
+          const assignmentEnd = toUtcDay(new Date(assignment.assignmentEndDate));
+          const employeeVacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
+
+          for (const vacation of employeeVacations) {
+            const vacationStart = toUtcDay(new Date(vacation.startDate));
+            const vacationEnd = toUtcDay(new Date(vacation.endDate));
+            if (hasOverlap(assignmentStart, assignmentEnd, vacationStart, vacationEnd)) {
+              vacationOverlapEmployees.add(assignment.employeeId);
+              break;
+            }
+          }
+        }
+
+        if (vacationOverlapEmployees.size > 0) {
+          issues.push({
+            key: 'vacations',
+            message: `${t.timelineErrorVacations}: ${vacationOverlapEmployees.size}`,
+          });
+        }
+
+        if (detail.costSummary && detail.costSummary.missingRateDays > 0) {
+          issues.push({
+            key: 'missing-rates',
+            message: `${t.timelineErrorMissingRates}: ${detail.costSummary.missingRateDays} / ${Number(detail.costSummary.missingRateHours).toFixed(1)}`,
+          });
+        }
+      }
+
+      const projectFact = projectFactByProjectId.get(row.id);
+      if (projectFact) {
+        const plannedStart = toUtcDay(new Date(row.startDate));
+        const plannedEnd = toUtcDay(new Date(row.endDate));
+        const factStart = toUtcDay(new Date(projectFact.startIso));
+        const factEnd = toUtcDay(new Date(projectFact.endIso));
+        if (factStart < plannedStart || factEnd > plannedEnd) {
+          issues.push({
+            key: 'fact-range',
+            message: `${t.timelineErrorFactRange}: ${factStart.toISOString().slice(0, 10)} → ${factEnd.toISOString().slice(0, 10)}`,
+          });
+        }
+      }
+
+      if (issues.length > 0) {
+        result.set(row.id, issues);
+      }
+    }
+
+    return result;
+  }, [projectDetails, projectFactByProjectId, sortedTimeline, t.timelineErrorFactRange, t.timelineErrorMissingRates, t.timelineErrorVacations, toUtcDay, vacationsByEmployeeId]);
+
   const {
     dragState,
     pendingPlanPreview,
@@ -940,6 +1004,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       todayPosition={todayPosition}
                       projectFact={projectFactByProjectId.get(row.id) ?? null}
                       projectHourStats={projectHourStatsById.get(row.id)}
+                      projectErrors={projectErrorsById.get(row.id)}
                       displayTooltipMode={displayTooltipMode}
                       tooltipMode={tooltipMode}
                       displayTooltipText={displayTooltipText}

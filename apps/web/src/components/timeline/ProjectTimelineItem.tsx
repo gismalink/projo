@@ -17,6 +17,7 @@ type ProjectTimelineItemProps = {
   todayPosition: string | null;
   projectFact: { style: { left: string; width: string }; startIso: string; endIso: string } | null;
   projectHourStats?: { actualHours: number; lostHours: number };
+  projectErrors?: Array<{ key: string; message: string }>;
   displayTooltipMode: 'move' | 'resize-start' | 'resize-end';
   tooltipMode: 'move' | 'resize-start' | 'resize-end' | null;
   displayTooltipText: string;
@@ -59,6 +60,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     todayPosition,
     projectFact,
     projectHourStats,
+    projectErrors,
     displayTooltipMode,
     tooltipMode,
     displayTooltipText,
@@ -244,6 +246,18 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 <span>{formatTimelineDate(row.startDate)}–{formatTimelineDate(row.endDate)}</span>
               </span>
             </div>
+            {projectErrors && projectErrors.length > 0 ? (
+              <div className="timeline-error-row" aria-label={t.timelineErrorsLabel}>
+                <span className="timeline-error-title">{t.timelineErrorsLabel}</span>
+                <div className="timeline-error-list">
+                  {projectErrors.map((item) => (
+                    <span key={item.key} className="timeline-error-chip" title={item.message} aria-label={item.message}>
+                      <Icon name="alert" size={12} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="timeline-meta-actions" ref={editPopoverRef}>
             <button
