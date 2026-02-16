@@ -13,6 +13,7 @@
 - Добавлена привязка шаблона к проекту (create/edit).
 - Проверка missing roles в Timeline переведена на выбранный шаблон проекта.
 - Добавлен чип выбранного шаблона в строке проекта.
+- Продолжен безопасный рефакторинг Timeline: date/marker утилиты вынесены в `apps/web/src/components/timeline/timeline-date.utils.ts`.
 
 ### P1 — техдолг и срочный рефакторинг
 1. [x] Убрать хардкод bootstrap-учеток из web state и API service:

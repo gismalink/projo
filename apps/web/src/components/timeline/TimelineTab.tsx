@@ -13,6 +13,7 @@ import {
   MS_PER_DAY,
   TIMELINE_FALLBACK_COLOR_HEX,
 } from './timeline.constants';
+import { buildCalendarSegments, buildDayMarkers, diffDays, getTodayPosition, shiftDateByDays, toUtcDay } from './timeline-date.utils';
 import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
@@ -176,73 +177,26 @@ export function TimelineTab(props: TimelineTabProps) {
     }
   };
 
-  const dayMarkers = [];
-  for (let dayOffset = 0; dayOffset < totalDays; dayOffset += dayMarkerStep) {
-    const date = new Date(yearStart);
-    date.setUTCDate(date.getUTCDate() + dayOffset);
-    const isoDate = date.toISOString().slice(0, 10);
-    const dayInfo = calendarDayByIso.get(isoDate);
-    dayMarkers.push({
-      key: `${selectedYear}-${dayOffset}`,
-      left: `${((dayOffset / totalDays) * 100).toFixed(2)}%`,
-      label: String(date.getUTCDate()),
-      title: `${isoDate} · ${dayKindLabel(dayInfo)}`,
-    });
-  }
+  const dayMarkers = buildDayMarkers({
+    selectedYear,
+    yearStart,
+    totalDays,
+    dayMarkerStep,
+    calendarDayByIso,
+    dayKindLabel,
+  });
 
-  const calendarSegments = useMemo(() => {
-    const segments: Array<{ key: string; left: string; width: string; kind: 'weekend' | 'holiday' }> = [];
-    const widthPercent = 100 / totalDays;
-    let lastSegmentEndDayOffset = -2;
+  const calendarSegments = useMemo(
+    () =>
+      buildCalendarSegments({
+        yearStart,
+        totalDays,
+        calendarDayByIso,
+      }),
+    [calendarDayByIso, totalDays, yearStart],
+  );
 
-    for (let dayOffset = 0; dayOffset < totalDays; dayOffset += 1) {
-      const date = new Date(yearStart);
-      date.setUTCDate(date.getUTCDate() + dayOffset);
-      const isoDate = date.toISOString().slice(0, 10);
-      const dayInfo = calendarDayByIso.get(isoDate);
-      if (!dayInfo) {
-        lastSegmentEndDayOffset = -2;
-        continue;
-      }
-      const kind: 'weekend' | 'holiday' | null = dayInfo.isHoliday ? 'holiday' : dayInfo.isWeekend ? 'weekend' : null;
-      if (!kind) {
-        lastSegmentEndDayOffset = -2;
-        continue;
-      }
-
-      const leftPercent = (dayOffset / totalDays) * 100;
-      const prev = segments[segments.length - 1];
-      if (!prev || prev.kind !== kind || lastSegmentEndDayOffset !== dayOffset - 1) {
-        segments.push({
-          key: `${isoDate}-${kind}`,
-          left: `${leftPercent.toFixed(6)}%`,
-          width: `${widthPercent.toFixed(6)}%`,
-          kind,
-        });
-        lastSegmentEndDayOffset = dayOffset;
-        continue;
-      }
-
-      const prevWidth = Number(prev.width.replace('%', ''));
-      prev.width = `${(prevWidth + widthPercent).toFixed(6)}%`;
-      lastSegmentEndDayOffset = dayOffset;
-    }
-
-    return segments;
-  }, [calendarDayByIso, totalDays, yearStart]);
-
-  const now = new Date();
-  const isCurrentYear = now.getFullYear() === selectedYear;
-  const todayPosition = isCurrentYear
-    ? (() => {
-        const start = new Date(Date.UTC(selectedYear, 0, 1));
-        const end = new Date(Date.UTC(selectedYear, 11, 31));
-        const total = end.getTime() - start.getTime();
-        const current = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const fromStart = current.getTime() - start.getTime();
-        return `${Math.max(0, Math.min(100, (fromStart / total) * 100)).toFixed(2)}%`;
-      })()
-    : null;
+  const todayPosition = getTodayPosition(selectedYear);
 
   const companyLoad = useMemo(() => {
     const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -324,20 +278,8 @@ export function TimelineTab(props: TimelineTabProps) {
   const companyLoadScaleMax = Math.max(100, Math.ceil(companyLoad.max / 25) * 25);
   const companyDayMarkers = dragStepDays === 30 ? [] : dayMarkers;
 
-  const toUtcDay = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
   const yearStartDay = new Date(Date.UTC(selectedYear, 0, 1));
   const yearEndDay = new Date(Date.UTC(selectedYear, 11, 31));
-
-  const shiftDateByDays = (value: Date, days: number) => {
-    const next = toUtcDay(value);
-    next.setUTCDate(next.getUTCDate() + days);
-    return next;
-  };
-
-  const diffDays = (from: Date, to: Date) => {
-    const diff = toUtcDay(to).getTime() - toUtcDay(from).getTime();
-    return Math.round(diff / MS_PER_DAY);
-  };
 
   const toApiDate = (value: Date) => toUtcDay(value).toISOString();
   const tooltipDateFormatter = useMemo(
