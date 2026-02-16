@@ -13,12 +13,29 @@ export class ApiError extends Error {
 
 export type LoginResponse = {
   accessToken: string;
-  user: {
-    id: string;
-    email: string;
-    fullName: string;
-    role: string;
-  };
+  user: AuthUser;
+};
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+};
+
+export type RegisterPayload = {
+  email: string;
+  fullName: string;
+  password: string;
+};
+
+export type UpdateMePayload = {
+  fullName: string;
+};
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
 };
 
 export type ProjectTimelineRow = {
@@ -359,6 +376,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  register: (payload: RegisterPayload) =>
+    request<LoginResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getMe: (token: string) => request<AuthUser>('/auth/me', {}, token),
+  updateMe: (payload: UpdateMePayload, token: string) =>
+    request<AuthUser>('/auth/me', { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  changePassword: (payload: ChangePasswordPayload, token: string) =>
+    request<{ success: true }>('/auth/change-password', { method: 'POST', body: JSON.stringify(payload) }, token),
+  logout: (token: string) => request<{ success: true }>('/auth/logout', { method: 'POST' }, token),
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
   getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),

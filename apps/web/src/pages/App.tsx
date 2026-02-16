@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { api, GradeItem } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
@@ -20,6 +20,15 @@ import { Lang } from './app-types';
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerFullName, setRegisterFullName] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState('');
+  const [accountFullNameDraft, setAccountFullNameDraft] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const t = TEXT[lang];
   const locale: 'ru-RU' | 'en-US' = lang === 'ru' ? 'ru-RU' : 'en-US';
 
@@ -51,6 +60,43 @@ export function App() {
     };
   }, [app.token]);
 
+  useEffect(() => {
+    if (!app.token) return;
+    setAccountFullNameDraft(app.currentUserFullName || '');
+  }, [app.currentUserFullName, app.token]);
+
+  const handleRegisterSubmit = async (event: FormEvent) => {
+    if (registerPassword !== registerPasswordConfirm) {
+      event.preventDefault();
+      app.setToasts((prev) => [...prev, { id: Date.now(), message: t.uiPasswordsDoNotMatch }]);
+      return;
+    }
+
+    await app.handleRegister(event, {
+      email: registerEmail,
+      fullName: registerFullName,
+      password: registerPassword,
+    });
+  };
+
+  const handleUpdateProfileSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    await app.handleUpdateMyProfile(accountFullNameDraft);
+  };
+
+  const handleChangePasswordSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (newPassword !== newPasswordConfirm) {
+      app.setToasts((prev) => [...prev, { id: Date.now(), message: t.uiPasswordsDoNotMatch }]);
+      return;
+    }
+
+    await app.handleChangeMyPassword(currentPassword, newPassword);
+    setCurrentPassword('');
+    setNewPassword('');
+    setNewPasswordConfirm('');
+  };
+
   return (
     <main className="container">
       <div className="section-header">
@@ -68,20 +114,91 @@ export function App() {
       </div>
 
       {!app.token ? (
-        <form onSubmit={app.handleLogin} className="card">
-          <h2>{t.login}</h2>
-          <label>
-            {t.email}
-            <input value={app.email} onChange={(e) => app.setEmail(e.target.value)} />
-          </label>
-          <label>
-            {t.password}
-            <input type="password" value={app.password} onChange={(e) => app.setPassword(e.target.value)} />
-          </label>
-          <button type="submit">{t.signIn}</button>
-        </form>
+        <article className="card">
+          <div className="tabs" style={{ marginBottom: 12 }}>
+            <button type="button" className={authMode === 'login' ? 'tab active' : 'tab'} onClick={() => setAuthMode('login')}>
+              {t.login}
+            </button>
+            <button type="button" className={authMode === 'register' ? 'tab active' : 'tab'} onClick={() => setAuthMode('register')}>
+              {t.register}
+            </button>
+          </div>
+
+          {authMode === 'login' ? (
+            <form onSubmit={app.handleLogin} className="timeline-form">
+              <h2>{t.login}</h2>
+              <label>
+                {t.email}
+                <input value={app.email} onChange={(e) => app.setEmail(e.target.value)} />
+              </label>
+              <label>
+                {t.password}
+                <input type="password" value={app.password} onChange={(e) => app.setPassword(e.target.value)} />
+              </label>
+              <button type="submit">{t.signIn}</button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegisterSubmit} className="timeline-form">
+              <h2>{t.register}</h2>
+              <label>
+                {t.fullName}
+                <input value={registerFullName} onChange={(e) => setRegisterFullName(e.target.value)} />
+              </label>
+              <label>
+                {t.email}
+                <input value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} />
+              </label>
+              <label>
+                {t.password}
+                <input type="password" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} />
+              </label>
+              <label>
+                {t.confirmPassword}
+                <input type="password" value={registerPasswordConfirm} onChange={(e) => setRegisterPasswordConfirm(e.target.value)} />
+              </label>
+              <button type="submit">{t.createAccount}</button>
+            </form>
+          )}
+        </article>
       ) : (
         <>
+          <article className="card" style={{ marginBottom: 12 }}>
+            <div className="section-header">
+              <h3>{t.account}</h3>
+              <button type="button" className="ghost-btn" onClick={() => void app.handleLogout()}>
+                {t.logout}
+              </button>
+            </div>
+            <div className="timeline-form">
+              <label>
+                {t.email}
+                <input value={app.currentUserEmail} readOnly />
+              </label>
+              <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
+                <label>
+                  {t.fullName}
+                  <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
+                </label>
+                <button type="submit">{t.saveProfile}</button>
+              </form>
+              <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
+                <label>
+                  {t.currentPassword}
+                  <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                </label>
+                <label>
+                  {t.newPassword}
+                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                </label>
+                <label>
+                  {t.confirmPassword}
+                  <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
+                </label>
+                <button type="submit">{t.changePassword}</button>
+              </form>
+            </div>
+          </article>
+
           <div className="tabs">
             <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
               {t.tabTimeline}

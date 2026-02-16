@@ -30,6 +30,9 @@ export function useAppState() {
   const [password, setPassword] = useState(WEB_DEFAULT_LOGIN_PASSWORD);
   const [token, setToken] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
+  const [currentUserFullName, setCurrentUserFullName] = useState<string>('');
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -118,6 +121,9 @@ export function useAppState() {
     password,
     token,
     currentUserRole,
+    currentUserId,
+    currentUserEmail,
+    currentUserFullName,
     activeTab,
     selectedYear,
     toasts,
@@ -194,6 +200,9 @@ export function useAppState() {
     setPassword,
     setToken,
     setCurrentUserRole,
+    setCurrentUserId,
+    setCurrentUserEmail,
+    setCurrentUserFullName,
     setActiveTab,
     setSelectedYear,
     setToasts,

@@ -7,10 +7,15 @@ import { PrismaService } from '../common/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
   async ensureBootstrapAdmin() {
-    const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
+    const bootstrapEmailRaw = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim();
     const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD;
     const legacyBootstrapPassword = process.env.LEGACY_BOOTSTRAP_ADMIN_PASSWORD;
+    const bootstrapEmail = bootstrapEmailRaw ? this.normalizeEmail(bootstrapEmailRaw) : '';
 
     if (!bootstrapEmail || !bootstrapPassword) {
       return null;
@@ -46,6 +51,37 @@ export class UsersService {
   }
 
   findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+    return this.prisma.user.findUnique({ where: { email: this.normalizeEmail(email) } });
+  }
+
+  findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  async createUser(payload: { email: string; fullName: string; passwordHash: string; appRole?: AppRole }) {
+    return this.prisma.user.create({
+      data: {
+        email: this.normalizeEmail(payload.email),
+        fullName: payload.fullName.trim(),
+        passwordHash: payload.passwordHash,
+        appRole: payload.appRole ?? AppRole.VIEWER,
+      },
+    });
+  }
+
+  async updateProfile(userId: string, payload: { fullName: string }) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        fullName: payload.fullName.trim(),
+      },
+    });
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
   }
 }

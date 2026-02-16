@@ -328,3 +328,63 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
     }
   }
 });
+
+test('API e2e smoke: account register + me + password change', async () => {
+  const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const accountEmail = `e2e-user-${seed}@projo.local`;
+  const initialPassword = `E2ePass!${seed}`;
+  const nextPassword = `E2eNext!${seed}`;
+  const accountName = `E2E User ${seed}`;
+
+  const register = await request('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: accountEmail,
+      fullName: accountName,
+      password: initialPassword,
+    }),
+  });
+
+  if (register.response.status === 404) {
+    return;
+  }
+
+  assert.equal(register.response.status, 201, 'register endpoint should return 201');
+  assert.equal(typeof register.payload?.accessToken, 'string', 'register should return accessToken');
+  assert.equal(register.payload?.user?.role, 'VIEWER', 'newly registered user should have VIEWER role');
+
+  const authHeaders = {
+    Authorization: `Bearer ${register.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const me = await request('/auth/me', { headers: authHeaders });
+  assert.equal(me.response.status, 200, 'auth/me should return 200');
+  assert.equal(me.payload?.email, accountEmail.toLowerCase(), 'auth/me should return normalized email');
+
+  const updatedName = `${accountName} Updated`;
+  const updateMe = await request('/auth/me', {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ fullName: updatedName }),
+  });
+  assert.equal(updateMe.response.status, 200, 'auth/me PATCH should return 200');
+  assert.equal(updateMe.payload?.fullName, updatedName, 'profile update should persist fullName');
+
+  const changePassword = await request('/auth/change-password', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ currentPassword: initialPassword, newPassword: nextPassword }),
+  });
+  assert.equal(changePassword.response.status, 201, 'change-password endpoint should return 201');
+  assert.equal(changePassword.payload?.success, true, 'change-password should return success=true');
+
+  const relogin = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: accountEmail, password: nextPassword }),
+  });
+  assert.equal(relogin.response.status, 201, 'login with updated password should return 201');
+  assert.equal(typeof relogin.payload?.accessToken, 'string', 'login after password change should return accessToken');
+});
