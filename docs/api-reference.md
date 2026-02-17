@@ -289,6 +289,10 @@
 - `ERR_ASSIGNMENT_DATE_RANGE_INVALID` — конец assignment раньше начала.
 - `ERR_PROJECT_DATE_RANGE_INVALID` — конец проекта раньше начала.
 
+### Текущие ограничения (open gaps)
+- Отдельная backend-проверка `assignment` в пределах дат проекта пока не включена во всех ветках create/update.
+- Коды `ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE`, `ERR_ASSIGNMENT_OVERLAPS_VACATION`, `ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED` зарезервированы в `error-codes`, но не задействованы как единое правило во всех assignment-flow.
+
 ## Timeline
 
 ### `GET /api/timeline/year?year=YYYY`

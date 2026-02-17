@@ -59,18 +59,24 @@
 - [x] Обновить описание инвариантов в `docs/architecture-overview.md` и `docs/product-spec.md`.
 
 ##### 2) Backend API и валидации
-- [ ] Проверить и выровнять контракты для потоков:
-   - [ ] add/remove project member,
-   - [ ] create/update/delete assignment,
-   - [ ] чтение project details для timeline.
+- [x] Проверить и выровнять контракты для потоков:
+   - [x] add/remove project member,
+   - [x] create/update/delete assignment,
+   - [x] чтение project details для timeline.
 - [ ] Добавить/уточнить валидации:
    - [ ] запрет assignment вне диапазона проекта,
-   - [ ] запрет assignment для сотрудника вне member-пула (или авто-добавление по зафиксированному правилу),
-   - [ ] запрет конфликтных дублей,
+   - [x] запрет assignment для сотрудника вне member-пула (или авто-добавление по зафиксированному правилу),
+   - [x] запрет конфликтных дублей,
    - [ ] корректная обработка пересечений и граничных дат.
 - [ ] Выровнять коды ошибок в `apps/api/src/common/error-codes.ts` под все ветки валидации.
 - [ ] Проверить DTO/сервисы на согласованность полей и nullability.
 - [ ] Проверить, что `ProjectDetail` всегда возвращает полный набор полей, нужных UI (включая role/grade/status, если используются в timeline).
+
+  Текущее состояние после audit:
+  - assignment CRUD валидирует базовый диапазон дат (`start <= end`) и уникальность пары `projectId + employeeId`;
+  - assignment CRUD автоматически восстанавливает membership (`ProjectMember`) при create/update;
+  - в API пока не реализована отдельная валидация `assignment` в пределах дат проекта;
+  - в `ProjectDetail` уже есть `role` и `grade`, поле `status` для assignment-employee в response сейчас не отдается.
 
 ##### 3) База данных и миграции
 - [ ] Проверить, что Prisma schema отражает целевые ограничения:
