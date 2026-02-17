@@ -4,6 +4,7 @@ import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
+import { AccountModal } from '../components/modals/AccountModal';
 import { EmployeeCreateModal } from '../components/modals/EmployeeCreateModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
@@ -864,55 +865,24 @@ export function App() {
             </>
           ) : null}
 
-          {isAccountModalOpen ? (
-            <div className="modal-backdrop">
-              <article className="modal-card auth-modal">
-                <div className="section-header">
-                  <h3>{t.account}</h3>
-                  <div className="lang-toggle">
-                    <button type="button" className="ghost-btn" onClick={() => setIsAccountModalOpen(false)}>
-                      {t.close}
-                    </button>
-                    <button type="button" className="ghost-btn" onClick={() => void handleLogoutClick()}>
-                      {t.logout}
-                    </button>
-                  </div>
-                </div>
-                <div className="timeline-form">
-                  <label>
-                    <span className="field-label">{t.email}</span>
-                    <input value={app.currentUserEmail} readOnly />
-                  </label>
-                  <label>
-                    <span className="field-label">{t.workspace}</span>
-                    <input value={app.currentWorkspaceId || '-'} readOnly />
-                  </label>
-                  <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
-                    <label>
-                      <span className="field-label required">{t.fullName}</span>
-                      <input value={accountFullNameDraft} placeholder={t.fullName} required onChange={(e) => setAccountFullNameDraft(e.target.value)} />
-                    </label>
-                    <button type="submit">{t.saveProfile}</button>
-                  </form>
-                  <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
-                    <label>
-                      <span className="field-label required">{t.currentPassword}</span>
-                      <input type="password" placeholder="••••••••" value={currentPassword} required onChange={(e) => setCurrentPassword(e.target.value)} />
-                    </label>
-                    <label>
-                      <span className="field-label required">{t.newPassword}</span>
-                      <input type="password" placeholder="••••••••" value={newPassword} required onChange={(e) => setNewPassword(e.target.value)} />
-                    </label>
-                    <label>
-                      <span className="field-label required">{t.confirmPassword}</span>
-                      <input type="password" placeholder="••••••••" value={newPasswordConfirm} required onChange={(e) => setNewPasswordConfirm(e.target.value)} />
-                    </label>
-                    <button type="submit">{t.changePassword}</button>
-                  </form>
-                </div>
-              </article>
-            </div>
-          ) : null}
+          <AccountModal
+            isOpen={isAccountModalOpen}
+            t={t}
+            currentUserEmail={app.currentUserEmail}
+            currentWorkspaceId={app.currentWorkspaceId}
+            accountFullNameDraft={accountFullNameDraft}
+            setAccountFullNameDraft={setAccountFullNameDraft}
+            currentPassword={currentPassword}
+            setCurrentPassword={setCurrentPassword}
+            newPassword={newPassword}
+            setNewPassword={setNewPassword}
+            newPasswordConfirm={newPasswordConfirm}
+            setNewPasswordConfirm={setNewPasswordConfirm}
+            onClose={() => setIsAccountModalOpen(false)}
+            onLogout={handleLogoutClick}
+            onUpdateProfileSubmit={handleUpdateProfileSubmit}
+            onChangePasswordSubmit={handleChangePasswordSubmit}
+          />
 
         </>
       )}
