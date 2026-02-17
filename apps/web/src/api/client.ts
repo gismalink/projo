@@ -246,6 +246,13 @@ export type CreateAssignmentPayload = {
   allocationPercent?: number;
   plannedHoursPerDay?: number;
   roleOnProject?: string;
+  loadProfile?: {
+    mode: 'flat' | 'curve';
+    points?: Array<{
+      date: string;
+      value: number;
+    }>;
+  };
 };
 
 export type UpdateAssignmentPayload = Partial<CreateAssignmentPayload>;
@@ -280,6 +287,13 @@ export type AssignmentItem = {
   assignmentStartDate: string;
   assignmentEndDate: string;
   allocationPercent: string | number;
+  loadProfile?: {
+    mode: 'flat' | 'curve';
+    points?: Array<{
+      date: string;
+      value: number;
+    }>;
+  } | null;
   plannedHoursPerDay: string | number | null;
   roleOnProject: string | null;
 };
@@ -326,6 +340,13 @@ export type ProjectDetail = {
     assignmentStartDate: string;
     assignmentEndDate: string;
     allocationPercent: string | number;
+    loadProfile?: {
+      mode: 'flat' | 'curve';
+      points?: Array<{
+        date: string;
+        value: number;
+      }>;
+    } | null;
     plannedHoursPerDay: string | number | null;
     roleOnProject: string | null;
     employee: {

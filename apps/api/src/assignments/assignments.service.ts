@@ -2,11 +2,165 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import { AssignmentLoadProfileDto, AssignmentLoadProfileModeValue } from './dto/load-profile.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+
+type AssignmentLoadProfilePoint = {
+  date: string;
+  value: number;
+};
+
+type AssignmentLoadProfile = {
+  mode: AssignmentLoadProfileModeValue;
+  points?: AssignmentLoadProfilePoint[];
+};
 
 @Injectable()
 export class AssignmentsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private ensureValidLoadProfilePointDate(pointDate: string): Date {
+    const parsed = new Date(pointDate);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+    }
+    return parsed;
+  }
+
+  private normalizeLoadProfile(
+    loadProfile: AssignmentLoadProfileDto | undefined,
+    assignmentStartDate: Date,
+    assignmentEndDate: Date,
+  ): AssignmentLoadProfile | undefined {
+    if (loadProfile === undefined) {
+      return undefined;
+    }
+
+    if (loadProfile.mode === 'flat') {
+      return { mode: 'flat' };
+    }
+
+    const points = loadProfile.points ?? [];
+    if (points.length < 2) {
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+    }
+
+    const normalizedPoints: AssignmentLoadProfilePoint[] = [];
+    let previousTimestamp = Number.NEGATIVE_INFINITY;
+    for (const point of points) {
+      const pointDate = this.ensureValidLoadProfilePointDate(point.date);
+      const pointTimestamp = pointDate.getTime();
+      if (pointTimestamp < assignmentStartDate.getTime() || pointTimestamp > assignmentEndDate.getTime()) {
+        throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+      }
+      if (pointTimestamp <= previousTimestamp) {
+        throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+      }
+
+      previousTimestamp = pointTimestamp;
+      normalizedPoints.push({
+        date: pointDate.toISOString(),
+        value: Number(point.value),
+      });
+    }
+
+    if (normalizedPoints[0]?.date !== assignmentStartDate.toISOString()) {
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+    }
+    if (normalizedPoints[normalizedPoints.length - 1]?.date !== assignmentEndDate.toISOString()) {
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+    }
+
+    return {
+      mode: 'curve',
+      points: normalizedPoints,
+    };
+  }
+
+  private readStoredLoadProfile(loadProfile: unknown): AssignmentLoadProfile | null {
+    if (!loadProfile || typeof loadProfile !== 'object') {
+      return null;
+    }
+
+    const profile = loadProfile as {
+      mode?: unknown;
+      points?: unknown;
+    };
+
+    if (profile.mode === 'flat') {
+      return { mode: 'flat' };
+    }
+
+    if (profile.mode !== 'curve' || !Array.isArray(profile.points)) {
+      return null;
+    }
+
+    const points = profile.points
+      .map((point) => {
+        if (!point || typeof point !== 'object') return null;
+        const candidate = point as { date?: unknown; value?: unknown };
+        if (typeof candidate.date !== 'string' || typeof candidate.value !== 'number') return null;
+        return {
+          date: candidate.date,
+          value: candidate.value,
+        };
+      })
+      .filter((point): point is AssignmentLoadProfilePoint => point !== null);
+
+    if (points.length < 2) {
+      return null;
+    }
+
+    return {
+      mode: 'curve',
+      points,
+    };
+  }
+
+  private scaleCurveProfilePointsToRange(params: {
+    profile: AssignmentLoadProfile;
+    previousStart: Date;
+    previousEnd: Date;
+    nextStart: Date;
+    nextEnd: Date;
+  }): AssignmentLoadProfile | undefined {
+    const { profile, previousStart, previousEnd, nextStart, nextEnd } = params;
+    if (profile.mode !== 'curve' || !profile.points || profile.points.length < 2) {
+      return undefined;
+    }
+
+    const previousSpanMs = previousEnd.getTime() - previousStart.getTime();
+    const nextSpanMs = nextEnd.getTime() - nextStart.getTime();
+    if (previousSpanMs <= 0 || nextSpanMs <= 0) {
+      throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
+    }
+
+    const scaledPoints: AssignmentLoadProfilePoint[] = profile.points.map((point, index) => {
+      if (index === 0) {
+        return { date: nextStart.toISOString(), value: point.value };
+      }
+      if (index === profile.points!.length - 1) {
+        return { date: nextEnd.toISOString(), value: point.value };
+      }
+
+      const sourcePointDate = this.ensureValidLoadProfilePointDate(point.date);
+      const ratio = (sourcePointDate.getTime() - previousStart.getTime()) / previousSpanMs;
+      const scaledTimestamp = nextStart.getTime() + ratio * nextSpanMs;
+      return {
+        date: new Date(scaledTimestamp).toISOString(),
+        value: point.value,
+      };
+    });
+
+    return this.normalizeLoadProfile(
+      {
+        mode: 'curve',
+        points: scaledPoints,
+      },
+      nextStart,
+      nextEnd,
+    );
+  }
 
   private async ensureProjectMember(projectId: string, employeeId: string) {
     const existing = await this.prisma.projectMember.findUnique({
@@ -70,6 +224,7 @@ export class AssignmentsService {
     const endDate = new Date(dto.assignmentEndDate);
     const allocationPercent = dto.allocationPercent ?? 100;
     this.ensureDateRange(startDate, endDate);
+    const normalizedLoadProfile = this.normalizeLoadProfile(dto.loadProfile, startDate, endDate);
 
     const [project, employee] = await Promise.all([
       this.prisma.project.findFirst({ where: { id: dto.projectId, workspaceId } }),
@@ -100,6 +255,7 @@ export class AssignmentsService {
         assignmentStartDate: startDate,
         assignmentEndDate: endDate,
         allocationPercent,
+        loadProfile: normalizedLoadProfile,
         plannedHoursPerDay: dto.plannedHoursPerDay,
         roleOnProject: dto.roleOnProject,
       },
@@ -158,6 +314,9 @@ export class AssignmentsService {
     const nextStart = dto.assignmentStartDate ? new Date(dto.assignmentStartDate) : existing.assignmentStartDate;
     const nextEnd = dto.assignmentEndDate ? new Date(dto.assignmentEndDate) : existing.assignmentEndDate;
     this.ensureDateRange(nextStart, nextEnd);
+    const hasDateRangeChanges =
+      nextStart.getTime() !== existing.assignmentStartDate.getTime() ||
+      nextEnd.getTime() !== existing.assignmentEndDate.getTime();
 
     const projectId = dto.projectId ?? existing.projectId;
     const employeeId = dto.employeeId ?? existing.employeeId;
@@ -184,6 +343,20 @@ export class AssignmentsService {
 
     await this.ensureProjectMember(projectId, employeeId);
 
+    const normalizedExplicitLoadProfile = this.normalizeLoadProfile(dto.loadProfile, nextStart, nextEnd);
+    const storedLoadProfile = this.readStoredLoadProfile(existing.loadProfile);
+    const scaledLoadProfile =
+      dto.loadProfile === undefined && hasDateRangeChanges && storedLoadProfile
+        ? this.scaleCurveProfilePointsToRange({
+            profile: storedLoadProfile,
+            previousStart: existing.assignmentStartDate,
+            previousEnd: existing.assignmentEndDate,
+            nextStart,
+            nextEnd,
+          })
+        : undefined;
+    const nextLoadProfile = dto.loadProfile !== undefined ? normalizedExplicitLoadProfile : scaledLoadProfile;
+
     return this.prisma.projectAssignment.update({
       where: { id },
       data: {
@@ -192,6 +365,7 @@ export class AssignmentsService {
         assignmentStartDate: dto.assignmentStartDate ? new Date(dto.assignmentStartDate) : undefined,
         assignmentEndDate: dto.assignmentEndDate ? new Date(dto.assignmentEndDate) : undefined,
         allocationPercent: dto.allocationPercent,
+        loadProfile: nextLoadProfile,
         plannedHoursPerDay: dto.plannedHoursPerDay,
         roleOnProject: dto.roleOnProject,
       },

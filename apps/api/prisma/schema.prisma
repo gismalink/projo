@@ -232,6 +232,7 @@ model ProjectAssignment {
   assignmentStartDate DateTime
   assignmentEndDate   DateTime
   allocationPercent   Decimal  @default(100) @db.Decimal(5, 2)
+  loadProfile         Json?
   plannedHoursPerDay  Decimal? @db.Decimal(4, 2)
   roleOnProject       String?
   createdAt           DateTime @default(now())
