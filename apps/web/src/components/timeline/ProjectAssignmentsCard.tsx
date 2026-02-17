@@ -227,7 +227,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     };
   };
 
-  const buildAssignmentCurvePath = (params: {
+  const buildAssignmentCurveGeometry = (params: {
     targetStartIso: string;
     targetEndIso: string;
     points: CurvePoint[];
@@ -249,25 +249,40 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
         };
       });
 
-    if (mappedPoints.length === 0) return '';
+    if (mappedPoints.length === 0) {
+      return {
+        linePath: '',
+        areaPath: '',
+      };
+    }
     if (mappedPoints.length === 1) {
       const single = mappedPoints[0];
-      return `M ${single.x.toFixed(3)} ${single.y.toFixed(3)}`;
+      const singlePath = `M ${single.x.toFixed(3)} ${single.y.toFixed(3)}`;
+      return {
+        linePath: singlePath,
+        areaPath: `${singlePath} L ${single.x.toFixed(3)} 100 Z`,
+      };
     }
 
-    let path = `M ${mappedPoints[0].x.toFixed(3)} ${mappedPoints[0].y.toFixed(3)}`;
+    let linePath = `M ${mappedPoints[0].x.toFixed(3)} ${mappedPoints[0].y.toFixed(3)}`;
     for (let index = 1; index < mappedPoints.length - 1; index += 1) {
       const current = mappedPoints[index];
       const next = mappedPoints[index + 1];
       const midX = (current.x + next.x) / 2;
       const midY = (current.y + next.y) / 2;
-      path += ` Q ${current.x.toFixed(3)} ${current.y.toFixed(3)} ${midX.toFixed(3)} ${midY.toFixed(3)}`;
+      linePath += ` Q ${current.x.toFixed(3)} ${current.y.toFixed(3)} ${midX.toFixed(3)} ${midY.toFixed(3)}`;
     }
     const penultimate = mappedPoints[mappedPoints.length - 2];
     const last = mappedPoints[mappedPoints.length - 1];
-    path += ` Q ${penultimate.x.toFixed(3)} ${penultimate.y.toFixed(3)} ${last.x.toFixed(3)} ${last.y.toFixed(3)}`;
+    linePath += ` Q ${penultimate.x.toFixed(3)} ${penultimate.y.toFixed(3)} ${last.x.toFixed(3)} ${last.y.toFixed(3)}`;
 
-    return path;
+    const first = mappedPoints[0];
+    const areaPath = `${linePath} L ${last.x.toFixed(3)} 100 L ${first.x.toFixed(3)} 100 Z`;
+
+    return {
+      linePath,
+      areaPath,
+    };
   };
 
   useEffect(() => {
@@ -498,7 +513,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                   const sourceCurvePoints =
                     curveDraftByAssignmentId[assignment.id] ??
                     getSourceCurvePoints(assignment, assignment.assignmentStartDate, assignment.assignmentEndDate);
-                  const curvePath = buildAssignmentCurvePath({
+                  const roleColor = employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A';
+                  const curveGeometry = buildAssignmentCurveGeometry({
                     targetStartIso: startIso,
                     targetEndIso: endIso,
                     points: sourceCurvePoints,
@@ -540,13 +556,19 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                       className="assignment-bar"
                       style={{
                         ...assignmentStyle(startIso, endIso),
-                        background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
                       }}
                       onMouseMove={(event) => handleAssignmentBarHover(event, detail.id, assignment.id)}
                       onMouseLeave={() => clearAssignmentBarHover(detail.id, assignment.id)}
                     >
-                      <svg className="assignment-curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-                        <path className="assignment-curve-line" d={curvePath} />
+                      <svg
+                        className="assignment-curve"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                        aria-hidden
+                        style={{ color: roleColor }}
+                      >
+                        <path className="assignment-curve-area" d={curveGeometry.areaPath} />
+                        <path className="assignment-curve-line" d={curveGeometry.linePath} />
                         {sourceCurvePoints.map((point, pointIndex) => (
                           <circle
                             key={`${assignment.id}-curve-point-${pointIndex}`}
