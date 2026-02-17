@@ -127,7 +127,7 @@ export function App() {
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
       event.preventDefault();
-      app.setToasts((prev) => [...prev, { id: Date.now(), message: t.uiPasswordsDoNotMatch }]);
+      app.pushToast(t.uiPasswordsDoNotMatch);
       return;
     }
 
@@ -164,7 +164,7 @@ export function App() {
   const handleChangePasswordSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (newPassword !== newPasswordConfirm) {
-      app.setToasts((prev) => [...prev, { id: Date.now(), message: t.uiPasswordsDoNotMatch }]);
+      app.pushToast(t.uiPasswordsDoNotMatch);
       return;
     }
 
@@ -285,7 +285,7 @@ export function App() {
     if (!editingProjectId) return;
 
     if (deleteProjectConfirmText.trim().toLowerCase() !== 'delete') {
-      app.setToasts((prev) => [...prev, { id: Date.now(), message: t.uiDeleteProjectConfirmWordRequired }]);
+      app.pushToast(t.uiDeleteProjectConfirmWordRequired);
       return;
     }
 

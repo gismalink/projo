@@ -281,8 +281,8 @@ button:active {
   content: attr(data-tooltip);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 7px);
-  transform: translate(-50%, 4px);
+  top: calc(100% + 7px);
+  transform: translate(-50%, -4px);
   opacity: 0;
   pointer-events: none;
   background: rgba(24, 24, 28, 0.96);
@@ -312,8 +312,8 @@ button[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 7px);
-  transform: translate(-50%, 4px);
+  top: calc(100% + 7px);
+  transform: translate(-50%, -4px);
   opacity: 0;
   pointer-events: none;
   background: rgba(24, 24, 28, 0.96);

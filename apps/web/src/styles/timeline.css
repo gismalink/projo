@@ -240,6 +240,10 @@
   gap: 0.5rem;
 }
 
+.timeline-year-row {
+  width: 100%;
+}
+
 .timeline-board {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 250px;

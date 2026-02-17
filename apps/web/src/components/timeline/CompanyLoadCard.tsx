@@ -33,11 +33,12 @@ export function CompanyLoadCard(props: CompanyLoadCardProps) {
         {companyLoad.values.map((value, index) => {
           const unitLabel =
             dragStepDays === 30 ? (months[index] ?? `Month ${index + 1}`) : dragStepDays === 7 ? `Week ${index + 1}` : `Day ${index + 1}`;
+          const barHeightPercent = value > 0 ? Math.max(2, (value / companyLoadScaleMax) * 100) : 0;
           return (
             <span
               key={`${selectedYear}-load-${index}`}
               className={value > 100 ? 'company-load-bar overloaded' : 'company-load-bar'}
-              style={{ height: `${Math.max(2, (value / companyLoadScaleMax) * 100)}%` }}
+              style={{ height: `${barHeightPercent}%` }}
               title={`${unitLabel}: ${value.toFixed(1)}%`}
             />
           );
