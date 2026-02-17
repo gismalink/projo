@@ -563,14 +563,7 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignments]);
 
-  const visibleTimelineRows = useMemo(() => {
-    if (!selectedBenchEmployeeId) return sortedTimeline;
-
-    return sortedTimeline.filter((row) => {
-      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
-      return projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId);
-    });
-  }, [assignmentsByProjectId, selectedBenchEmployeeId, sortedTimeline]);
+  const visibleTimelineRows = sortedTimeline;
 
   const projectFactByProjectId = useMemo(() => {
     const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
@@ -977,7 +970,7 @@ export function TimelineTab(props: TimelineTabProps) {
                     : false;
                   const isDimmedBySelection = Boolean(selectedBenchEmployeeId) && !selectedEmployeeAssigned;
                   const isDimmedByDrag = Boolean(draggedBenchEmployeeId) && draggedEmployeeAssigned;
-                  const isRowDimmed = isDimmedBySelection || isDimmedByDrag;
+                  const isRowDimmed = draggedBenchEmployeeId ? isDimmedByDrag : isDimmedBySelection;
 
                   const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
                   const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
@@ -1100,7 +1093,6 @@ export function TimelineTab(props: TimelineTabProps) {
             onToggleEmployeeFilter={(employeeId) =>
               setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
             }
-            onClearEmployeeFilter={() => setSelectedBenchEmployeeId('')}
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {
               setDraggedBenchEmployeeId(null);
