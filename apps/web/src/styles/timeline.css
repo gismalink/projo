@@ -1021,7 +1021,8 @@
 .assignment-plan-handle.left,
 .assignment-plan-handle.right {
   width: 8px;
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
 }
 
 .assignment-plan-handle.left {
