@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AppRole } from '@prisma/client';
+import { AppRole, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
 
@@ -243,6 +243,160 @@ export class UsersService {
     });
 
     return workspace;
+  }
+
+  async copyProjectSpace(ownerUserId: string, sourceWorkspaceId: string, name: string) {
+    const sourceWorkspace = await this.prisma.workspace.findUnique({
+      where: { id: sourceWorkspaceId },
+      select: { id: true, ownerUserId: true },
+    });
+
+    if (!sourceWorkspace || sourceWorkspace.ownerUserId !== ownerUserId) {
+      return null;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const copiedWorkspace = await tx.workspace.create({
+        data: {
+          name: name.trim(),
+          ownerUserId,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      const sourceMembers = await tx.workspaceMember.findMany({
+        where: { workspaceId: sourceWorkspaceId },
+        select: {
+          userId: true,
+          role: true,
+        },
+      });
+
+      const memberRows = sourceMembers.length
+        ? sourceMembers
+        : [
+            {
+              userId: ownerUserId,
+              role: AppRole.ADMIN,
+            },
+          ];
+
+      await tx.workspaceMember.createMany({
+        data: memberRows.map((member) => ({
+          workspaceId: copiedWorkspace.id,
+          userId: member.userId,
+          role: member.role,
+        })),
+      });
+
+      const sourceProjects = await tx.project.findMany({
+        where: { workspaceId: sourceWorkspaceId },
+        include: {
+          members: true,
+          assignments: true,
+        },
+      });
+
+      for (const sourceProject of sourceProjects) {
+        const copiedProject = await tx.project.create({
+          data: {
+            workspaceId: copiedWorkspace.id,
+            code: sourceProject.code,
+            name: sourceProject.name,
+            description: sourceProject.description,
+            status: sourceProject.status,
+            priority: sourceProject.priority,
+            startDate: sourceProject.startDate,
+            endDate: sourceProject.endDate,
+            links: sourceProject.links === null ? Prisma.JsonNull : (sourceProject.links as Prisma.InputJsonValue),
+            teamTemplateId: sourceProject.teamTemplateId,
+          },
+          select: { id: true },
+        });
+
+        if (sourceProject.members.length > 0) {
+          await tx.projectMember.createMany({
+            data: sourceProject.members.map((member) => ({
+              projectId: copiedProject.id,
+              employeeId: member.employeeId,
+            })),
+          });
+        }
+
+        if (sourceProject.assignments.length > 0) {
+          await tx.projectAssignment.createMany({
+            data: sourceProject.assignments.map((assignment) => ({
+              projectId: copiedProject.id,
+              employeeId: assignment.employeeId,
+              assignmentStartDate: assignment.assignmentStartDate,
+              assignmentEndDate: assignment.assignmentEndDate,
+              allocationPercent: assignment.allocationPercent,
+              plannedHoursPerDay: assignment.plannedHoursPerDay,
+              roleOnProject: assignment.roleOnProject,
+              loadProfile:
+                assignment.loadProfile === null
+                  ? Prisma.JsonNull
+                  : (assignment.loadProfile as Prisma.InputJsonValue),
+            })),
+          });
+        }
+      }
+
+      const sourceVacations = await tx.vacation.findMany({
+        where: { workspaceId: sourceWorkspaceId },
+        select: {
+          employeeId: true,
+          startDate: true,
+          endDate: true,
+          type: true,
+          note: true,
+        },
+      });
+
+      if (sourceVacations.length > 0) {
+        await tx.vacation.createMany({
+          data: sourceVacations.map((vacation) => ({
+            workspaceId: copiedWorkspace.id,
+            employeeId: vacation.employeeId,
+            startDate: vacation.startDate,
+            endDate: vacation.endDate,
+            type: vacation.type,
+            note: vacation.note,
+          })),
+        });
+      }
+
+      const sourceRates = await tx.costRate.findMany({
+        where: { workspaceId: sourceWorkspaceId },
+        select: {
+          employeeId: true,
+          roleId: true,
+          amountPerHour: true,
+          currency: true,
+          validFrom: true,
+          validTo: true,
+        },
+      });
+
+      if (sourceRates.length > 0) {
+        await tx.costRate.createMany({
+          data: sourceRates.map((rate) => ({
+            workspaceId: copiedWorkspace.id,
+            employeeId: rate.employeeId,
+            roleId: rate.roleId,
+            amountPerHour: rate.amountPerHour,
+            currency: rate.currency,
+            validFrom: rate.validFrom,
+            validTo: rate.validTo,
+          })),
+        });
+      }
+
+      return copiedWorkspace;
+    });
   }
 
   async renameProjectSpace(ownerUserId: string, workspaceId: string, name: string) {

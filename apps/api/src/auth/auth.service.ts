@@ -310,6 +310,23 @@ export class AuthService {
     };
   }
 
+  async copyProjectSpace(userId: string, projectId: string, name: string): Promise<ProjectNameResponse> {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException(ErrorCode.AUTH_PROJECT_NAME_REQUIRED);
+    }
+
+    const copied = await this.usersService.copyProjectSpace(userId, projectId, trimmedName);
+    if (!copied) {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    return {
+      id: copied.id,
+      name: copied.name,
+    };
+  }
+
   async getProjectMembers(userId: string, projectId: string): Promise<ProjectMembersResponse> {
     const members = await this.usersService.listProjectMembersForUser(userId, projectId);
     if (!members) {

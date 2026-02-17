@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { createAssignmentLoadPercentResolver } from '../common/load-profile.utils';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -18,64 +19,6 @@ const PROJECT_PERSON_SELECT = {
 @Injectable()
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
-
-  private clampPercent(value: number) {
-    return Math.max(0, Math.min(100, value));
-  }
-
-  private createAssignmentLoadPercentResolver(assignment: {
-    allocationPercent: unknown;
-    loadProfile?: unknown;
-  }) {
-    const fallback = this.clampPercent(Number(assignment.allocationPercent));
-    const profile = assignment.loadProfile;
-    if (!profile || typeof profile !== 'object') {
-      return () => fallback;
-    }
-
-    const candidate = profile as { mode?: unknown; points?: unknown };
-    if (candidate.mode !== 'curve' || !Array.isArray(candidate.points) || candidate.points.length < 2) {
-      return () => fallback;
-    }
-
-    const points = candidate.points
-      .map((point) => {
-        if (!point || typeof point !== 'object') return null;
-        const typedPoint = point as { date?: unknown; value?: unknown };
-        if (typeof typedPoint.date !== 'string') return null;
-        const date = new Date(typedPoint.date);
-        const value = Number(typedPoint.value);
-        if (Number.isNaN(date.getTime()) || !Number.isFinite(value)) return null;
-        return {
-          dateMs: this.startOfUtcDay(date).getTime(),
-          value: this.clampPercent(value),
-        };
-      })
-      .filter((point): point is { dateMs: number; value: number } => Boolean(point))
-      .sort((left, right) => left.dateMs - right.dateMs);
-
-    if (points.length < 2) {
-      return () => fallback;
-    }
-
-    return (date: Date) => {
-      const dateMs = this.startOfUtcDay(date).getTime();
-      if (dateMs <= points[0].dateMs) return points[0].value;
-      if (dateMs >= points[points.length - 1].dateMs) return points[points.length - 1].value;
-
-      for (let index = 0; index < points.length - 1; index += 1) {
-        const start = points[index];
-        const end = points[index + 1];
-        if (dateMs < start.dateMs || dateMs > end.dateMs) continue;
-        const span = end.dateMs - start.dateMs;
-        if (span <= 0) return start.value;
-        const ratio = (dateMs - start.dateMs) / span;
-        return start.value + (end.value - start.value) * ratio;
-      }
-
-      return fallback;
-    };
-  }
 
   private async ensureTeamTemplateExists(templateId: string) {
     const template = await this.prisma.projectTeamTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
@@ -150,8 +93,30 @@ export class ProjectsService {
     }
   }
 
+  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerUserId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return workspace.ownerUserId;
+  }
+
   private async ensureEmployeeExists(workspaceId: string, employeeId: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id: employeeId, workspaceId }, select: { id: true } });
+    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id: employeeId,
+        workspace: {
+          ownerUserId,
+        },
+      },
+      select: { id: true },
+    });
     if (!employee) {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
@@ -382,7 +347,7 @@ export class ProjectsService {
       if (fixedDailyHours !== null && (!Number.isFinite(fixedDailyHours) || fixedDailyHours <= 0)) {
         continue;
       }
-      const resolveLoadPercent = this.createAssignmentLoadPercentResolver(assignment);
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const employeeVacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
 

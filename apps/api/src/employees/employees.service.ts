@@ -19,6 +19,19 @@ type CsvEmployeeRow = {
 export class EmployeesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerUserId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return workspace.ownerUserId;
+  }
+
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
   }
@@ -49,11 +62,12 @@ export class EmployeesService {
 
   private async ensureEmployeeEmailAvailable(workspaceId: string, email: string, excludeEmployeeId?: string) {
     const normalizedEmail = this.normalizeEmail(email);
-    const existing = await this.prisma.employee.findUnique({
+    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const existing = await this.prisma.employee.findFirst({
       where: {
-        workspaceId_email: {
-          workspaceId,
-          email: normalizedEmail,
+        email: normalizedEmail,
+        workspace: {
+          ownerUserId,
         },
       },
       select: { id: true },
@@ -161,19 +175,27 @@ export class EmployeesService {
     });
   }
 
-  findAll(workspaceId: string) {
+  async findAll(workspaceId: string) {
+    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
     return this.prisma.employee.findMany({
-      where: { workspaceId },
+      where: {
+        workspace: {
+          ownerUserId,
+        },
+      },
       include: { role: true, department: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(workspaceId: string, id: string) {
+    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
     const employee = await this.prisma.employee.findFirst({
       where: {
         id,
-        workspaceId,
+        workspace: {
+          ownerUserId,
+        },
       },
       include: { role: true, department: true },
     });
@@ -221,6 +243,8 @@ export class EmployeesService {
       return { total: 0, created: 0, updated: 0, errors: ['Invalid CSV or missing required columns'] };
     }
 
+    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+
     const [roles, departments] = await Promise.all([
       this.prisma.role.findMany({ select: { id: true, name: true } }),
       this.prisma.department.findMany({ select: { id: true, name: true } }),
@@ -255,19 +279,19 @@ export class EmployeesService {
         continue;
       }
 
-      const existing = await this.prisma.employee.findUnique({
+      const existingInOwnerTeam = await this.prisma.employee.findFirst({
         where: {
-          workspaceId_email: {
-            workspaceId,
-            email: row.email,
+          email: row.email,
+          workspace: {
+            ownerUserId,
           },
         },
         select: { id: true },
       });
 
-      if (existing) {
+      if (existingInOwnerTeam) {
         await this.prisma.employee.update({
-          where: { id: existing.id },
+          where: { id: existingInOwnerTeam.id },
           data: {
             fullName: row.fullName,
             roleId,

@@ -47,7 +47,7 @@ type ProjectAssignmentsCardProps = {
       mode: 'curve';
       points: Array<{ date: string; value: number }>;
     },
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   assignmentDragState: AssignmentDragState | null;
   resolveAssignmentDragDates: (state: AssignmentDragState) => { nextStart: Date; nextEnd: Date };
   pendingAssignmentPreview: PendingAssignmentPreview | null;
@@ -132,7 +132,42 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     startClientY: number;
     startValue: number;
   } | null>(null);
-  const isUnmountedRef = useRef(false);
+  const curveDraftByAssignmentIdRef = useRef<Record<string, CurvePoint[]>>({});
+  const savingCurveByAssignmentIdRef = useRef<Record<string, true>>({});
+
+  const persistCurveDraft = (params: {
+    projectId: string;
+    assignmentId: string;
+    sourceStartIso: string;
+    sourceEndIso: string;
+    clearDraftAfterSave: boolean;
+  }) => {
+    const { projectId, assignmentId, sourceStartIso, sourceEndIso, clearDraftAfterSave } = params;
+    const draft = curveDraftByAssignmentIdRef.current[assignmentId];
+    if (!draft || draft.length < 2) return;
+    if (savingCurveByAssignmentIdRef.current[assignmentId]) return;
+
+    savingCurveByAssignmentIdRef.current[assignmentId] = true;
+
+    const payload = convertCurvePointsToLoadProfile(draft, sourceStartIso, sourceEndIso);
+    void onUpdateAssignmentCurve(projectId, assignmentId, payload)
+      .then((saved) => {
+        if (!saved || !clearDraftAfterSave) return;
+        setCurveDraftByAssignmentId((prev) => {
+          if (!prev[assignmentId]) return prev;
+          const next = { ...prev };
+          delete next[assignmentId];
+          return next;
+        });
+      })
+      .finally(() => {
+        delete savingCurveByAssignmentIdRef.current[assignmentId];
+      });
+  };
+
+  useEffect(() => {
+    curveDraftByAssignmentIdRef.current = curveDraftByAssignmentId;
+  }, [curveDraftByAssignmentId]);
 
   const sortedAssignments = useMemo(
     () =>
@@ -352,7 +387,6 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
 
   useEffect(() => {
     return () => {
-      isUnmountedRef.current = true;
       barResizeObserverRef.current?.disconnect();
     };
   }, []);
@@ -456,19 +490,14 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     const handleMouseUp = () => {
       const drag = dragStateRef.current;
       if (!drag) return;
-      const draft = curveDraftByAssignmentId[drag.assignmentId];
       dragStateRef.current = null;
       setActiveCurveDrag(null);
-      if (!draft || draft.length < 2 || isUnmountedRef.current) return;
-      const payload = convertCurvePointsToLoadProfile(draft, drag.sourceStartIso, drag.sourceEndIso);
-      void onUpdateAssignmentCurve(drag.projectId, drag.assignmentId, payload).finally(() => {
-        if (isUnmountedRef.current) return;
-        setCurveDraftByAssignmentId((prev) => {
-          if (!prev[drag.assignmentId]) return prev;
-          const next = { ...prev };
-          delete next[drag.assignmentId];
-          return next;
-        });
+      persistCurveDraft({
+        projectId: drag.projectId,
+        assignmentId: drag.assignmentId,
+        sourceStartIso: drag.sourceStartIso,
+        sourceEndIso: drag.sourceEndIso,
+        clearDraftAfterSave: true,
       });
     };
 
@@ -478,7 +507,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [curveDraftByAssignmentId, onUpdateAssignmentCurve]);
+  }, [onUpdateAssignmentCurve]);
 
   const actualHoursByAssignmentId = useMemo(() => {
     const result = new Map<string, { actualHours: number; lostHours: number }>();

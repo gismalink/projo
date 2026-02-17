@@ -19,12 +19,78 @@ type AssignmentLoadProfile = {
 export class AssignmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerUserId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return workspace.ownerUserId;
+  }
+
+  private async ensureEmployeeBelongsToWorkspaceOwner(workspaceId: string, employeeId: string) {
+    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id: employeeId,
+        workspace: {
+          ownerUserId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
+    }
+  }
+
+  private calculateCurveAveragePercent(
+    profile: AssignmentLoadProfile,
+    assignmentStartDate: Date,
+    assignmentEndDate: Date,
+  ): number {
+    if (profile.mode !== 'curve' || !profile.points || profile.points.length < 2) {
+      return 100;
+    }
+
+    const totalDurationMs = assignmentEndDate.getTime() - assignmentStartDate.getTime();
+    if (totalDurationMs <= 0) {
+      return profile.points[0]?.value ?? 100;
+    }
+
+    let weightedArea = 0;
+    for (let index = 0; index < profile.points.length - 1; index += 1) {
+      const current = profile.points[index]!;
+      const next = profile.points[index + 1]!;
+      const start = this.ensureValidLoadProfilePointDate(current.date).getTime();
+      const end = this.ensureValidLoadProfilePointDate(next.date).getTime();
+      const duration = Math.max(0, end - start);
+      if (duration === 0) {
+        continue;
+      }
+
+      weightedArea += ((current.value + next.value) / 2) * duration;
+    }
+
+    const average = weightedArea / totalDurationMs;
+    return Number(average.toFixed(2));
+  }
+
   private ensureValidLoadProfilePointDate(pointDate: string): Date {
     const parsed = new Date(pointDate);
     if (Number.isNaN(parsed.getTime())) {
       throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
     }
     return parsed;
+  }
+
+  private toUtcDayTimestamp(value: Date): number {
+    return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
   }
 
   private normalizeLoadProfile(
@@ -64,12 +130,24 @@ export class AssignmentsService {
       });
     }
 
-    if (normalizedPoints[0]?.date !== assignmentStartDate.toISOString()) {
+    const assignmentStartDay = this.toUtcDayTimestamp(assignmentStartDate);
+    const assignmentEndDay = this.toUtcDayTimestamp(assignmentEndDate);
+    const firstPointDay = normalizedPoints[0]
+      ? this.toUtcDayTimestamp(this.ensureValidLoadProfilePointDate(normalizedPoints[0].date))
+      : Number.NaN;
+    const lastPointDay = normalizedPoints[normalizedPoints.length - 1]
+      ? this.toUtcDayTimestamp(this.ensureValidLoadProfilePointDate(normalizedPoints[normalizedPoints.length - 1].date))
+      : Number.NaN;
+
+    if (firstPointDay !== assignmentStartDay) {
       throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
     }
-    if (normalizedPoints[normalizedPoints.length - 1]?.date !== assignmentEndDate.toISOString()) {
+    if (lastPointDay !== assignmentEndDay) {
       throw new BadRequestException(ErrorCode.ASSIGNMENT_LOAD_PROFILE_INVALID);
     }
+
+    normalizedPoints[0].date = assignmentStartDate.toISOString();
+    normalizedPoints[normalizedPoints.length - 1].date = assignmentEndDate.toISOString();
 
     return {
       mode: 'curve',
@@ -222,22 +300,20 @@ export class AssignmentsService {
   async create(workspaceId: string, dto: CreateAssignmentDto) {
     const startDate = new Date(dto.assignmentStartDate);
     const endDate = new Date(dto.assignmentEndDate);
-    const allocationPercent = dto.allocationPercent ?? 100;
+    const requestedAllocationPercent = dto.allocationPercent ?? 100;
     this.ensureDateRange(startDate, endDate);
     const normalizedLoadProfile = this.normalizeLoadProfile(dto.loadProfile, startDate, endDate);
+    const allocationPercent =
+      normalizedLoadProfile?.mode === 'curve'
+        ? this.calculateCurveAveragePercent(normalizedLoadProfile, startDate, endDate)
+        : requestedAllocationPercent;
 
-    const [project, employee] = await Promise.all([
-      this.prisma.project.findFirst({ where: { id: dto.projectId, workspaceId } }),
-      this.prisma.employee.findFirst({ where: { id: dto.employeeId, workspaceId } }),
-    ]);
-
+    const project = await this.prisma.project.findFirst({ where: { id: dto.projectId, workspaceId } });
     if (!project) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    if (!employee) {
-      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
-    }
+    await this.ensureEmployeeBelongsToWorkspaceOwner(workspaceId, dto.employeeId);
 
     this.ensureWithinProjectRange(startDate, endDate, project.startDate, project.endDate);
 
@@ -320,18 +396,12 @@ export class AssignmentsService {
 
     const projectId = dto.projectId ?? existing.projectId;
     const employeeId = dto.employeeId ?? existing.employeeId;
-    const [project, employee] = await Promise.all([
-      this.prisma.project.findFirst({ where: { id: projectId, workspaceId } }),
-      this.prisma.employee.findFirst({ where: { id: employeeId, workspaceId } }),
-    ]);
-
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, workspaceId } });
     if (!project) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    if (!employee) {
-      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
-    }
+    await this.ensureEmployeeBelongsToWorkspaceOwner(workspaceId, employeeId);
 
     this.ensureWithinProjectRange(nextStart, nextEnd, project.startDate, project.endDate);
 
@@ -356,6 +426,12 @@ export class AssignmentsService {
           })
         : undefined;
     const nextLoadProfile = dto.loadProfile !== undefined ? normalizedExplicitLoadProfile : scaledLoadProfile;
+    const effectiveLoadProfileForAllocation =
+      nextLoadProfile ?? (dto.loadProfile === undefined ? storedLoadProfile ?? undefined : undefined);
+    const nextAllocationPercent =
+      effectiveLoadProfileForAllocation?.mode === 'curve'
+        ? this.calculateCurveAveragePercent(effectiveLoadProfileForAllocation, nextStart, nextEnd)
+        : dto.allocationPercent;
 
     return this.prisma.projectAssignment.update({
       where: { id },
@@ -364,7 +440,7 @@ export class AssignmentsService {
         employeeId: dto.employeeId,
         assignmentStartDate: dto.assignmentStartDate ? new Date(dto.assignmentStartDate) : undefined,
         assignmentEndDate: dto.assignmentEndDate ? new Date(dto.assignmentEndDate) : undefined,
-        allocationPercent: dto.allocationPercent,
+        allocationPercent: nextAllocationPercent,
         loadProfile: nextLoadProfile,
         plannedHoursPerDay: dto.plannedHoursPerDay,
         roleOnProject: dto.roleOnProject,

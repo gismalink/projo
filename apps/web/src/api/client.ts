@@ -465,6 +465,11 @@ export const api = {
     request<LoginResponse>(`/auth/projects/${projectId}`, {
       method: 'DELETE',
     }, token),
+  copyProjectSpace: (projectId: string, name: string, token: string) =>
+    request<ProjectSpaceNameResponse>(`/auth/projects/${projectId}/copy`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }, token),
   getProjectMembers: (projectId: string, token: string) =>
     request<ProjectMembersResponse>(`/auth/projects/${projectId}/members`, {}, token),
   inviteProjectMember: (projectId: string, email: string, permission: ProjectPermission, token: string) =>

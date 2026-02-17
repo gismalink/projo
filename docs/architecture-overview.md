@@ -11,6 +11,7 @@
 - PostgreSQL runs in Docker (`docker-compose.yml`).
 - API runs as NestJS service with global `/api` prefix.
 - Web calls API through `VITE_API_URL` in `apps/web/src/api/client.ts`.
+- Уровень агрегации стартового экрана — планы (project spaces / workspaces), внутри которых хранятся timeline-проекты.
 
 ## 3) Backend architecture (`apps/api`)
 - Entry: `src/main.ts` -> `src/app.module.ts`.
@@ -30,6 +31,8 @@
   - optional binding to `ProjectTeamTemplate` via `teamTemplateId`,
   - `ProjectMember` keeps membership list,
   - `ProjectAssignment` keeps timeline allocation periods.
+- `Workspace` (project space) — контейнер плана для изоляции операционных расчетов (`timeline/assignments/vacations/cost-rates`) на уровне активного плана.
+- Сотрудники используются как owner-scoped shared team между планами одного владельца (без дублирования записей при создании нового плана).
 - `ProjectTeamTemplate` + `ProjectTeamTemplateRole`: настраиваемые шаблоны обязательного состава проекта.
 - `Vacation`: employee absences.
 - `CostRate`: role/employee rates with validity interval.
@@ -76,3 +79,8 @@
 - Удаление assignment не удаляет member автоматически.
 - Удаление member не удаляет assignment автоматически; при следующем create/update assignment member будет восстановлен backend-логикой.
 - Смещение дат проекта не триггерит принудительный cascade в API-слое; сдвиг assignment дат выполняется отдельными операциями Timeline flow.
+
+## 8) Aggregation levels
+- Уровень 1 (текущий): **Планы** — карточки на экране «Мои планы», переключают активный tenant-контекст.
+- Уровень 2 (текущий): **Проекты внутри плана** — участвуют в Timeline и расчетах загрузки.
+- Будущий уровень (planned): **Компании** как надстройка над планами, где у пользователя может быть несколько независимых наборов планов.

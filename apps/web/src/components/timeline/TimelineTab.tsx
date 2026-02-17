@@ -62,7 +62,7 @@ type TimelineTabProps = {
       mode: 'curve';
       points: Array<{ date: string; value: number }>;
     },
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   onMoveProject: (projectId: string, direction: 'up' | 'down') => void;
   onAdjustProjectPlan: (
     projectId: string,

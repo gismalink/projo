@@ -214,6 +214,26 @@ export function App() {
     setIsProjectHomeOpen(false);
   };
 
+  const buildCopiedPlanName = (sourceName: string) => {
+    const trimmed = sourceName.trim();
+    const baseName = trimmed.replace(/_v\(\d+\)$/u, '');
+    const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const versionPattern = new RegExp(`^${escapeRegExp(baseName)}_v\\((\\d+)\\)$`, 'u');
+    const allNames = [...app.myProjectSpaces, ...app.sharedProjectSpaces].map((item) => item.name.trim());
+    const maxVersion = allNames.reduce((max, name) => {
+      const match = name.match(versionPattern);
+      if (!match) return max;
+      const parsed = Number(match[1]);
+      return Number.isFinite(parsed) ? Math.max(max, parsed) : max;
+    }, 0);
+    return `${baseName}_v(${maxVersion + 1})`;
+  };
+
+  const handleCopyProjectSpaceCard = async (projectId: string, sourceName: string) => {
+    const copiedName = buildCopiedPlanName(sourceName);
+    await app.handleCopyProjectSpace(projectId, copiedName);
+  };
+
   const handleOpenProject = async (projectId: string) => {
     await app.handleSwitchProjectSpace(projectId);
     setIsProjectHomeOpen(false);
@@ -429,20 +449,34 @@ export function App() {
                         <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
                           <div className="project-space-card-topline">
                             <strong>{item.name}</strong>
-                            {item.isOwner || item.role === 'PM' ? (
+                            <div className="project-space-card-actions">
                               <button
                                 type="button"
                                 className="icon-btn"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  void handleOpenProjectSettingsById(item.id);
+                                  void handleCopyProjectSpaceCard(item.id, item.name);
                                 }}
-                                aria-label={t.projectSettings}
-                                data-tooltip={t.projectSettings}
+                                aria-label={t.copyProjectSpace}
+                                data-tooltip={t.copyProjectSpace}
                               >
-                                <Icon name="edit" />
+                                <Icon name="copy" />
                               </button>
-                            ) : null}
+                              {item.isOwner || item.role === 'PM' ? (
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleOpenProjectSettingsById(item.id);
+                                  }}
+                                  aria-label={t.projectSettings}
+                                  data-tooltip={t.projectSettings}
+                                >
+                                  <Icon name="edit" />
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                           <span>{item.role}</span>
                         </div>

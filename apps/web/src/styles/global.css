@@ -371,6 +371,12 @@ button[data-tooltip]:focus-visible::after {
   overflow-wrap: anywhere;
 }
 
+.project-space-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .project-space-card-create {
   align-items: center;
   justify-content: center;
