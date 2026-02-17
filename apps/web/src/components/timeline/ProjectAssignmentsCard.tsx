@@ -111,6 +111,9 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   } = props;
 
   const [curveDraftByAssignmentId, setCurveDraftByAssignmentId] = useState<Record<string, CurvePoint[]>>({});
+  const [barSizeByAssignmentId, setBarSizeByAssignmentId] = useState<Record<string, { width: number; height: number }>>({});
+  const barNodeByAssignmentIdRef = useRef<Record<string, HTMLSpanElement | null>>({});
+  const barResizeObserverRef = useRef<ResizeObserver | null>(null);
   const dragStateRef = useRef<{
     projectId: string;
     assignmentId: string;
@@ -228,21 +231,16 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   };
 
   const buildAssignmentCurveGeometry = (params: {
-    targetStartIso: string;
-    targetEndIso: string;
+    widthPx: number;
+    heightPx: number;
     points: CurvePoint[];
   }) => {
-    const { targetStartIso, targetEndIso, points } = params;
-
-    const targetStartMs = toUtcDayTimestamp(targetStartIso);
-    const targetEndMs = toUtcDayTimestamp(targetEndIso);
-    const targetSpanMs = Math.max(1, targetEndMs - targetStartMs);
+    const { widthPx, heightPx, points } = params;
 
     const mappedPoints = points.map((point) => {
         const ratio = Math.max(0, Math.min(1, point.xRatio));
-        const mappedMs = targetStartMs + ratio * targetSpanMs;
-        const x = ((mappedMs - targetStartMs) / targetSpanMs) * 100;
-        const y = 100 - clampPercent(point.value);
+        const x = ratio * widthPx;
+        const y = ((100 - clampPercent(point.value)) / 100) * heightPx;
         return {
           x,
           y,
@@ -260,7 +258,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       const singlePath = `M ${single.x.toFixed(3)} ${single.y.toFixed(3)}`;
       return {
         linePath: singlePath,
-        areaPath: `${singlePath} L ${single.x.toFixed(3)} 100 Z`,
+        areaPath: `${singlePath} L ${single.x.toFixed(3)} ${heightPx.toFixed(3)} Z`,
       };
     }
 
@@ -277,7 +275,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     linePath += ` Q ${penultimate.x.toFixed(3)} ${penultimate.y.toFixed(3)} ${last.x.toFixed(3)} ${last.y.toFixed(3)}`;
 
     const first = mappedPoints[0];
-    const areaPath = `${linePath} L ${last.x.toFixed(3)} 100 L ${first.x.toFixed(3)} 100 Z`;
+    const areaPath = `${linePath} L ${last.x.toFixed(3)} ${heightPx.toFixed(3)} L ${first.x.toFixed(3)} ${heightPx.toFixed(3)} Z`;
 
     return {
       linePath,
@@ -288,8 +286,78 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true;
+      barResizeObserverRef.current?.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      setBarSizeByAssignmentId((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const entry of entries) {
+          const target = entry.target as HTMLElement;
+          const assignmentId = target.dataset.assignmentId;
+          if (!assignmentId) continue;
+          const width = Math.max(1, Math.round(entry.contentRect.width));
+          const height = Math.max(1, Math.round(entry.contentRect.height));
+          const current = next[assignmentId];
+          if (!current || current.width !== width || current.height !== height) {
+            next[assignmentId] = { width, height };
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+
+    barResizeObserverRef.current = observer;
+    for (const node of Object.values(barNodeByAssignmentIdRef.current)) {
+      if (node) observer.observe(node);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (barResizeObserverRef.current === observer) {
+        barResizeObserverRef.current = null;
+      }
+    };
+  }, []);
+
+  const bindAssignmentBarNode = (assignmentId: string) => (node: HTMLSpanElement | null) => {
+    const previousNode = barNodeByAssignmentIdRef.current[assignmentId];
+    if (previousNode && previousNode !== node) {
+      barResizeObserverRef.current?.unobserve(previousNode);
+    }
+
+    if (node) {
+      barNodeByAssignmentIdRef.current[assignmentId] = node;
+      barResizeObserverRef.current?.observe(node);
+      const width = Math.max(1, Math.round(node.getBoundingClientRect().width));
+      const height = Math.max(1, Math.round(node.getBoundingClientRect().height));
+      setBarSizeByAssignmentId((prev) => {
+        const current = prev[assignmentId];
+        if (current && current.width === width && current.height === height) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [assignmentId]: { width, height },
+        };
+      });
+      return;
+    }
+
+    delete barNodeByAssignmentIdRef.current[assignmentId];
+    setBarSizeByAssignmentId((prev) => {
+      if (!prev[assignmentId]) return prev;
+      const next = { ...prev };
+      delete next[assignmentId];
+      return next;
+    });
+  };
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -514,9 +582,10 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     curveDraftByAssignmentId[assignment.id] ??
                     getSourceCurvePoints(assignment, assignment.assignmentStartDate, assignment.assignmentEndDate);
                   const roleColor = employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A';
+                  const barSize = barSizeByAssignmentId[assignment.id] ?? { width: 100, height: 24 };
                   const curveGeometry = buildAssignmentCurveGeometry({
-                    targetStartIso: startIso,
-                    targetEndIso: endIso,
+                    widthPx: barSize.width,
+                    heightPx: barSize.height,
                     points: sourceCurvePoints,
                   });
                   const assignmentTooltipMode =
@@ -553,6 +622,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
 
                   return (
                     <span
+                      ref={bindAssignmentBarNode(assignment.id)}
+                      data-assignment-id={assignment.id}
                       className="assignment-bar"
                       style={{
                         ...assignmentStyle(startIso, endIso),
@@ -562,8 +633,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     >
                       <svg
                         className="assignment-curve"
-                        viewBox="0 0 100 100"
-                        preserveAspectRatio="none"
+                        viewBox={`0 0 ${barSize.width} ${barSize.height}`}
+                        preserveAspectRatio="xMinYMin meet"
                         aria-hidden
                         style={{ color: roleColor }}
                       >
@@ -573,8 +644,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                           <circle
                             key={`${assignment.id}-curve-point-${pointIndex}`}
                             className="assignment-curve-point"
-                            cx={`${Math.max(0, Math.min(100, point.xRatio * 100))}%`}
-                            cy={`${100 - clampPercent(point.value)}%`}
+                            cx={(Math.max(0, Math.min(1, point.xRatio)) * barSize.width).toFixed(3)}
+                            cy={(((100 - clampPercent(point.value)) / 100) * barSize.height).toFixed(3)}
                             r="4"
                             onMouseDown={(event) => {
                               event.preventDefault();
