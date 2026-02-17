@@ -228,33 +228,46 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   };
 
   const buildAssignmentCurvePath = (params: {
-    sourceStartIso: string;
-    sourceEndIso: string;
     targetStartIso: string;
     targetEndIso: string;
     points: CurvePoint[];
   }) => {
-    const { sourceStartIso, sourceEndIso, targetStartIso, targetEndIso, points } = params;
-
-    const sourceStartMs = toUtcDayTimestamp(sourceStartIso);
-    const sourceEndMs = toUtcDayTimestamp(sourceEndIso);
-    const sourceSpanMs = sourceEndMs - sourceStartMs;
+    const { targetStartIso, targetEndIso, points } = params;
 
     const targetStartMs = toUtcDayTimestamp(targetStartIso);
     const targetEndMs = toUtcDayTimestamp(targetEndIso);
     const targetSpanMs = Math.max(1, targetEndMs - targetStartMs);
 
-    const pathPoints = points
-      .map((point) => {
+    const mappedPoints = points.map((point) => {
         const ratio = Math.max(0, Math.min(1, point.xRatio));
         const mappedMs = targetStartMs + ratio * targetSpanMs;
         const x = ((mappedMs - targetStartMs) / targetSpanMs) * 100;
         const y = 100 - clampPercent(point.value);
-        return `${x.toFixed(3)},${y.toFixed(3)}`;
-      })
-      .join(' ');
+        return {
+          x,
+          y,
+        };
+      });
 
-    return pathPoints;
+    if (mappedPoints.length === 0) return '';
+    if (mappedPoints.length === 1) {
+      const single = mappedPoints[0];
+      return `M ${single.x.toFixed(3)} ${single.y.toFixed(3)}`;
+    }
+
+    let path = `M ${mappedPoints[0].x.toFixed(3)} ${mappedPoints[0].y.toFixed(3)}`;
+    for (let index = 1; index < mappedPoints.length - 1; index += 1) {
+      const current = mappedPoints[index];
+      const next = mappedPoints[index + 1];
+      const midX = (current.x + next.x) / 2;
+      const midY = (current.y + next.y) / 2;
+      path += ` Q ${current.x.toFixed(3)} ${current.y.toFixed(3)} ${midX.toFixed(3)} ${midY.toFixed(3)}`;
+    }
+    const penultimate = mappedPoints[mappedPoints.length - 2];
+    const last = mappedPoints[mappedPoints.length - 1];
+    path += ` Q ${penultimate.x.toFixed(3)} ${penultimate.y.toFixed(3)} ${last.x.toFixed(3)} ${last.y.toFixed(3)}`;
+
+    return path;
   };
 
   useEffect(() => {
@@ -485,9 +498,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                   const sourceCurvePoints =
                     curveDraftByAssignmentId[assignment.id] ??
                     getSourceCurvePoints(assignment, assignment.assignmentStartDate, assignment.assignmentEndDate);
-                  const curvePathPoints = buildAssignmentCurvePath({
-                    sourceStartIso: assignment.assignmentStartDate,
-                    sourceEndIso: assignment.assignmentEndDate,
+                  const curvePath = buildAssignmentCurvePath({
                     targetStartIso: startIso,
                     targetEndIso: endIso,
                     points: sourceCurvePoints,
@@ -535,7 +546,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                       onMouseLeave={() => clearAssignmentBarHover(detail.id, assignment.id)}
                     >
                       <svg className="assignment-curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-                        <polyline className="assignment-curve-line" points={curvePathPoints} />
+                        <path className="assignment-curve-line" d={curvePath} />
                         {sourceCurvePoints.map((point, pointIndex) => (
                           <circle
                             key={`${assignment.id}-curve-point-${pointIndex}`}
