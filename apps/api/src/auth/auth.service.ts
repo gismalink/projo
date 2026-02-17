@@ -210,7 +210,7 @@ export class AuthService {
   }
 
   async getMyProjects(userId: string, activeProjectId: string): Promise<ProjectsResponse> {
-    const items = await this.usersService.listProjectMemberships(userId);
+    const items = await this.usersService.listProjectMembershipsInActiveCompany(userId, activeProjectId);
 
     const projectItems = items.map((item) => ({
       id: item.workspaceId,

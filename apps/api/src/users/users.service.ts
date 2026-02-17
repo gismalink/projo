@@ -289,6 +289,48 @@ export class UsersService {
     }));
   }
 
+  async listProjectMembershipsInActiveCompany(userId: string, activeWorkspaceId: string): Promise<ProjectMembershipItem[]> {
+    const activeCompanyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
+
+    const memberships = await this.prisma.workspaceMember.findMany({
+      where: {
+        userId,
+        OR: [
+          {
+            workspace: {
+              companyId: activeCompanyId,
+            },
+          },
+          {
+            workspaceId: activeWorkspaceId,
+          },
+        ],
+      },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            ownerUserId: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    const unique = new Map<string, ProjectMembershipItem>();
+    for (const membership of memberships) {
+      unique.set(membership.workspace.id, {
+        workspaceId: membership.workspace.id,
+        workspaceName: membership.workspace.name,
+        ownerUserId: membership.workspace.ownerUserId,
+        role: membership.role,
+      });
+    }
+
+    return Array.from(unique.values());
+  }
+
   async listCompaniesForUser(userId: string): Promise<{ activeCompanyId: string; companies: CompanyMembershipItem[] }> {
     const { workspaceId: activeWorkspaceId } = await this.ensureActiveWorkspaceForUser(userId);
 

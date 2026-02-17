@@ -746,6 +746,16 @@ test('API e2e smoke: company list/create/rename/switch lifecycle', async () => {
   const afterSwitchCompanies = await request('/auth/companies', { headers: switchedHeaders });
   assert.equal(afterSwitchCompanies.response.status, 200, 'companies endpoint should return 200 after switch');
   assert.equal(afterSwitchCompanies.payload?.activeCompanyId, createdCompany.id, 'active company should match switched company');
+
+  const projectsInCompany = await request('/auth/projects', { headers: switchedHeaders });
+  assert.equal(projectsInCompany.response.status, 200, 'projects endpoint should return 200 after company switch');
+  assert.equal(typeof projectsInCompany.payload?.activeProjectId, 'string', 'active project id should be present');
+  const allProjects = [...(projectsInCompany.payload?.myProjects ?? []), ...(projectsInCompany.payload?.sharedProjects ?? [])];
+  assert.ok(allProjects.length >= 1, 'projects list should contain at least one project in active company');
+  assert.ok(
+    allProjects.some((item) => item.id === projectsInCompany.payload.activeProjectId),
+    'active project should belong to active company project list',
+  );
 });
 
 test('API e2e smoke: account register + me + password change', async () => {
