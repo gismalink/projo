@@ -90,8 +90,13 @@ export function App() {
     }
 
     setIsProjectHomeOpen(true);
+    void app.loadMyCompanies();
     void app.loadMyProjects();
   }, [app.token]);
+
+  const currentCompany = app.companies.find((item) => item.id === app.activeCompanyId) || null;
+  const currentCompanyName = currentCompany?.name || '-';
+  const canRenameCompany = Boolean(currentCompany?.isOwner);
 
   const currentProjectName =
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
@@ -201,6 +206,17 @@ export function App() {
     return `unnamed + ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
   };
 
+  const buildUnnamedCompanyName = () => {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const mm = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const hh = pad(now.getHours());
+    const mi = pad(now.getMinutes());
+    return `company + ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  };
+
   const closeProjectSettings = () => {
     setIsProjectSettingsOpen(false);
     setProjectSettingsProjectId('');
@@ -238,6 +254,24 @@ export function App() {
     await app.handleSwitchProjectSpace(projectId);
     setIsProjectHomeOpen(false);
     setIsProjectSettingsOpen(false);
+  };
+
+  const handleSwitchCompany = async (companyId: string) => {
+    if (!companyId || companyId === app.activeCompanyId) return;
+    await app.handleSwitchCompany(companyId);
+  };
+
+  const handleCreateCompany = async () => {
+    const draft = window.prompt(t.companyName, buildUnnamedCompanyName());
+    if (draft === null) return;
+    await app.handleCreateCompany(draft);
+  };
+
+  const handleRenameCompany = async () => {
+    if (!app.activeCompanyId) return;
+    const draft = window.prompt(t.companyName, currentCompanyName);
+    if (draft === null) return;
+    await app.handleUpdateCompanyName(app.activeCompanyId, draft);
   };
 
   const handleOpenProjectSettings = async () => {
@@ -344,6 +378,38 @@ export function App() {
                 </button>
               </div>
               <div className="project-top-actions">
+                <select
+                  className="lang-select"
+                  aria-label={t.workspace}
+                  value={app.activeCompanyId}
+                  onChange={(event) => void handleSwitchCompany(event.target.value)}
+                >
+                  {app.companies.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                {canRenameCompany ? (
+                  <button
+                    type="button"
+                    className="icon-btn header-btn header-icon-btn"
+                    onClick={() => void handleRenameCompany()}
+                    aria-label={t.editCompany}
+                    data-tooltip={t.editCompany}
+                  >
+                    <Icon name="edit" />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="icon-btn header-btn header-icon-btn"
+                  onClick={() => void handleCreateCompany()}
+                  aria-label={t.createCompany}
+                  data-tooltip={t.createCompany}
+                >
+                  <Icon name="plus" />
+                </button>
                 {canViewParticipants ? (
                   <button
                     type="button"

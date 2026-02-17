@@ -40,6 +40,22 @@ type ProjectsResponse = {
   sharedProjects: ProjectAccessItem[];
 };
 
+type CompanyAccessItem = {
+  id: string;
+  name: string;
+  isOwner: boolean;
+};
+
+type CompaniesResponse = {
+  activeCompanyId: string;
+  companies: CompanyAccessItem[];
+};
+
+type CompanyNameResponse = {
+  id: string;
+  name: string;
+};
+
 type ProjectMemberItem = {
   userId: string;
   email: string;
@@ -207,6 +223,94 @@ export class AuthService {
       activeProjectId,
       myProjects: projectItems.filter((item) => item.isOwner),
       sharedProjects: projectItems.filter((item) => !item.isOwner),
+    };
+  }
+
+  async getMyCompanies(userId: string): Promise<CompaniesResponse> {
+    const list = await this.usersService.listCompaniesForUser(userId);
+    return {
+      activeCompanyId: list.activeCompanyId,
+      companies: list.companies.map((item) => ({
+        id: item.companyId,
+        name: item.companyName,
+        isOwner: item.ownerUserId === userId,
+      })),
+    };
+  }
+
+  async createCompany(userId: string, name: string): Promise<LoginResponse> {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException(ErrorCode.AUTH_COMPANY_NAME_REQUIRED);
+    }
+
+    const created = await this.usersService.createCompany(userId, trimmedName);
+    if (!created) {
+      throw new UnauthorizedException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
+    }
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
+
+    return {
+      accessToken,
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
+    };
+  }
+
+  async switchCompany(userId: string, companyId: string): Promise<LoginResponse> {
+    const switched = await this.usersService.switchActiveCompany(userId, companyId);
+    if (!switched) {
+      throw new UnauthorizedException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
+    }
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
+
+    return {
+      accessToken,
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
+    };
+  }
+
+  async updateCompanyName(userId: string, companyId: string, name: string): Promise<CompanyNameResponse> {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException(ErrorCode.AUTH_COMPANY_NAME_REQUIRED);
+    }
+
+    const updated = await this.usersService.renameCompany(userId, companyId, trimmedName);
+    if (!updated) {
+      throw new UnauthorizedException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
+    }
+
+    return {
+      id: updated.id,
+      name: updated.name,
     };
   }
 

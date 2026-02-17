@@ -30,6 +30,12 @@ type ProjectMemberItem = {
   isOwner: boolean;
 };
 
+type CompanyMembershipItem = {
+  companyId: string;
+  companyName: string;
+  ownerUserId: string;
+};
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -73,6 +79,37 @@ export class UsersService {
     });
 
     return company.id;
+  }
+
+  private async ensureWorkspaceCompanyId(workspaceId: string): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        companyId: true,
+        ownerUserId: true,
+        owner: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (!workspace) {
+      throw new Error('Workspace not found while resolving company context');
+    }
+
+    if (workspace.companyId) {
+      return workspace.companyId;
+    }
+
+    const companyId = await this.ensureOwnerCompanyId(workspace.ownerUserId, workspace.owner.fullName);
+    await this.prisma.workspace.update({
+      where: { id: workspace.id },
+      data: { companyId },
+    });
+    return companyId;
   }
 
   private async listProjectMembers(workspaceId: string): Promise<ProjectMemberItem[]> {
@@ -250,6 +287,201 @@ export class UsersService {
       ownerUserId: membership.workspace.ownerUserId,
       role: membership.role,
     }));
+  }
+
+  async listCompaniesForUser(userId: string): Promise<{ activeCompanyId: string; companies: CompanyMembershipItem[] }> {
+    const { workspaceId: activeWorkspaceId } = await this.ensureActiveWorkspaceForUser(userId);
+
+    const memberships = await this.prisma.workspaceMember.findMany({
+      where: { userId },
+      select: {
+        workspaceId: true,
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    const workspaceIds = Array.from(new Set([activeWorkspaceId, ...memberships.map((item) => item.workspaceId)]));
+    const companyIds = new Set<string>();
+    for (const workspaceId of workspaceIds) {
+      const companyId = await this.ensureWorkspaceCompanyId(workspaceId);
+      companyIds.add(companyId);
+    }
+
+    const activeCompanyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
+
+    const companies = await this.prisma.company.findMany({
+      where: {
+        id: { in: Array.from(companyIds) },
+      },
+      select: {
+        id: true,
+        name: true,
+        ownerUserId: true,
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    return {
+      activeCompanyId,
+      companies: companies.map((company) => ({
+        companyId: company.id,
+        companyName: company.name,
+        ownerUserId: company.ownerUserId,
+      })),
+    };
+  }
+
+  async createCompany(ownerUserId: string, name: string): Promise<{ id: string; name: string } | null> {
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerUserId },
+      select: { id: true },
+    });
+    if (!owner) {
+      return null;
+    }
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return null;
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          ownerUserId,
+          name: trimmedName,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      const workspace = await tx.workspace.create({
+        data: {
+          ownerUserId,
+          companyId: company.id,
+          name: `${trimmedName} plan`,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await tx.workspaceMember.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: ownerUserId,
+          role: AppRole.ADMIN,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: ownerUserId },
+        data: {
+          activeWorkspaceId: workspace.id,
+        },
+      });
+
+      return company;
+    });
+
+    return created;
+  }
+
+  async renameCompany(ownerUserId: string, companyId: string, name: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!company || company.ownerUserId !== ownerUserId) {
+      return null;
+    }
+
+    return this.prisma.company.update({
+      where: { id: companyId },
+      data: {
+        name: name.trim(),
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
+  async switchActiveCompany(userId: string, companyId: string): Promise<{ workspaceId: string } | null> {
+    const existingMembership = await this.prisma.workspaceMember.findFirst({
+      where: {
+        userId,
+        workspace: {
+          companyId,
+        },
+      },
+      select: {
+        workspaceId: true,
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    if (existingMembership) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          activeWorkspaceId: existingMembership.workspaceId,
+        },
+      });
+      return { workspaceId: existingMembership.workspaceId };
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: {
+        id: true,
+        name: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!company || company.ownerUserId !== userId) {
+      return null;
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const workspace = await tx.workspace.create({
+        data: {
+          ownerUserId: userId,
+          companyId: company.id,
+          name: `${company.name} plan`,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await tx.workspaceMember.create({
+        data: {
+          workspaceId: workspace.id,
+          userId,
+          role: AppRole.ADMIN,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          activeWorkspaceId: workspace.id,
+        },
+      });
+
+      return workspace;
+    });
+
+    return { workspaceId: created.id };
   }
 
   async createProjectSpace(userId: string, name: string) {

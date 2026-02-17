@@ -47,6 +47,23 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     }
   }
 
+  async function loadMyCompanies(tokenOverride?: string) {
+    const authToken = tokenOverride ?? state.token;
+    if (!authToken) return;
+
+    const companiesResult = await runWithErrorToast({
+      operation: () => api.getMyCompanies(authToken),
+      fallbackMessage: t.uiLoadCompaniesFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (companiesResult) {
+      state.setCompanies(companiesResult.companies);
+      state.setActiveCompanyId(companiesResult.activeCompanyId);
+    }
+  }
+
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
     if (!state.email.trim() || !state.password.trim()) {
@@ -59,6 +76,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
         const result = await api.login(state.email, state.password);
         applyAuthSession(result, { includeIdentity: true });
         await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
         await loadMyProjects(result.accessToken);
       },
       fallbackMessage: t.uiLoginFailed,
@@ -88,6 +106,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
         state.setEmail(payload.email);
         state.setPassword('');
         await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
         await loadMyProjects(result.accessToken);
       },
       fallbackMessage: t.uiRegisterFailed,
@@ -116,6 +135,73 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       errorText,
       pushToast,
     });
+  }
+
+  async function handleCreateCompany(name: string) {
+    if (!state.token) return;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      pushToast(t.uiCompanyNameRequired);
+      return;
+    }
+
+    await runWithErrorToast({
+      operation: async () => {
+        const result = await api.createCompany(trimmedName, state.token as string);
+        applyAuthSession(result);
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiCreateCompanyFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
+  async function handleSwitchCompany(companyId: string) {
+    if (!state.token) return;
+
+    await runWithErrorToast({
+      operation: async () => {
+        const result = await api.switchCompany(companyId, state.token as string);
+        applyAuthSession(result);
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiSwitchCompanyFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
+  async function handleUpdateCompanyName(companyId: string, name: string) {
+    if (!state.token) return false;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      pushToast(t.uiCompanyNameRequired);
+      return false;
+    }
+
+    const updated = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.updateCompanyName(companyId, trimmedName, state.token as string);
+        await loadMyCompanies(state.token as string);
+      },
+      fallbackMessage: t.uiUpdateCompanyFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (updated) {
+      pushToast(t.uiUpdateCompanySuccess);
+      return true;
+    }
+
+    return false;
   }
 
   async function handleSwitchProjectSpace(projectId: string) {
@@ -350,12 +436,18 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     state.setMyProjectSpaces([]);
     state.setSharedProjectSpaces([]);
     state.setActiveProjectSpaceId('');
+    state.setCompanies([]);
+    state.setActiveCompanyId('');
   }
 
   return {
     handleLogin,
     handleRegister,
     loadMyProjects,
+    loadMyCompanies,
+    handleCreateCompany,
+    handleSwitchCompany,
+    handleUpdateCompanyName,
     handleCreateProjectSpace,
     handleSwitchProjectSpace,
     handleUpdateProjectSpaceName,

@@ -680,6 +680,74 @@ test('API e2e smoke: auth project member role update and removal', async () => {
   );
 });
 
+test('API e2e smoke: company list/create/rename/switch lifecycle', async () => {
+  const login = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  assert.equal(login.response.status, 201, 'login endpoint should return 201');
+  assert.equal(typeof login.payload?.accessToken, 'string', 'login should return accessToken');
+
+  const authHeaders = {
+    Authorization: `Bearer ${login.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const beforeCompanies = await request('/auth/companies', { headers: authHeaders });
+  assert.equal(beforeCompanies.response.status, 200, 'companies endpoint should return 200');
+  assert.equal(typeof beforeCompanies.payload?.activeCompanyId, 'string', 'active company id should be present');
+  assert.ok(Array.isArray(beforeCompanies.payload?.companies), 'companies payload should be array');
+  assert.ok(beforeCompanies.payload.companies.length >= 1, 'user should have at least one company');
+
+  const companyName = `E2E Company ${Date.now()}`;
+  const createCompany = await request('/auth/companies', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ name: companyName }),
+  });
+  assert.equal(createCompany.response.status, 201, 'create company should return 201');
+  assert.equal(typeof createCompany.payload?.accessToken, 'string', 'create company should return new accessToken');
+
+  const createdToken = createCompany.payload.accessToken;
+  const createdHeaders = {
+    Authorization: `Bearer ${createdToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const afterCreateCompanies = await request('/auth/companies', { headers: createdHeaders });
+  assert.equal(afterCreateCompanies.response.status, 200, 'companies endpoint should return 200 after create');
+  const createdCompany = afterCreateCompanies.payload?.companies?.find((item) => item.name === companyName);
+  assert.ok(createdCompany, 'newly created company should exist in companies list');
+  assert.equal(afterCreateCompanies.payload?.activeCompanyId, createdCompany.id, 'created company should become active');
+
+  const renamedCompanyName = `${companyName} Updated`;
+  const renameCompany = await request(`/auth/companies/${createdCompany.id}`, {
+    method: 'PATCH',
+    headers: createdHeaders,
+    body: JSON.stringify({ name: renamedCompanyName }),
+  });
+  assert.equal(renameCompany.response.status, 200, 'rename company should return 200');
+  assert.equal(renameCompany.payload?.name, renamedCompanyName, 'renamed company should return updated name');
+
+  const switchCompany = await request('/auth/companies/switch', {
+    method: 'POST',
+    headers: createdHeaders,
+    body: JSON.stringify({ companyId: createdCompany.id }),
+  });
+  assert.equal(switchCompany.response.status, 201, 'switch company should return 201');
+  assert.equal(typeof switchCompany.payload?.accessToken, 'string', 'switch company should return new accessToken');
+
+  const switchedHeaders = {
+    Authorization: `Bearer ${switchCompany.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+  const afterSwitchCompanies = await request('/auth/companies', { headers: switchedHeaders });
+  assert.equal(afterSwitchCompanies.response.status, 200, 'companies endpoint should return 200 after switch');
+  assert.equal(afterSwitchCompanies.payload?.activeCompanyId, createdCompany.id, 'active company should match switched company');
+});
+
 test('API e2e smoke: account register + me + password change', async () => {
   const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   const accountEmail = `e2e-user-${seed}@projo.local`;

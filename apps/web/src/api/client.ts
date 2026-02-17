@@ -53,6 +53,22 @@ export type MyProjectsResponse = {
   sharedProjects: ProjectSpaceItem[];
 };
 
+export type CompanyItem = {
+  id: string;
+  name: string;
+  isOwner: boolean;
+};
+
+export type MyCompaniesResponse = {
+  activeCompanyId: string;
+  companies: CompanyItem[];
+};
+
+export type CompanyNameResponse = {
+  id: string;
+  name: string;
+};
+
 export type ProjectPermission = 'viewer' | 'editor';
 
 export type ProjectMemberItem = {
@@ -445,6 +461,22 @@ export const api = {
   changePassword: (payload: ChangePasswordPayload, token: string) =>
     request<{ success: true }>('/auth/change-password', { method: 'POST', body: JSON.stringify(payload) }, token),
   logout: (token: string) => request<{ success: true }>('/auth/logout', { method: 'POST' }, token),
+  getMyCompanies: (token: string) => request<MyCompaniesResponse>('/auth/companies', {}, token),
+  createCompany: (name: string, token: string) =>
+    request<LoginResponse>('/auth/companies', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }, token),
+  switchCompany: (companyId: string, token: string) =>
+    request<LoginResponse>('/auth/companies/switch', {
+      method: 'POST',
+      body: JSON.stringify({ companyId }),
+    }, token),
+  updateCompanyName: (companyId: string, name: string, token: string) =>
+    request<CompanyNameResponse>(`/auth/companies/${companyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }, token),
   getMyProjects: (token: string) => request<MyProjectsResponse>('/auth/projects', {}, token),
   createProjectSpace: (name: string, token: string) =>
     request<LoginResponse>('/auth/projects', {

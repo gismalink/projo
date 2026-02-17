@@ -1,11 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateCompanyDto } from './dto/create-company.dto';
 import { CreateProjectSpaceDto } from './dto/create-project-space.dto';
 import { InviteProjectMemberDto } from './dto/invite-project-member.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SwitchCompanyDto } from './dto/switch-company.dto';
 import { SwitchProjectSpaceDto } from './dto/switch-project-space.dto';
+import { UpdateCompanyDto } from './dto/update-company.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UpdateProjectMemberPermissionDto } from './dto/update-project-member-permission.dto';
 import { UpdateProjectSpaceDto } from './dto/update-project-space.dto';
@@ -48,6 +51,34 @@ export class AuthController {
   @Get('projects')
   getProjects(@Req() req: AuthenticatedRequest) {
     return this.authService.getMyProjects(req.user.userId, req.user.workspaceId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('companies')
+  getCompanies(@Req() req: AuthenticatedRequest) {
+    return this.authService.getMyCompanies(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('companies')
+  createCompany(@Req() req: AuthenticatedRequest, @Body() dto: CreateCompanyDto) {
+    return this.authService.createCompany(req.user.userId, dto.name);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('companies/switch')
+  switchCompany(@Req() req: AuthenticatedRequest, @Body() dto: SwitchCompanyDto) {
+    return this.authService.switchCompany(req.user.userId, dto.companyId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('companies/:companyId')
+  updateCompanyName(
+    @Req() req: AuthenticatedRequest,
+    @Param('companyId') companyId: string,
+    @Body() dto: UpdateCompanyDto,
+  ) {
+    return this.authService.updateCompanyName(req.user.userId, companyId, dto.name);
   }
 
   @UseGuards(JwtAuthGuard)

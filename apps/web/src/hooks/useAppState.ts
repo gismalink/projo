@@ -3,6 +3,7 @@ import {
   AssignmentItem,
   CalendarDayItem,
   CalendarHealthResponse,
+  CompanyItem,
   DepartmentItem,
   ProjectSpaceItem,
   ProjectDetail,
@@ -38,6 +39,8 @@ export function useAppState() {
   const [myProjectSpaces, setMyProjectSpaces] = useState<ProjectSpaceItem[]>([]);
   const [sharedProjectSpaces, setSharedProjectSpaces] = useState<ProjectSpaceItem[]>([]);
   const [activeProjectSpaceId, setActiveProjectSpaceId] = useState<string>('');
+  const [companies, setCompanies] = useState<CompanyItem[]>([]);
+  const [activeCompanyId, setActiveCompanyId] = useState<string>('');
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -133,6 +136,8 @@ export function useAppState() {
     myProjectSpaces,
     sharedProjectSpaces,
     activeProjectSpaceId,
+    companies,
+    activeCompanyId,
     activeTab,
     selectedYear,
     toasts,
@@ -216,6 +221,8 @@ export function useAppState() {
     setMyProjectSpaces,
     setSharedProjectSpaces,
     setActiveProjectSpaceId,
+    setCompanies,
+    setActiveCompanyId,
     setActiveTab,
     setSelectedYear,
     setToasts,
