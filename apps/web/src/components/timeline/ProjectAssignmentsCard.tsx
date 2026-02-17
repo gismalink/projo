@@ -314,9 +314,6 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                       className="assignment-bar"
                       style={{
                         ...assignmentStyle(startIso, endIso),
-                        ['--assignment-fill-height' as string]: `${Math.round(
-                          Math.max(8, Math.min(18, (Number(assignment.allocationPercent) / 100) * 18)),
-                        )}px`,
                         background: employeeRoleColorById.get(assignment.employeeId) ?? '#6E7B8A',
                       }}
                       onMouseMove={(event) => handleAssignmentBarHover(event, detail.id, assignment.id)}

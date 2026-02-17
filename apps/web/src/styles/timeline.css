@@ -928,7 +928,7 @@
 
 .assignment-track {
   position: relative;
-  height: 20px;
+  height: 30px;
   border-radius: 0;
   border: none;
   background: transparent;
@@ -947,7 +947,7 @@
 .assignment-bar {
   position: absolute;
   top: 50%;
-  height: var(--assignment-fill-height, 16px);
+  height: 24px;
   transform: translateY(-50%);
   border-radius: 0;
   background: linear-gradient(90deg, #2a9dff 0%, var(--ios-accent) 100%);
