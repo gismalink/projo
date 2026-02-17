@@ -113,6 +113,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   const [curveDraftByAssignmentId, setCurveDraftByAssignmentId] = useState<Record<string, CurvePoint[]>>({});
   const [barSizeByAssignmentId, setBarSizeByAssignmentId] = useState<Record<string, { width: number; height: number }>>({});
   const barNodeByAssignmentIdRef = useRef<Record<string, HTMLSpanElement | null>>({});
+  const barRefHandlerByAssignmentIdRef = useRef<Record<string, (node: HTMLSpanElement | null) => void>>({});
   const barResizeObserverRef = useRef<ResizeObserver | null>(null);
   const dragStateRef = useRef<{
     projectId: string;
@@ -326,37 +327,25 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     };
   }, []);
 
-  const bindAssignmentBarNode = (assignmentId: string) => (node: HTMLSpanElement | null) => {
-    const previousNode = barNodeByAssignmentIdRef.current[assignmentId];
-    if (previousNode && previousNode !== node) {
-      barResizeObserverRef.current?.unobserve(previousNode);
-    }
-
-    if (node) {
-      barNodeByAssignmentIdRef.current[assignmentId] = node;
-      barResizeObserverRef.current?.observe(node);
-      const width = Math.max(1, Math.round(node.getBoundingClientRect().width));
-      const height = Math.max(1, Math.round(node.getBoundingClientRect().height));
-      setBarSizeByAssignmentId((prev) => {
-        const current = prev[assignmentId];
-        if (current && current.width === width && current.height === height) {
-          return prev;
+  const bindAssignmentBarNode = (assignmentId: string) => {
+    if (!barRefHandlerByAssignmentIdRef.current[assignmentId]) {
+      barRefHandlerByAssignmentIdRef.current[assignmentId] = (node: HTMLSpanElement | null) => {
+        const previousNode = barNodeByAssignmentIdRef.current[assignmentId];
+        if (previousNode && previousNode !== node) {
+          barResizeObserverRef.current?.unobserve(previousNode);
         }
-        return {
-          ...prev,
-          [assignmentId]: { width, height },
-        };
-      });
-      return;
+
+        if (node) {
+          barNodeByAssignmentIdRef.current[assignmentId] = node;
+          barResizeObserverRef.current?.observe(node);
+          return;
+        }
+
+        delete barNodeByAssignmentIdRef.current[assignmentId];
+      };
     }
 
-    delete barNodeByAssignmentIdRef.current[assignmentId];
-    setBarSizeByAssignmentId((prev) => {
-      if (!prev[assignmentId]) return prev;
-      const next = { ...prev };
-      delete next[assignmentId];
-      return next;
-    });
+    return barRefHandlerByAssignmentIdRef.current[assignmentId];
   };
 
   useEffect(() => {
