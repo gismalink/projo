@@ -19,6 +19,64 @@ const PROJECT_PERSON_SELECT = {
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private clampPercent(value: number) {
+    return Math.max(0, Math.min(100, value));
+  }
+
+  private createAssignmentLoadPercentResolver(assignment: {
+    allocationPercent: unknown;
+    loadProfile?: unknown;
+  }) {
+    const fallback = this.clampPercent(Number(assignment.allocationPercent));
+    const profile = assignment.loadProfile;
+    if (!profile || typeof profile !== 'object') {
+      return () => fallback;
+    }
+
+    const candidate = profile as { mode?: unknown; points?: unknown };
+    if (candidate.mode !== 'curve' || !Array.isArray(candidate.points) || candidate.points.length < 2) {
+      return () => fallback;
+    }
+
+    const points = candidate.points
+      .map((point) => {
+        if (!point || typeof point !== 'object') return null;
+        const typedPoint = point as { date?: unknown; value?: unknown };
+        if (typeof typedPoint.date !== 'string') return null;
+        const date = new Date(typedPoint.date);
+        const value = Number(typedPoint.value);
+        if (Number.isNaN(date.getTime()) || !Number.isFinite(value)) return null;
+        return {
+          dateMs: this.startOfUtcDay(date).getTime(),
+          value: this.clampPercent(value),
+        };
+      })
+      .filter((point): point is { dateMs: number; value: number } => Boolean(point))
+      .sort((left, right) => left.dateMs - right.dateMs);
+
+    if (points.length < 2) {
+      return () => fallback;
+    }
+
+    return (date: Date) => {
+      const dateMs = this.startOfUtcDay(date).getTime();
+      if (dateMs <= points[0].dateMs) return points[0].value;
+      if (dateMs >= points[points.length - 1].dateMs) return points[points.length - 1].value;
+
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const start = points[index];
+        const end = points[index + 1];
+        if (dateMs < start.dateMs || dateMs > end.dateMs) continue;
+        const span = end.dateMs - start.dateMs;
+        if (span <= 0) return start.value;
+        const ratio = (dateMs - start.dateMs) / span;
+        return start.value + (end.value - start.value) * ratio;
+      }
+
+      return fallback;
+    };
+  }
+
   private async ensureTeamTemplateExists(templateId: string) {
     const template = await this.prisma.projectTeamTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
     if (!template) {
@@ -320,10 +378,11 @@ export class ProjectsService {
 
     for (const assignment of project.assignments) {
       const assignmentDays = this.listUtcDays(assignment.assignmentStartDate, assignment.assignmentEndDate);
-      const dailyHours =
-        assignment.plannedHoursPerDay !== null
-          ? Number(assignment.plannedHoursPerDay)
-          : (Number(assignment.employee.defaultCapacityHoursPerDay) * Number(assignment.allocationPercent)) / 100;
+      const fixedDailyHours = assignment.plannedHoursPerDay !== null ? Number(assignment.plannedHoursPerDay) : null;
+      if (fixedDailyHours !== null && (!Number.isFinite(fixedDailyHours) || fixedDailyHours <= 0)) {
+        continue;
+      }
+      const resolveLoadPercent = this.createAssignmentLoadPercentResolver(assignment);
 
       const employeeVacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
 
@@ -337,6 +396,14 @@ export class ProjectsService {
             })();
 
         if (!isWorkingDay) continue;
+
+        const dailyHours =
+          fixedDailyHours !== null
+            ? fixedDailyHours
+            : (Number(assignment.employee.defaultCapacityHoursPerDay) * resolveLoadPercent(day)) / 100;
+        if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
+          continue;
+        }
 
         totalPlannedHours += dailyHours;
 
