@@ -993,6 +993,24 @@
   r: 5;
 }
 
+.assignment-curve-value-indicator {
+  pointer-events: none;
+}
+
+.assignment-curve-value-indicator circle {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, 0.18);
+  stroke-width: 1;
+}
+
+.assignment-curve-value-indicator text {
+  fill: #1d1d1f;
+  font-size: 7px;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .assignment-plan-handle {
   position: absolute;
   top: 0;

@@ -81,6 +81,8 @@ type CurvePoint = {
   value: number;
 };
 
+const CURVE_VERTICAL_DRAG_SLOWDOWN_FACTOR = 5;
+
 export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   const {
     t,
@@ -112,6 +114,11 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
 
   const [curveDraftByAssignmentId, setCurveDraftByAssignmentId] = useState<Record<string, CurvePoint[]>>({});
   const [barSizeByAssignmentId, setBarSizeByAssignmentId] = useState<Record<string, { width: number; height: number }>>({});
+  const [activeCurveDrag, setActiveCurveDrag] = useState<{
+    assignmentId: string;
+    pointIndex: number;
+    value: number;
+  } | null>(null);
   const barNodeByAssignmentIdRef = useRef<Record<string, HTMLSpanElement | null>>({});
   const barRefHandlerByAssignmentIdRef = useRef<Record<string, (node: HTMLSpanElement | null) => void>>({});
   const barResizeObserverRef = useRef<ResizeObserver | null>(null);
@@ -122,6 +129,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     rect: DOMRect;
     sourceStartIso: string;
     sourceEndIso: string;
+    startClientY: number;
+    startValue: number;
   } | null>(null);
   const isUnmountedRef = useRef(false);
 
@@ -348,8 +357,9 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       const drag = dragStateRef.current;
       if (!drag) return;
       const ratioX = (event.clientX - drag.rect.left) / Math.max(1, drag.rect.width);
-      const ratioY = (event.clientY - drag.rect.top) / Math.max(1, drag.rect.height);
-      const nextValue = clampPercent((1 - ratioY) * 100);
+      const verticalDeltaPx = event.clientY - drag.startClientY;
+      const valueDelta = -(verticalDeltaPx / Math.max(1, drag.rect.height)) * (100 / CURVE_VERTICAL_DRAG_SLOWDOWN_FACTOR);
+      const nextValue = clampPercent(drag.startValue + valueDelta);
 
       setCurveDraftByAssignmentId((prev) => {
         const current = prev[drag.assignmentId];
@@ -373,6 +383,12 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
           [drag.assignmentId]: next,
         };
       });
+
+      setActiveCurveDrag({
+        assignmentId: drag.assignmentId,
+        pointIndex: drag.pointIndex,
+        value: nextValue,
+      });
     };
 
     const handleMouseUp = () => {
@@ -380,6 +396,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       if (!drag) return;
       const draft = curveDraftByAssignmentId[drag.assignmentId];
       dragStateRef.current = null;
+      setActiveCurveDrag(null);
       if (!draft || draft.length < 2 || isUnmountedRef.current) return;
       const payload = convertCurvePointsToLoadProfile(draft, drag.sourceStartIso, drag.sourceEndIso);
       void onUpdateAssignmentCurve(drag.projectId, drag.assignmentId, payload);
@@ -635,6 +652,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                               event.preventDefault();
                               event.stopPropagation();
                               const rect = (event.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
+                              const startValue = clampPercent(point.value);
                               dragStateRef.current = {
                                 projectId: detail.id,
                                 assignmentId: assignment.id,
@@ -642,7 +660,14 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                                 rect,
                                 sourceStartIso: assignment.assignmentStartDate,
                                 sourceEndIso: assignment.assignmentEndDate,
+                                startClientY: event.clientY,
+                                startValue,
                               };
+                              setActiveCurveDrag({
+                                assignmentId: assignment.id,
+                                pointIndex,
+                                value: startValue,
+                              });
                               if (!curveDraftByAssignmentId[assignment.id]) {
                                 setCurveDraftByAssignmentId((prev) => ({
                                   ...prev,
@@ -652,6 +677,17 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                             }}
                           />
                         ))}
+                        {activeCurveDrag && activeCurveDrag.assignmentId === assignment.id ? (
+                          <g
+                            className="assignment-curve-value-indicator"
+                            transform={`translate(${(Math.max(0, Math.min(1, sourceCurvePoints[activeCurveDrag.pointIndex]?.xRatio ?? 0)) * barSize.width).toFixed(3)} ${((((100 - clampPercent(activeCurveDrag.value)) / 100) * barSize.height) - 14).toFixed(3)})`}
+                          >
+                            <circle r="11" />
+                            <text textAnchor="middle" dominantBaseline="middle">
+                              {Math.round(activeCurveDrag.value)}
+                            </text>
+                          </g>
+                        ) : null}
                       </svg>
                       <span
                         className={
