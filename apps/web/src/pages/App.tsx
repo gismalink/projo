@@ -403,6 +403,25 @@ export function App() {
                 </button>
               </div>
               <div className="project-top-actions">
+                {canViewParticipants ? (
+                  <button
+                    type="button"
+                    className="icon-btn header-btn header-icon-btn"
+                    onClick={() => void handleOpenProjectSettings()}
+                    aria-label={isOwner ? t.projectSettings : t.participants}
+                    data-tooltip={isOwner ? t.projectSettings : t.participants}
+                  >
+                    <Icon name="settings" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : app.token ? (
+            <div className="project-top-panel">
+              <div className="project-top-main">
+                <h1>{t.appTitle}</h1>
+              </div>
+              <div className="project-top-actions">
                 <select
                   className="lang-select"
                   aria-label={t.workspace}
@@ -418,7 +437,7 @@ export function App() {
                 {canRenameCompany ? (
                   <button
                     type="button"
-                    className="icon-btn header-btn header-icon-btn"
+                    className="icon-btn"
                     onClick={() => void handleRenameCompany()}
                     aria-label={t.editCompany}
                     data-tooltip={t.editCompany}
@@ -428,24 +447,13 @@ export function App() {
                 ) : null}
                 <button
                   type="button"
-                  className="icon-btn header-btn header-icon-btn"
+                  className="icon-btn"
                   onClick={() => void handleCreateCompany()}
                   aria-label={t.createCompany}
                   data-tooltip={t.createCompany}
                 >
                   <Icon name="plus" />
                 </button>
-                {canViewParticipants ? (
-                  <button
-                    type="button"
-                    className="icon-btn header-btn header-icon-btn"
-                    onClick={() => void handleOpenProjectSettings()}
-                    aria-label={isOwner ? t.projectSettings : t.participants}
-                    data-tooltip={isOwner ? t.projectSettings : t.participants}
-                  >
-                    <Icon name="settings" />
-                  </button>
-                ) : null}
               </div>
             </div>
           ) : (

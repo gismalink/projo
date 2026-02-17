@@ -239,6 +239,10 @@ button:active {
   margin: 0;
 }
 
+.project-top-main h1 {
+  margin: 0;
+}
+
 .project-top-actions {
   display: inline-flex;
   align-items: center;
@@ -363,8 +367,10 @@ button[data-tooltip]:focus-visible::after {
 .project-space-card-topline {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
+  font-size: 14px;
+  font-weight: 100;
 }
 
 .project-space-card-topline strong {
