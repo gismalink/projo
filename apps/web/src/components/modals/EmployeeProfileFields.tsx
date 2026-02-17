@@ -46,7 +46,7 @@ export function EmployeeProfileFields({
 }: EmployeeProfileFieldsProps) {
   const departmentField = (
     <label>
-      {t.department}
+      <span className="field-label optional">{t.department}</span>
       <select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
         <option value="">{t.selectDepartment}</option>
         {departments.map((department) => (
@@ -60,8 +60,8 @@ export function EmployeeProfileFields({
 
   const roleField = (
     <label>
-      {t.role}
-      <select value={roleId} onChange={(event) => setRoleId(event.target.value)}>
+      <span className="field-label required">{t.role}</span>
+      <select value={roleId} onChange={(event) => setRoleId(event.target.value)} required>
         <option value="">{t.selectRole}</option>
         {roles.map((role) => (
           <option key={role.id} value={role.id}>
@@ -74,7 +74,7 @@ export function EmployeeProfileFields({
 
   const gradeField = (
     <label>
-      {t.grade}
+      <span className="field-label optional">{t.grade}</span>
       <select value={grade} onChange={(event) => setGrade(event.target.value)}>
         <option value="">—</option>
         {gradeOptions.map((gradeOption) => (
@@ -89,12 +89,25 @@ export function EmployeeProfileFields({
   return (
     <>
       <label>
-        {t.fullName}
-        <input value={fullName} onChange={(event) => setFullName(event.target.value)} />
+        <span className="field-label required">{t.fullName}</span>
+        <input
+          value={fullName}
+          placeholder={t.fullName}
+          required
+          onChange={(event) => setFullName(event.target.value)}
+        />
       </label>
       <label>
-        {t.email}
-        <input value={email} onChange={(event) => setEmail(event.target.value)} />
+        <span className="field-label required">{t.email}</span>
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="name@example.com"
+          value={email}
+          required
+          onChange={(event) => setEmail(event.target.value)}
+        />
       </label>
 
       {compactMeta ? (
@@ -112,18 +125,19 @@ export function EmployeeProfileFields({
       )}
 
       <label>
-        {t.status}
+        <span className="field-label required">{t.status}</span>
         <select value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="active">{t.statusActive}</option>
           <option value="inactive">{t.statusInactive}</option>
         </select>
       </label>
       <label>
-        {t.salaryPerMonth}
+        <span className="field-label optional">{t.salaryPerMonth}</span>
         <input
           type="number"
           min={0}
           step="1"
+          placeholder="0"
           value={salary}
           onChange={(event) => setSalary(event.target.value)}
           onBlur={(event) => {

@@ -478,6 +478,11 @@ export const TEXT: Record<Lang, Record<string, string>> = {
 
 export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
   ru: {
+    HTTP_400: 'Проверьте корректность заполнения полей',
+    HTTP_401: 'Требуется повторный вход в систему',
+    HTTP_403: 'Недостаточно прав для выполнения действия',
+    HTTP_409: 'Конфликт данных: запись уже существует',
+    HTTP_500: 'Ошибка сервера. Попробуйте еще раз',
     ERR_AUTH_INVALID_CREDENTIALS: 'Неверный email или пароль',
     ERR_AUTH_EMAIL_ALREADY_EXISTS: 'Пользователь с таким email уже существует',
     ERR_AUTH_USER_NOT_FOUND: 'Пользователь не найден',
@@ -488,6 +493,7 @@ export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_AUTH_PROJECT_OWNER_IMMUTABLE: 'Нельзя изменить или удалить owner проекта',
     ERR_ROLE_NOT_FOUND: 'Роль не найдена',
     ERR_EMPLOYEE_NOT_FOUND: 'Сотрудник не найден',
+    ERR_EMPLOYEE_EMAIL_ALREADY_EXISTS: 'Сотрудник с таким email уже существует в проекте',
     ERR_DEPARTMENT_NOT_FOUND: 'Отдел не найден',
     ERR_SKILL_NOT_FOUND: 'Навык не найден',
     ERR_PROJECT_TEAM_TEMPLATE_NOT_FOUND: 'Шаблон состава не найден',
@@ -507,6 +513,11 @@ export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_CALENDAR_SYNC_FAILED: 'Не удалось синхронизировать производственный календарь',
   },
   en: {
+    HTTP_400: 'Please check input fields and try again',
+    HTTP_401: 'Please sign in again',
+    HTTP_403: 'You do not have permission for this action',
+    HTTP_409: 'Data conflict: record already exists',
+    HTTP_500: 'Server error. Please try again',
     ERR_AUTH_INVALID_CREDENTIALS: 'Invalid email or password',
     ERR_AUTH_EMAIL_ALREADY_EXISTS: 'User with this email already exists',
     ERR_AUTH_USER_NOT_FOUND: 'User not found',
@@ -517,6 +528,7 @@ export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_AUTH_PROJECT_OWNER_IMMUTABLE: 'Project owner cannot be changed or removed',
     ERR_ROLE_NOT_FOUND: 'Role not found',
     ERR_EMPLOYEE_NOT_FOUND: 'Employee not found',
+    ERR_EMPLOYEE_EMAIL_ALREADY_EXISTS: 'Employee with this email already exists in project',
     ERR_DEPARTMENT_NOT_FOUND: 'Department not found',
     ERR_SKILL_NOT_FOUND: 'Skill not found',
     ERR_PROJECT_TEAM_TEMPLATE_NOT_FOUND: 'Team template not found',

@@ -180,6 +180,13 @@ export function App() {
     setIsProjectHomeOpen(false);
   };
 
+  const handleOpenGlobalTab = (tab: 'timeline' | 'personnel' | 'roles' | 'instruction') => {
+    if (isProjectHomeOpen) {
+      setIsProjectHomeOpen(false);
+    }
+    app.setActiveTab(tab);
+  };
+
   const buildUnnamedProjectName = () => {
     const now = new Date();
     const pad = (value: number) => String(value).padStart(2, '0');
@@ -298,25 +305,31 @@ export function App() {
               <div className="project-top-main">
                 <button
                   type="button"
-                  className="icon-btn"
+                  className="icon-btn header-btn header-icon-btn"
                   onClick={() => setIsProjectHomeOpen(true)}
                   aria-label={t.projectList}
                   data-tooltip={t.projectList}
                 >
                   <Icon name="grid" />
                 </button>
-                <h3>{currentProjectName}</h3>
+                <button
+                  type="button"
+                  className={app.activeTab === 'timeline' ? 'tab active header-btn header-project-tab' : 'tab header-btn header-project-tab'}
+                  onClick={() => app.setActiveTab('timeline')}
+                >
+                  {currentProjectName}
+                </button>
               </div>
               <div className="project-top-actions">
                 {canViewParticipants ? (
                   <button
                     type="button"
-                    className="icon-btn"
+                    className="icon-btn header-btn header-icon-btn"
                     onClick={() => void handleOpenProjectSettings()}
                     aria-label={isOwner ? t.projectSettings : t.participants}
                     data-tooltip={isOwner ? t.projectSettings : t.participants}
                   >
-                    <Icon name="edit" />
+                    <Icon name="settings" />
                   </button>
                 ) : null}
               </div>
@@ -326,22 +339,56 @@ export function App() {
           )}
         </div>
         <div className="header-controls">
+          {app.token && isOwner ? (
+            <>
+              <button
+                type="button"
+                className={app.activeTab === 'personnel' && !isProjectHomeOpen ? 'icon-btn active header-btn header-icon-btn' : 'icon-btn header-btn header-icon-btn'}
+                onClick={() => handleOpenGlobalTab('personnel')}
+                aria-label={t.tabPersonnel}
+                data-tooltip={t.tabPersonnel}
+              >
+                <Icon name="users" />
+              </button>
+              <button
+                type="button"
+                className={app.activeTab === 'roles' && !isProjectHomeOpen ? 'icon-btn active header-btn header-icon-btn' : 'icon-btn header-btn header-icon-btn'}
+                onClick={() => handleOpenGlobalTab('roles')}
+                aria-label={t.tabRoles}
+                data-tooltip={t.tabRoles}
+              >
+                <Icon name="settings" />
+              </button>
+              <button
+                type="button"
+                className={app.activeTab === 'instruction' && !isProjectHomeOpen ? 'icon-btn active header-btn header-icon-btn' : 'icon-btn header-btn header-icon-btn'}
+                onClick={() => handleOpenGlobalTab('instruction')}
+                aria-label={t.tabInstruction}
+                data-tooltip={t.tabInstruction}
+              >
+                <Icon name="copy" />
+              </button>
+            </>
+          ) : null}
           {app.token ? (
             <button
               type="button"
-              className={isAccountModalOpen ? 'tab active' : 'tab'}
+              className={isAccountModalOpen ? 'tab active header-btn' : 'tab header-btn'}
               onClick={() => setIsAccountModalOpen((prev) => !prev)}
             >
               {app.currentUserFullName || t.account}
             </button>
           ) : null}
-          <div className="lang-toggle">
-            <button type="button" className={lang === 'ru' ? 'tab active' : 'tab'} onClick={() => setLang('ru')}>
-              RU
-            </button>
-            <button type="button" className={lang === 'en' ? 'tab active' : 'tab'} onClick={() => setLang('en')}>
-              EN
-            </button>
+          <div className="lang-select-wrap">
+            <select
+              aria-label="Language"
+              className="lang-select"
+              value={lang}
+              onChange={(event) => setLang(event.target.value as Lang)}
+            >
+              <option value="ru">RU</option>
+              <option value="en">EN</option>
+            </select>
           </div>
         </div>
       </div>
@@ -362,12 +409,20 @@ export function App() {
             <form onSubmit={app.handleLogin} className="timeline-form">
               <h2>{t.login}</h2>
               <label>
-                {t.email}
-                <input value={app.email} onChange={(e) => app.setEmail(e.target.value)} />
+                <span className="field-label required">{t.email}</span>
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="name@example.com"
+                  value={app.email}
+                  required
+                  onChange={(e) => app.setEmail(e.target.value)}
+                />
               </label>
               <label>
-                {t.password}
-                <input type="password" value={app.password} onChange={(e) => app.setPassword(e.target.value)} />
+                <span className="field-label required">{t.password}</span>
+                <input type="password" placeholder="••••••••" value={app.password} required onChange={(e) => app.setPassword(e.target.value)} />
               </label>
               <button type="submit">{t.signIn}</button>
             </form>
@@ -375,20 +430,28 @@ export function App() {
             <form onSubmit={handleRegisterSubmit} className="timeline-form">
               <h2>{t.register}</h2>
               <label>
-                {t.fullName}
-                <input value={registerFullName} onChange={(e) => setRegisterFullName(e.target.value)} />
+                <span className="field-label required">{t.fullName}</span>
+                <input value={registerFullName} placeholder={t.fullName} required onChange={(e) => setRegisterFullName(e.target.value)} />
               </label>
               <label>
-                {t.email}
-                <input value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} />
+                <span className="field-label required">{t.email}</span>
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="name@example.com"
+                  value={registerEmail}
+                  required
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                />
               </label>
               <label>
-                {t.password}
-                <input type="password" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} />
+                <span className="field-label required">{t.password}</span>
+                <input type="password" placeholder="••••••••" value={registerPassword} required onChange={(e) => setRegisterPassword(e.target.value)} />
               </label>
               <label>
-                {t.confirmPassword}
-                <input type="password" value={registerPasswordConfirm} onChange={(e) => setRegisterPasswordConfirm(e.target.value)} />
+                <span className="field-label required">{t.confirmPassword}</span>
+                <input type="password" placeholder="••••••••" value={registerPasswordConfirm} required onChange={(e) => setRegisterPasswordConfirm(e.target.value)} />
               </label>
               <button type="submit">{t.createAccount}</button>
             </form>
@@ -489,9 +552,11 @@ export function App() {
                 <div className="project-settings-body">
                   {isOwner ? (
                     <form onSubmit={handleUpdateProjectNameSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                      <label>{t.projectName}</label>
+                      <label>
+                        <span className="field-label required">{t.projectName}</span>
+                      </label>
                       <div className="project-settings-inline project-settings-inline-name">
-                        <input value={projectSettingsNameDraft} onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
+                        <input value={projectSettingsNameDraft} placeholder={t.projectName} required onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
                         <button type="submit">{t.save}</button>
                       </div>
                     </form>
@@ -499,8 +564,8 @@ export function App() {
 
                   <h4>{t.participants}</h4>
                   <label>
-                    {t.searchParticipants}
-                    <input value={projectMemberSearch} onChange={(e) => setProjectMemberSearch(e.target.value)} />
+                    <span className="field-label optional">{t.searchParticipants}</span>
+                    <input value={projectMemberSearch} placeholder={t.searchParticipants} onChange={(e) => setProjectMemberSearch(e.target.value)} />
                   </label>
                   <ul>
                     {filteredProjectMembers.map((member) => (
@@ -542,9 +607,19 @@ export function App() {
                   {canInviteParticipants ? (
                     <>
                       <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                        <label>{t.inviteByEmail}</label>
+                        <label>
+                          <span className="field-label required">{t.inviteByEmail}</span>
+                        </label>
                         <div className="project-settings-inline project-settings-inline-invite">
-                          <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+                          <input
+                            type="email"
+                            inputMode="email"
+                            autoComplete="email"
+                            placeholder="name@example.com"
+                            value={inviteEmail}
+                            required
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                          />
                           <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
                             <option value="viewer">{t.permissionViewer}</option>
                             <option value="editor">{t.permissionEditor}</option>
@@ -555,8 +630,8 @@ export function App() {
 
                       <form onSubmit={handleDeleteProjectSubmit} className="project-settings-form project-delete-form" style={{ padding: 0 }}>
                         <label>
-                          {t.deleteConfirmLabel}
-                          <input value={deleteProjectConfirmText} onChange={(e) => setDeleteProjectConfirmText(e.target.value)} />
+                          <span className="field-label required">{t.deleteConfirmLabel}</span>
+                          <input value={deleteProjectConfirmText} placeholder="delete" required onChange={(e) => setDeleteProjectConfirmText(e.target.value)} />
                         </label>
                         <button type="submit" className="danger-btn">{t.deleteProject}</button>
                       </form>
@@ -569,26 +644,6 @@ export function App() {
 
           {!isProjectHomeOpen ? (
             <>
-
-              <div className="tabs">
-                <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
-                  {t.tabTimeline}
-                </button>
-                {isOwner ? (
-                  <>
-                    <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
-                      {t.tabPersonnel}
-                    </button>
-                    <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
-                      {t.tabRoles}
-                    </button>
-                    <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
-                      {t.tabInstruction}
-                    </button>
-                  </>
-                ) : null}
-              </div>
-
               {isOwner && app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
@@ -905,32 +960,32 @@ export function App() {
                 </div>
                 <div className="timeline-form">
                   <label>
-                    {t.email}
+                    <span className="field-label">{t.email}</span>
                     <input value={app.currentUserEmail} readOnly />
                   </label>
                   <label>
-                    {t.workspace}
+                    <span className="field-label">{t.workspace}</span>
                     <input value={app.currentWorkspaceId || '-'} readOnly />
                   </label>
                   <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
                     <label>
-                      {t.fullName}
-                      <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
+                      <span className="field-label required">{t.fullName}</span>
+                      <input value={accountFullNameDraft} placeholder={t.fullName} required onChange={(e) => setAccountFullNameDraft(e.target.value)} />
                     </label>
                     <button type="submit">{t.saveProfile}</button>
                   </form>
                   <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
                     <label>
-                      {t.currentPassword}
-                      <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                      <span className="field-label required">{t.currentPassword}</span>
+                      <input type="password" placeholder="••••••••" value={currentPassword} required onChange={(e) => setCurrentPassword(e.target.value)} />
                     </label>
                     <label>
-                      {t.newPassword}
-                      <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                      <span className="field-label required">{t.newPassword}</span>
+                      <input type="password" placeholder="••••••••" value={newPassword} required onChange={(e) => setNewPassword(e.target.value)} />
                     </label>
                     <label>
-                      {t.confirmPassword}
-                      <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
+                      <span className="field-label required">{t.confirmPassword}</span>
+                      <input type="password" placeholder="••••••••" value={newPasswordConfirm} required onChange={(e) => setNewPasswordConfirm(e.target.value)} />
                     </label>
                     <button type="submit">{t.changePassword}</button>
                   </form>

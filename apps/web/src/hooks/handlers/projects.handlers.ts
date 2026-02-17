@@ -1,7 +1,8 @@
 import { FormEvent } from 'react';
 import { api } from '../../api/client';
-import { isoToInputDate, resolveErrorMessage } from '../app-helpers';
+import { isoToInputDate } from '../app-helpers';
 import { HandlerDeps } from './handler-deps';
+import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
 
 function getNextProjectCode(projects: Array<{ code: string }>) {
   const suffixes = projects
@@ -42,22 +43,30 @@ export function createProjectsHandlers({
   async function handleCreateProject(event: FormEvent) {
     event.preventDefault();
     if (!state.token) return;
-    try {
-      await api.createProject(
-        {
-          code: state.projectCode,
-          name: state.projectName,
-          startDate: new Date(state.projectStartDate).toISOString(),
-          endDate: new Date(state.projectEndDate).toISOString(),
-          status: 'planned',
-          priority: 2,
-          links: [],
-          teamTemplateId: state.projectTeamTemplateId || undefined,
-        },
-        state.token,
-      );
+    const created = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.createProject(
+          {
+            code: state.projectCode,
+            name: state.projectName,
+            startDate: new Date(state.projectStartDate).toISOString(),
+            endDate: new Date(state.projectEndDate).toISOString(),
+            status: 'planned',
+            priority: 2,
+            links: [],
+            teamTemplateId: state.projectTeamTemplateId || undefined,
+          },
+          state.token as string,
+        );
 
-      await refreshData(state.token, state.selectedYear);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateProjectFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (created) {
       state.setIsProjectModalOpen(false);
       state.setProjectTeamTemplateId('');
       state.setProjectCode((prev) => {
@@ -66,8 +75,6 @@ export function createProjectsHandlers({
         const next = String(Number(match[1]) + 1).padStart(match[1].length, '0');
         return prev.replace(/\d+$/, next);
       });
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateProjectFailed, errorText));
     }
   }
 
@@ -75,19 +82,25 @@ export function createProjectsHandlers({
     event.preventDefault();
     if (!state.token || !state.editProjectId) return;
 
-    try {
-      await api.updateProject(
-        state.editProjectId,
-        {
-          startDate: new Date(state.editProjectStartDate).toISOString(),
-          endDate: new Date(state.editProjectEndDate).toISOString(),
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, state.editProjectId);
+    const updated = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.updateProject(
+          state.editProjectId as string,
+          {
+            startDate: new Date(state.editProjectStartDate).toISOString(),
+            endDate: new Date(state.editProjectEndDate).toISOString(),
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear, state.editProjectId as string);
+      },
+      fallbackMessage: t.uiCreateProjectFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (updated) {
       state.setIsProjectDatesModalOpen(false);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateProjectFailed, errorText));
     }
   }
 
@@ -97,22 +110,25 @@ export function createProjectsHandlers({
   ) {
     if (!state.token) return;
 
-    try {
-      await api.updateProject(
-        projectId,
-        {
-          code: payload.code,
-          name: payload.name,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          teamTemplateId: payload.teamTemplateId === undefined ? undefined : payload.teamTemplateId || '',
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateProjectFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateProject(
+          projectId,
+          {
+            code: payload.code,
+            name: payload.name,
+            startDate: payload.startDate,
+            endDate: payload.endDate,
+            teamTemplateId: payload.teamTemplateId === undefined ? undefined : payload.teamTemplateId || '',
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear, projectId);
+      },
+      fallbackMessage: t.uiCreateProjectFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleSelectProject(projectId: string) {
@@ -131,11 +147,12 @@ export function createProjectsHandlers({
       return;
     }
 
-    try {
-      await loadProjectDetail(state.token, projectId, false);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiLoadProjectDetailsFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: () => loadProjectDetail(state.token as string, projectId, false),
+      fallbackMessage: t.uiLoadProjectDetailsFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   function handleMoveProject(projectId: string, direction: 'up' | 'down') {

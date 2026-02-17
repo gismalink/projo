@@ -55,23 +55,23 @@ export function ProjectModal(props: ProjectModalProps) {
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
           <label>
-            {t.code}
-            <input value={projectCode} onChange={(e) => setProjectCode(e.target.value)} />
+            <span className="field-label required">{t.code}</span>
+            <input value={projectCode} placeholder={t.code} required onChange={(e) => setProjectCode(e.target.value)} />
           </label>
           <label>
-            {t.name}
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+            <span className="field-label required">{t.name}</span>
+            <input value={projectName} placeholder={t.name} required onChange={(e) => setProjectName(e.target.value)} />
           </label>
           <label>
-            {t.start}
-            <input type="date" value={projectStartDate} onChange={(e) => setProjectStartDate(e.target.value)} />
+            <span className="field-label required">{t.start}</span>
+            <input type="date" value={projectStartDate} required onChange={(e) => setProjectStartDate(e.target.value)} />
           </label>
           <label>
-            {t.end}
-            <input type="date" value={projectEndDate} onChange={(e) => setProjectEndDate(e.target.value)} />
+            <span className="field-label required">{t.end}</span>
+            <input type="date" value={projectEndDate} required onChange={(e) => setProjectEndDate(e.target.value)} />
           </label>
           <label>
-            {t.teamTemplate}
+            <span className="field-label optional">{t.teamTemplate}</span>
             <select value={projectTeamTemplateId} onChange={(e) => setProjectTeamTemplateId(e.target.value)}>
               <option value="">{t.noTeamTemplate}</option>
               {teamTemplates.map((template) => (

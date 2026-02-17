@@ -33,7 +33,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  margin: .5rem 0;
+  margin: .3rem 0;
   color: var(--ios-text);
 }
 
@@ -171,11 +171,25 @@ button:active {
   justify-content: space-between;
   align-items: center;
   gap: 0.6rem;
+  min-height: 48px;
 }
 
 .lang-toggle {
   display: inline-flex;
   gap: 0.35rem;
+}
+
+.lang-select-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-select {
+  min-width: 74px;
+  height: 32px;
+  border-radius: 999px;
+  padding: 0 0.75rem;
+  font-weight: 600;
 }
 
 .header-controls {
@@ -184,10 +198,35 @@ button:active {
   gap: 0.45rem;
 }
 
+.header-btn {
+  min-height: 38px;
+}
+
+.header-icon-btn {
+  min-width: 38px;
+  width: 38px;
+  height: 38px;
+}
+
+.header-project-tab {
+  min-width: 180px;
+  max-width: 320px;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .project-top-panel {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
+  min-height: 40px;
+}
+
+.section-header .header-icon-btn .ui-icon {
+  width: 1.2em;
+  height: 1.2em;
 }
 
 .project-top-main {
@@ -230,6 +269,12 @@ button:active {
 
 .icon-btn:hover {
   background: rgba(10, 132, 255, 0.12);
+}
+
+.icon-btn.active {
+  background: var(--ios-accent);
+  color: #fff;
+  border-color: var(--ios-accent);
 }
 
 .icon-btn[data-tooltip]::after {
@@ -292,7 +337,8 @@ button[data-tooltip]:focus-visible::after {
 
 .project-space-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, 260px);
+  justify-content: flex-start;
   gap: 0.55rem;
 }
 
@@ -306,7 +352,8 @@ button[data-tooltip]:focus-visible::after {
   flex-direction: column;
   justify-content: space-between;
   gap: 0.3rem;
-  aspect-ratio: 1 / 1;
+  width: 260px;
+  height: 200px;
 }
 
 .project-space-card:hover {

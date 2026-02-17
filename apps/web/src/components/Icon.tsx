@@ -20,7 +20,8 @@ type IconName =
   | 'coins'
   | 'alert'
   | 'door'
-  | 'grid';
+  | 'grid'
+  | 'settings';
 
 type IconProps = {
   name: IconName;
@@ -174,6 +175,13 @@ export function Icon({ name, size = 16, className }: IconProps) {
           <rect {...common} x="13" y="4" width="7" height="7" rx="1.4" />
           <rect {...common} x="4" y="13" width="7" height="7" rx="1.4" />
           <rect {...common} x="13" y="13" width="7" height="7" rx="1.4" />
+        </>
+      ) : null}
+
+      {name === 'settings' ? (
+        <>
+          <circle {...common} cx="12" cy="12" r="3" />
+          <path {...common} d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-1.6a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-1.6a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1.1-1.1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2a1 1 0 0 1 1 1v1.6a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.9.6Z" />
         </>
       ) : null}
     </svg>

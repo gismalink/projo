@@ -25,8 +25,14 @@ export function EmployeeImportModal(props: EmployeeImportModalProps) {
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
           <label>
-            {t.csvData}
-            <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={10} />
+            <span className="field-label required">{t.csvData}</span>
+            <textarea
+              value={csv}
+              onChange={(e) => setCsv(e.target.value)}
+              rows={10}
+              placeholder="fullName,email,role,department,grade,status"
+              required
+            />
           </label>
           <button type="submit">{t.importCsv}</button>
         </form>

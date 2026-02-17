@@ -1,7 +1,8 @@
 import { FormEvent } from 'react';
 import { api } from '../../api/client';
-import { isoToInputDate, resolveErrorMessage } from '../app-helpers';
+import { isoToInputDate } from '../app-helpers';
 import { HandlerDeps } from './handler-deps';
+import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
 
 export function createAssignmentsHandlers({
   state,
@@ -35,51 +36,63 @@ export function createAssignmentsHandlers({
   async function handleCreateAssignment(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.assignmentProjectId || !state.assignmentEmployeeId) return;
-    try {
-      await api.createAssignment(
-        {
-          projectId: state.assignmentProjectId,
-          employeeId: state.assignmentEmployeeId,
-          assignmentStartDate: new Date(state.assignmentStartDate).toISOString(),
-          assignmentEndDate: new Date(state.assignmentEndDate).toISOString(),
-          allocationPercent: state.assignmentPercent,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, state.assignmentProjectId);
+    const created = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.createAssignment(
+          {
+            projectId: state.assignmentProjectId,
+            employeeId: state.assignmentEmployeeId,
+            assignmentStartDate: new Date(state.assignmentStartDate).toISOString(),
+            assignmentEndDate: new Date(state.assignmentEndDate).toISOString(),
+            allocationPercent: state.assignmentPercent,
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear, state.assignmentProjectId as string);
+      },
+      fallbackMessage: t.uiCreateAssignmentFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (created) {
       state.setIsAssignmentModalOpen(false);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateAssignmentFailed, errorText));
     }
   }
 
   async function handleUpdateAssignment(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.editAssignmentId || !state.selectedProjectId) return;
-    try {
-      await api.updateAssignment(
-        state.editAssignmentId,
-        {
-          assignmentStartDate: new Date(state.editAssignmentStartDate).toISOString(),
-          assignmentEndDate: new Date(state.editAssignmentEndDate).toISOString(),
-          allocationPercent: state.editAssignmentPercent,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, state.selectedProjectId);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateAssignmentFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateAssignment(
+          state.editAssignmentId as string,
+          {
+            assignmentStartDate: new Date(state.editAssignmentStartDate).toISOString(),
+            assignmentEndDate: new Date(state.editAssignmentEndDate).toISOString(),
+            allocationPercent: state.editAssignmentPercent,
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear, state.selectedProjectId as string);
+      },
+      fallbackMessage: t.uiUpdateAssignmentFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleDeleteAssignment(projectId: string, assignmentId: string) {
     if (!state.token) return;
-    try {
-      await api.deleteAssignment(assignmentId, state.token);
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateAssignmentFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.deleteAssignment(assignmentId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear, projectId);
+      },
+      fallbackMessage: t.uiUpdateAssignmentFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleAdjustAssignmentPlan(
@@ -89,19 +102,22 @@ export function createAssignmentsHandlers({
     nextEndIso: string,
   ) {
     if (!state.token) return;
-    try {
-      await api.updateAssignment(
-        assignmentId,
-        {
-          assignmentStartDate: nextStartIso,
-          assignmentEndDate: nextEndIso,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateAssignmentFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateAssignment(
+          assignmentId,
+          {
+            assignmentStartDate: nextStartIso,
+            assignmentEndDate: nextEndIso,
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear, projectId);
+      },
+      fallbackMessage: t.uiUpdateAssignmentFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   return {

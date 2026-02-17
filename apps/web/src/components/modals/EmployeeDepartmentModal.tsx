@@ -39,11 +39,11 @@ export function EmployeeDepartmentModal(props: EmployeeDepartmentModalProps) {
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
           <label>
-            {t.role}
+            <span className="field-label">{t.role}</span>
             <input value={employeeRoleName} readOnly />
           </label>
           <label>
-            {t.department}
+            <span className="field-label optional">{t.department}</span>
             <select value={employeeDepartmentId} onChange={(event) => setEmployeeDepartmentId(event.target.value)}>
               <option value="">{t.selectDepartment}</option>
               {departments.map((department) => (

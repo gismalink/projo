@@ -1,20 +1,49 @@
 import { FormEvent } from 'react';
 import { api } from '../../api/client';
-import { resolveErrorMessage } from '../app-helpers';
 import { HandlerDeps } from './handler-deps';
+import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
 
 export function createAuthHandlers({ state, t, errorText, pushToast, refreshData }: HandlerDeps) {
+  function applyAuthSession(
+    payload: {
+      accessToken: string;
+      user: {
+        id: string;
+        email: string;
+        fullName: string;
+        role: string;
+        workspaceId?: string;
+        workspaceRole?: string;
+      };
+    },
+    options?: { includeIdentity?: boolean },
+  ) {
+    state.setToken(payload.accessToken);
+    state.setCurrentUserRole(payload.user.workspaceRole ?? payload.user.role);
+    state.setCurrentWorkspaceId(payload.user.workspaceId ?? '');
+
+    if (options?.includeIdentity) {
+      state.setCurrentUserId(payload.user.id);
+      state.setCurrentUserEmail(payload.user.email);
+      state.setCurrentUserFullName(payload.user.fullName);
+    }
+  }
+
   async function loadMyProjects(tokenOverride?: string) {
     const authToken = tokenOverride ?? state.token;
     if (!authToken) return;
 
-    try {
-      const projects = await api.getMyProjects(authToken);
+    const projects = await runWithErrorToast({
+      operation: () => api.getMyProjects(authToken),
+      fallbackMessage: t.uiLoadProjectsFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (projects) {
       state.setMyProjectSpaces(projects.myProjects);
       state.setSharedProjectSpaces(projects.sharedProjects);
       state.setActiveProjectSpaceId(projects.activeProjectId);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiLoadProjectsFailed, errorText));
     }
   }
 
@@ -25,19 +54,17 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       return;
     }
 
-    try {
-      const result = await api.login(state.email, state.password);
-      state.setToken(result.accessToken);
-      state.setCurrentUserRole(result.user.workspaceRole ?? result.user.role);
-      state.setCurrentUserId(result.user.id);
-      state.setCurrentUserEmail(result.user.email);
-      state.setCurrentUserFullName(result.user.fullName);
-      state.setCurrentWorkspaceId(result.user.workspaceId ?? '');
-      await refreshData(result.accessToken, state.selectedYear);
-      await loadMyProjects(result.accessToken);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiLoginFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        const result = await api.login(state.email, state.password);
+        applyAuthSession(result, { includeIdentity: true });
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiLoginFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleRegister(
@@ -54,21 +81,19 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       return;
     }
 
-    try {
-      const result = await api.register(payload);
-      state.setToken(result.accessToken);
-      state.setCurrentUserRole(result.user.workspaceRole ?? result.user.role);
-      state.setCurrentUserId(result.user.id);
-      state.setCurrentUserEmail(result.user.email);
-      state.setCurrentUserFullName(result.user.fullName);
-      state.setCurrentWorkspaceId(result.user.workspaceId ?? '');
-      state.setEmail(payload.email);
-      state.setPassword('');
-      await refreshData(result.accessToken, state.selectedYear);
-      await loadMyProjects(result.accessToken);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiRegisterFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        const result = await api.register(payload);
+        applyAuthSession(result, { includeIdentity: true });
+        state.setEmail(payload.email);
+        state.setPassword('');
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiRegisterFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleCreateProjectSpace(name: string) {
@@ -80,31 +105,33 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       return;
     }
 
-    try {
-      const result = await api.createProjectSpace(trimmedName, state.token);
-      state.setToken(result.accessToken);
-      state.setCurrentUserRole(result.user.workspaceRole ?? result.user.role);
-      state.setCurrentWorkspaceId(result.user.workspaceId ?? '');
-      await refreshData(result.accessToken, state.selectedYear);
-      await loadMyProjects(result.accessToken);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateProjectSpaceFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        const result = await api.createProjectSpace(trimmedName, state.token as string);
+        applyAuthSession(result);
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiCreateProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleSwitchProjectSpace(projectId: string) {
     if (!state.token) return;
 
-    try {
-      const result = await api.switchProjectSpace(projectId, state.token);
-      state.setToken(result.accessToken);
-      state.setCurrentUserRole(result.user.workspaceRole ?? result.user.role);
-      state.setCurrentWorkspaceId(result.user.workspaceId ?? '');
-      await refreshData(result.accessToken, state.selectedYear);
-      await loadMyProjects(result.accessToken);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiSwitchProjectSpaceFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        const result = await api.switchProjectSpace(projectId, state.token as string);
+        applyAuthSession(result);
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiSwitchProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleUpdateProjectSpaceName(projectId: string, name: string) {
@@ -116,45 +143,61 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       return false;
     }
 
-    try {
-      await api.updateProjectSpaceName(projectId, trimmedName, state.token);
-      await loadMyProjects(state.token);
+    const updated = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.updateProjectSpaceName(projectId, trimmedName, state.token as string);
+        await loadMyProjects(state.token as string);
+      },
+      fallbackMessage: t.uiUpdateProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (updated) {
       pushToast(t.uiUpdateProjectSpaceSuccess);
       return true;
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateProjectSpaceFailed, errorText));
-      return false;
     }
+
+    return false;
   }
 
   async function handleDeleteProjectSpace(projectId: string) {
     if (!state.token) return false;
 
-    try {
-      const result = await api.deleteProjectSpace(projectId, state.token);
-      state.setToken(result.accessToken);
-      state.setCurrentUserRole(result.user.workspaceRole ?? result.user.role);
-      state.setCurrentWorkspaceId(result.user.workspaceId ?? '');
-      await refreshData(result.accessToken, state.selectedYear);
-      await loadMyProjects(result.accessToken);
+    const deleted = await runWithErrorToastVoid({
+      operation: async () => {
+        const result = await api.deleteProjectSpace(projectId, state.token as string);
+        applyAuthSession(result);
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiDeleteProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (deleted) {
       pushToast(t.uiDeleteProjectSpaceSuccess);
       return true;
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiDeleteProjectSpaceFailed, errorText));
-      return false;
     }
+
+    return false;
   }
 
   async function loadProjectMembers(projectId: string) {
     if (!state.token) return null;
 
-    try {
-      const result = await api.getProjectMembers(projectId, state.token);
-      return result.members;
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiLoadProjectMembersFailed, errorText));
-      return null;
-    }
+    return (
+      (await runWithErrorToast({
+        operation: async () => {
+          const result = await api.getProjectMembers(projectId, state.token as string);
+          return result.members;
+        },
+        fallbackMessage: t.uiLoadProjectMembersFailed,
+        errorText,
+        pushToast,
+      })) ?? null
+    );
   }
 
   async function handleInviteProjectMember(projectId: string, email: string, permission: 'viewer' | 'editor') {
@@ -166,14 +209,22 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       return null;
     }
 
-    try {
-      const result = await api.inviteProjectMember(projectId, trimmedEmail, permission, state.token);
+    const members = await runWithErrorToast({
+      operation: async () => {
+        const result = await api.inviteProjectMember(projectId, trimmedEmail, permission, state.token as string);
+        return result.members;
+      },
+      fallbackMessage: t.uiInviteFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (members) {
       pushToast(t.uiInviteSuccess);
-      return result.members;
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiInviteFailed, errorText));
-      return null;
+      return members;
     }
+
+    return null;
   }
 
   async function handleUpdateProjectMemberPermission(
@@ -183,48 +234,74 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
   ) {
     if (!state.token) return null;
 
-    try {
-      const result = await api.updateProjectMemberPermission(projectId, targetUserId, permission, state.token);
+    const members = await runWithErrorToast({
+      operation: async () => {
+        const result = await api.updateProjectMemberPermission(projectId, targetUserId, permission, state.token as string);
+        await loadMyProjects(state.token as string);
+        return result.members;
+      },
+      fallbackMessage: t.uiMemberRoleUpdateFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (members) {
       pushToast(t.uiMemberRoleUpdated);
-      await loadMyProjects(state.token);
-      return result.members;
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiMemberRoleUpdateFailed, errorText));
-      return null;
+      return members;
     }
+
+    return null;
   }
 
   async function handleRemoveProjectMember(projectId: string, targetUserId: string) {
     if (!state.token) return null;
 
-    try {
-      const result = await api.removeProjectMember(projectId, targetUserId, state.token);
+    const members = await runWithErrorToast({
+      operation: async () => {
+        const result = await api.removeProjectMember(projectId, targetUserId, state.token as string);
+        await loadMyProjects(state.token as string);
+        return result.members;
+      },
+      fallbackMessage: t.uiMemberRemoveFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (members) {
       pushToast(t.uiMemberRemoved);
-      await loadMyProjects(state.token);
-      return result.members;
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiMemberRemoveFailed, errorText));
-      return null;
+      return members;
     }
+
+    return null;
   }
 
   async function handleUpdateMyProfile(fullName: string) {
     if (!state.token) return;
-    try {
-      const user = await api.updateMe({ fullName }, state.token);
+    const user = await runWithErrorToast({
+      operation: () => api.updateMe({ fullName }, state.token as string),
+      fallbackMessage: t.uiUpdateProfileFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (user) {
       state.setCurrentUserFullName(user.fullName);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateProfileFailed, errorText));
     }
   }
 
   async function handleChangeMyPassword(currentPassword: string, newPassword: string) {
     if (!state.token) return;
-    try {
-      await api.changePassword({ currentPassword, newPassword }, state.token);
+    const changed = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.changePassword({ currentPassword, newPassword }, state.token as string);
+      },
+      fallbackMessage: t.uiChangePasswordFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (changed) {
       pushToast(t.passwordChangedSuccess);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiChangePasswordFailed, errorText));
     }
   }
 
