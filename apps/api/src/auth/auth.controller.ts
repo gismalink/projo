@@ -7,6 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SwitchProjectSpaceDto } from './dto/switch-project-space.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { UpdateProjectSpaceDto } from './dto/update-project-space.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 type AuthenticatedRequest = {
@@ -58,6 +59,16 @@ export class AuthController {
   @Post('projects/switch')
   switchProject(@Req() req: AuthenticatedRequest, @Body() dto: SwitchProjectSpaceDto) {
     return this.authService.switchProjectSpace(req.user.userId, dto.projectId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('projects/:projectId')
+  updateProjectName(
+    @Req() req: AuthenticatedRequest,
+    @Param('projectId') projectId: string,
+    @Body() dto: UpdateProjectSpaceDto,
+  ) {
+    return this.authService.updateProjectSpaceName(req.user.userId, projectId, dto.name);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -245,6 +245,31 @@ export class UsersService {
     return workspace;
   }
 
+  async renameProjectSpace(ownerUserId: string, workspaceId: string, name: string) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!workspace || workspace.ownerUserId !== ownerUserId) {
+      return null;
+    }
+
+    return this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        name: name.trim(),
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
   async listProjectMembersForUser(userId: string, workspaceId: string): Promise<ProjectMemberItem[] | null> {
     const membership = await this.prisma.workspaceMember.findUnique({
       where: {

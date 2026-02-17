@@ -107,6 +107,26 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     }
   }
 
+  async function handleUpdateProjectSpaceName(projectId: string, name: string) {
+    if (!state.token) return false;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      pushToast(t.uiProjectNameRequired);
+      return false;
+    }
+
+    try {
+      await api.updateProjectSpaceName(projectId, trimmedName, state.token);
+      await loadMyProjects(state.token);
+      pushToast(t.uiUpdateProjectSpaceSuccess);
+      return true;
+    } catch (error) {
+      pushToast(resolveErrorMessage(error, t.uiUpdateProjectSpaceFailed, errorText));
+      return false;
+    }
+  }
+
   async function loadProjectMembers(projectId: string) {
     if (!state.token) return null;
 
@@ -184,6 +204,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     loadMyProjects,
     handleCreateProjectSpace,
     handleSwitchProjectSpace,
+    handleUpdateProjectSpaceName,
     loadProjectMembers,
     handleInviteProjectMember,
     handleUpdateMyProfile,

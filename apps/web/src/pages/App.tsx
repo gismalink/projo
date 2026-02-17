@@ -9,6 +9,7 @@ import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { Icon } from '../components/Icon';
 import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
@@ -23,6 +24,8 @@ export function App() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isProjectHomeOpen, setIsProjectHomeOpen] = useState(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [projectSettingsProjectId, setProjectSettingsProjectId] = useState('');
+  const [projectSettingsNameDraft, setProjectSettingsNameDraft] = useState('');
   const [newProjectSpaceName, setNewProjectSpaceName] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMemberItem[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -77,6 +80,8 @@ export function App() {
       setIsAccountModalOpen(false);
       setIsProjectHomeOpen(false);
       setIsProjectSettingsOpen(false);
+      setProjectSettingsProjectId('');
+      setProjectSettingsNameDraft('');
       return;
     }
 
@@ -92,6 +97,7 @@ export function App() {
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
     app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
     null;
+  const editingProjectId = projectSettingsProjectId || app.activeProjectSpaceId;
   const isOwner = Boolean(currentProjectAccess?.isOwner);
   const isEditor = app.currentUserRole === 'PM';
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
@@ -156,11 +162,50 @@ export function App() {
   };
 
   const handleOpenProjectSettings = async () => {
-    if (!app.activeProjectSpaceId) return;
-    const members = await app.loadProjectMembers(app.activeProjectSpaceId);
+    const projectId = app.activeProjectSpaceId;
+    if (!projectId) return;
+
+    const projectAccess =
+      app.myProjectSpaces.find((item) => item.id === projectId) ||
+      app.sharedProjectSpaces.find((item) => item.id === projectId);
+    if (!projectAccess) return;
+
+    const members = await app.loadProjectMembers(projectId);
     if (members) {
+      setProjectSettingsProjectId(projectId);
+      setProjectSettingsNameDraft(projectAccess.name);
       setProjectMembers(members);
       setIsProjectSettingsOpen(true);
+    }
+  };
+
+  const handleOpenProjectSettingsById = async (projectId: string) => {
+    const projectAccess =
+      app.myProjectSpaces.find((item) => item.id === projectId) ||
+      app.sharedProjectSpaces.find((item) => item.id === projectId);
+    if (!projectAccess) return;
+
+    const members = await app.loadProjectMembers(projectId);
+    if (members) {
+      setProjectSettingsProjectId(projectId);
+      setProjectSettingsNameDraft(projectAccess.name);
+      setProjectMembers(members);
+      setIsProjectSettingsOpen(true);
+    }
+  };
+
+  const handleUpdateProjectNameSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingProjectId) return;
+
+    const success = await app.handleUpdateProjectSpaceName(editingProjectId, projectSettingsNameDraft);
+    if (success) {
+      const updatedAccess =
+        app.myProjectSpaces.find((item) => item.id === editingProjectId) ||
+        app.sharedProjectSpaces.find((item) => item.id === editingProjectId);
+      if (updatedAccess) {
+        setProjectSettingsNameDraft(updatedAccess.name);
+      }
     }
   };
 
@@ -259,19 +304,30 @@ export function App() {
                   <h3>{t.projectHomeTitle}</h3>
                   <div className="timeline-form">
                     <h4>{t.myProjects}</h4>
-                    <ul>
+                    <div className="project-space-grid">
                       {app.myProjectSpaces.map((item) => (
-                        <li key={item.id}>
-                          <div>
+                        <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
+                          <div className="project-space-card-topline">
                             <strong>{item.name}</strong>
-                            <span>{item.role}</span>
+                            {item.isOwner || item.role === 'PM' ? (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleOpenProjectSettingsById(item.id);
+                                }}
+                                aria-label={t.projectSettings}
+                                title={t.projectSettings}
+                              >
+                                <Icon name="edit" />
+                              </button>
+                            ) : null}
                           </div>
-                          <button type="button" onClick={() => void handleOpenProject(item.id)}>
-                            {t.openProject}
-                          </button>
-                        </li>
+                          <span>{item.role}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                     <form onSubmit={handleCreateProjectSpaceSubmit} className="timeline-form" style={{ padding: 0 }}>
                       <label>
                         {t.projectName}
@@ -284,19 +340,30 @@ export function App() {
                     {app.sharedProjectSpaces.length === 0 ? (
                       <p className="muted">{t.noSharedProjects}</p>
                     ) : (
-                      <ul>
+                      <div className="project-space-grid">
                         {app.sharedProjectSpaces.map((item) => (
-                          <li key={item.id}>
-                            <div>
+                          <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
+                            <div className="project-space-card-topline">
                               <strong>{item.name}</strong>
-                              <span>{item.role}</span>
+                              {item.isOwner || item.role === 'PM' ? (
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleOpenProjectSettingsById(item.id);
+                                  }}
+                                  aria-label={t.participants}
+                                  title={t.participants}
+                                >
+                                  <Icon name="edit" />
+                                </button>
+                              ) : null}
                             </div>
-                            <button type="button" onClick={() => void handleOpenProject(item.id)}>
-                              {t.openProject}
-                            </button>
-                          </li>
+                            <span>{item.role}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 </article>
@@ -306,12 +373,24 @@ export function App() {
                     <h3>{currentProjectName}</h3>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {canViewParticipants ? (
-                        <button type="button" className="ghost-btn" onClick={() => void handleOpenProjectSettings()}>
-                          {isOwner ? t.projectSettings : t.participants}
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => void handleOpenProjectSettings()}
+                          aria-label={isOwner ? t.projectSettings : t.participants}
+                          title={isOwner ? t.projectSettings : t.participants}
+                        >
+                          <Icon name="users" />
                         </button>
                       ) : null}
-                      <button type="button" className="ghost-btn" onClick={() => setIsProjectHomeOpen(true)}>
-                        {t.home}
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => setIsProjectHomeOpen(true)}
+                        aria-label={t.home}
+                        title={t.home}
+                      >
+                        <Icon name="building" />
                       </button>
                     </div>
                   </div>
@@ -323,11 +402,29 @@ export function App() {
               <article className="modal-card auth-modal">
                 <div className="section-header" style={{ marginBottom: 12 }}>
                   <h3>{t.projectSettings}</h3>
-                  <button type="button" className="ghost-btn" onClick={() => setIsProjectSettingsOpen(false)}>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => {
+                      setIsProjectSettingsOpen(false);
+                      setProjectSettingsProjectId('');
+                      setProjectSettingsNameDraft('');
+                    }}
+                  >
                     {t.close}
                   </button>
                 </div>
                 <div className="timeline-form" style={{ gap: 8 }}>
+                  {isOwner ? (
+                    <form onSubmit={handleUpdateProjectNameSubmit} className="timeline-form" style={{ padding: 0 }}>
+                      <label>
+                        {t.projectName}
+                        <input value={projectSettingsNameDraft} onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
+                      </label>
+                      <button type="submit">{t.save}</button>
+                    </form>
+                  ) : null}
+
                   <h4>{t.participants}</h4>
                   <ul>
                     {projectMembers.map((member) => (

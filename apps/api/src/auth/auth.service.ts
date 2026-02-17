@@ -53,6 +53,11 @@ type ProjectMembersResponse = {
   members: ProjectMemberItem[];
 };
 
+type ProjectNameResponse = {
+  id: string;
+  name: string;
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -258,6 +263,23 @@ export class AuthService {
         workspaceId: context.workspaceId,
         workspaceRole: context.workspaceRole,
       }),
+    };
+  }
+
+  async updateProjectSpaceName(userId: string, projectId: string, name: string): Promise<ProjectNameResponse> {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException(ErrorCode.AUTH_PROJECT_NAME_REQUIRED);
+    }
+
+    const updated = await this.usersService.renameProjectSpace(userId, projectId, trimmedName);
+    if (!updated) {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    return {
+      id: updated.id,
+      name: updated.name,
     };
   }
 

@@ -49,6 +49,11 @@
 - Body: `{ projectId: string }`
 - Назначение: переключить активный project-space пользователя.
 
+### `PATCH /api/auth/projects/:projectId`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ name: string }`
+- Назначение: owner-only переименование project-space.
+
 ### `GET /api/auth/projects/:projectId/members`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 - Назначение: получить список участников project-space (доступно только участникам).

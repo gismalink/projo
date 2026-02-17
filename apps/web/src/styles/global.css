@@ -191,6 +191,52 @@ button:active {
   box-shadow: none;
 }
 
+.icon-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: rgba(10, 132, 255, 0.12);
+}
+
+.project-space-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.55rem;
+}
+
+.project-space-card {
+  border: 1px solid var(--ios-border);
+  border-radius: 12px;
+  background: var(--ios-surface-strong);
+  padding: 0.65rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.project-space-card:hover {
+  background: rgba(10, 132, 255, 0.08);
+}
+
+.project-space-card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 
 ul {
   list-style: none;

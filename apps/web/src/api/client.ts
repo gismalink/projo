@@ -68,6 +68,11 @@ export type ProjectMembersResponse = {
   members: ProjectMemberItem[];
 };
 
+export type ProjectSpaceNameResponse = {
+  id: string;
+  name: string;
+};
+
 export type ProjectTimelineRow = {
   id: string;
   code: string;
@@ -427,6 +432,11 @@ export const api = {
     request<LoginResponse>('/auth/projects/switch', {
       method: 'POST',
       body: JSON.stringify({ projectId }),
+    }, token),
+  updateProjectSpaceName: (projectId: string, name: string, token: string) =>
+    request<ProjectSpaceNameResponse>(`/auth/projects/${projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
     }, token),
   getProjectMembers: (projectId: string, token: string) =>
     request<ProjectMembersResponse>(`/auth/projects/${projectId}/members`, {}, token),
