@@ -51,8 +51,8 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
               void onCreate(nextDepartmentName);
               setNewDepartmentName('');
             }}
-            title={t.addDepartment}
             aria-label={t.addDepartment}
+            data-tooltip={t.addDepartment}
           >
             <Icon name="plus" />
           </button>
@@ -80,8 +80,8 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
                   type="button"
                   className="department-manage-action"
                   disabled={!canSave}
-                  title={t.save}
                   aria-label={t.save}
+                  data-tooltip={t.save}
                   onClick={() => {
                     if (!canSave) return;
                     void onUpdate(department.id, nextName);
@@ -92,8 +92,8 @@ export function DepartmentsModal(props: DepartmentsModalProps) {
                 <button
                   type="button"
                   className="department-manage-action"
-                  title={t.deleteDepartment}
                   aria-label={t.deleteDepartment}
+                  data-tooltip={t.deleteDepartment}
                   onClick={() => {
                     if (!window.confirm(t.confirmDeleteDepartment)) return;
                     void onDelete(department.id);

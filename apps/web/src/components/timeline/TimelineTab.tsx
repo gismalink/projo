@@ -883,6 +883,12 @@ export function TimelineTab(props: TimelineTabProps) {
   }, [dragState, assignmentDragState]);
 
   useEffect(() => {
+    if (!selectedBenchEmployeeId) return;
+    if (employees.some((employee) => employee.id === selectedBenchEmployeeId)) return;
+    setSelectedBenchEmployeeId('');
+  }, [employees, selectedBenchEmployeeId]);
+
+  useEffect(() => {
     if (!assignmentDragState) return;
 
     const handleWindowMouseMove = (event: MouseEvent) => {

@@ -438,6 +438,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ name }),
     }, token),
+  deleteProjectSpace: (projectId: string, token: string) =>
+    request<LoginResponse>(`/auth/projects/${projectId}`, {
+      method: 'DELETE',
+    }, token),
   getProjectMembers: (projectId: string, token: string) =>
     request<ProjectMembersResponse>(`/auth/projects/${projectId}/members`, {}, token),
   inviteProjectMember: (projectId: string, email: string, permission: ProjectPermission, token: string) =>

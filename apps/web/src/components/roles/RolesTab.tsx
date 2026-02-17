@@ -403,8 +403,8 @@ export function RolesTab(props: RolesTabProps) {
             type="button"
             className="create-role-icon-btn"
             onClick={() => setIsCreateRoleOpen(true)}
-            title={t.createRole}
             aria-label={t.createRole}
+            data-tooltip={t.createRole}
           >
             <Icon name="plus" />
           </button>
@@ -564,8 +564,8 @@ export function RolesTab(props: RolesTabProps) {
                   setNewTemplateName('');
                   setNewTemplateRoleIds([]);
                 }}
-                title={t.addTeamTemplate}
                 aria-label={t.addTeamTemplate}
+                data-tooltip={t.addTeamTemplate}
               >
                 <Icon name="plus" />
               </button>
@@ -589,8 +589,8 @@ export function RolesTab(props: RolesTabProps) {
                       <button
                         type="button"
                         className="department-manage-action"
-                        title={t.deleteTeamTemplate}
                         aria-label={t.deleteTeamTemplate}
+                        data-tooltip={t.deleteTeamTemplate}
                         onClick={() => {
                           if (!window.confirm(t.confirmDeleteTeamTemplate)) return;
                           void onDeleteTeamTemplate(template.id);

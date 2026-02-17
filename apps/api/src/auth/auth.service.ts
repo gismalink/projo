@@ -283,6 +283,33 @@ export class AuthService {
     };
   }
 
+  async deleteProjectSpace(userId: string, projectId: string): Promise<LoginResponse> {
+    const deleted = await this.usersService.deleteProjectSpace(userId, projectId);
+    if (!deleted) {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
+
+    return {
+      accessToken,
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
+    };
+  }
+
   async getProjectMembers(userId: string, projectId: string): Promise<ProjectMembersResponse> {
     const members = await this.usersService.listProjectMembersForUser(userId, projectId);
     if (!members) {

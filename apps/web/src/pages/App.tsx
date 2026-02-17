@@ -26,7 +26,7 @@ export function App() {
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [projectSettingsProjectId, setProjectSettingsProjectId] = useState('');
   const [projectSettingsNameDraft, setProjectSettingsNameDraft] = useState('');
-  const [newProjectSpaceName, setNewProjectSpaceName] = useState('');
+  const [deleteProjectConfirmText, setDeleteProjectConfirmText] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMemberItem[]>([]);
   const [projectMemberSearch, setProjectMemberSearch] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -180,10 +180,27 @@ export function App() {
     setIsProjectHomeOpen(false);
   };
 
-  const handleCreateProjectSpaceSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    await app.handleCreateProjectSpace(newProjectSpaceName);
-    setNewProjectSpaceName('');
+  const buildUnnamedProjectName = () => {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const mm = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const hh = pad(now.getHours());
+    const mi = pad(now.getMinutes());
+    return `unnamed + ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  };
+
+  const closeProjectSettings = () => {
+    setIsProjectSettingsOpen(false);
+    setProjectSettingsProjectId('');
+    setProjectSettingsNameDraft('');
+    setProjectMemberSearch('');
+    setDeleteProjectConfirmText('');
+  };
+
+  const handleCreateProjectSpaceCard = async () => {
+    await app.handleCreateProjectSpace(buildUnnamedProjectName());
     setIsProjectHomeOpen(false);
   };
 
@@ -208,6 +225,7 @@ export function App() {
       setProjectSettingsNameDraft(projectAccess.name);
       setProjectMembers(members);
       setProjectMemberSearch('');
+      setDeleteProjectConfirmText('');
       setIsProjectSettingsOpen(true);
     }
   };
@@ -224,6 +242,7 @@ export function App() {
       setProjectSettingsNameDraft(projectAccess.name);
       setProjectMembers(members);
       setProjectMemberSearch('');
+      setDeleteProjectConfirmText('');
       setIsProjectSettingsOpen(true);
     }
   };
@@ -245,13 +264,29 @@ export function App() {
 
   const handleInviteSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!app.activeProjectSpaceId) return;
+    if (!editingProjectId) return;
 
-    const members = await app.handleInviteProjectMember(app.activeProjectSpaceId, inviteEmail, invitePermission);
+    const members = await app.handleInviteProjectMember(editingProjectId, inviteEmail, invitePermission);
     if (members) {
       setProjectMembers(members);
       setInviteEmail('');
     }
+  };
+
+  const handleDeleteProjectSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingProjectId) return;
+
+    if (deleteProjectConfirmText.trim().toLowerCase() !== 'delete') {
+      app.setToasts((prev) => [...prev, { id: Date.now(), message: t.uiDeleteProjectConfirmWordRequired }]);
+      return;
+    }
+
+    const deleted = await app.handleDeleteProjectSpace(editingProjectId);
+    if (!deleted) return;
+
+    closeProjectSettings();
+    setIsProjectHomeOpen(true);
   };
 
   return (
@@ -265,8 +300,8 @@ export function App() {
                   type="button"
                   className="icon-btn"
                   onClick={() => setIsProjectHomeOpen(true)}
-                  aria-label={t.home}
-                  title={t.home}
+                  aria-label={t.projectList}
+                  data-tooltip={t.projectList}
                 >
                   <Icon name="grid" />
                 </button>
@@ -279,7 +314,7 @@ export function App() {
                     className="icon-btn"
                     onClick={() => void handleOpenProjectSettings()}
                     aria-label={isOwner ? t.projectSettings : t.participants}
-                    title={isOwner ? t.projectSettings : t.participants}
+                    data-tooltip={isOwner ? t.projectSettings : t.participants}
                   >
                     <Icon name="edit" />
                   </button>
@@ -365,7 +400,6 @@ export function App() {
 
               {isProjectHomeOpen ? (
                 <article className="card" style={{ marginBottom: 12 }}>
-                  <h3>{t.projectHomeTitle}</h3>
                   <div className="timeline-form">
                     <h4>{t.myProjects}</h4>
                     <div className="project-space-grid">
@@ -382,7 +416,7 @@ export function App() {
                                   void handleOpenProjectSettingsById(item.id);
                                 }}
                                 aria-label={t.projectSettings}
-                                title={t.projectSettings}
+                                data-tooltip={t.projectSettings}
                               >
                                 <Icon name="edit" />
                               </button>
@@ -391,14 +425,18 @@ export function App() {
                           <span>{item.role}</span>
                         </div>
                       ))}
+                      <button
+                        type="button"
+                        className="project-space-card project-space-card-create"
+                        onClick={() => void handleCreateProjectSpaceCard()}
+                        aria-label={t.createProjectSpace}
+                        data-tooltip={t.createProjectSpace}
+                      >
+                        <span className="project-space-card-create-plus">
+                          <Icon name="plus" />
+                        </span>
+                      </button>
                     </div>
-                    <form onSubmit={handleCreateProjectSpaceSubmit} className="timeline-form" style={{ padding: 0 }}>
-                      <label>
-                        {t.projectName}
-                        <input value={newProjectSpaceName} onChange={(e) => setNewProjectSpaceName(e.target.value)} />
-                      </label>
-                      <button type="submit">{t.createProjectSpace}</button>
-                    </form>
 
                     <h4>{t.sharedProjects}</h4>
                     {app.sharedProjectSpaces.length === 0 ? (
@@ -418,7 +456,7 @@ export function App() {
                                     void handleOpenProjectSettingsById(item.id);
                                   }}
                                   aria-label={t.participants}
-                                  title={t.participants}
+                                  data-tooltip={t.participants}
                                 >
                                   <Icon name="edit" />
                                 </button>
@@ -443,12 +481,7 @@ export function App() {
                   <button
                     type="button"
                     className="ghost-btn"
-                    onClick={() => {
-                      setIsProjectSettingsOpen(false);
-                      setProjectSettingsProjectId('');
-                      setProjectSettingsNameDraft('');
-                      setProjectMemberSearch('');
-                    }}
+                    onClick={closeProjectSettings}
                   >
                     {t.close}
                   </button>
@@ -488,7 +521,13 @@ export function App() {
                               <option value="viewer">{t.permissionViewer}</option>
                               <option value="editor">{t.permissionEditor}</option>
                             </select>
-                            <button type="button" className="icon-btn" onClick={() => void handleRemoveMember(member.userId)} aria-label={t.remove}>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => void handleRemoveMember(member.userId)}
+                              aria-label={t.remove}
+                              data-tooltip={t.remove}
+                            >
                               <Icon name="x" />
                             </button>
                           </div>
@@ -501,17 +540,27 @@ export function App() {
                   </ul>
 
                   {canInviteParticipants ? (
-                    <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                      <label>{t.inviteByEmail}</label>
-                      <div className="project-settings-inline project-settings-inline-invite">
-                        <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
-                        <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
-                          <option value="viewer">{t.permissionViewer}</option>
-                          <option value="editor">{t.permissionEditor}</option>
-                        </select>
-                        <button type="submit">{t.invite}</button>
-                      </div>
-                    </form>
+                    <>
+                      <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
+                        <label>{t.inviteByEmail}</label>
+                        <div className="project-settings-inline project-settings-inline-invite">
+                          <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+                          <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
+                            <option value="viewer">{t.permissionViewer}</option>
+                            <option value="editor">{t.permissionEditor}</option>
+                          </select>
+                          <button type="submit">{t.invite}</button>
+                        </div>
+                      </form>
+
+                      <form onSubmit={handleDeleteProjectSubmit} className="project-settings-form project-delete-form" style={{ padding: 0 }}>
+                        <label>
+                          {t.deleteConfirmLabel}
+                          <input value={deleteProjectConfirmText} onChange={(e) => setDeleteProjectConfirmText(e.target.value)} />
+                        </label>
+                        <button type="submit" className="danger-btn">{t.deleteProject}</button>
+                      </form>
+                    </>
                   ) : null}
                 </div>
               </article>

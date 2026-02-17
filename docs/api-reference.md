@@ -54,6 +54,11 @@
 - Body: `{ name: string }`
 - Назначение: owner-only переименование project-space.
 
+### `DELETE /api/auth/projects/:projectId`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Назначение: owner-only удаление project-space.
+- Response: JWT payload (token + user) с новым активным project-context.
+
 ### `GET /api/auth/projects/:projectId/members`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 - Назначение: получить список участников project-space (доступно только участникам).

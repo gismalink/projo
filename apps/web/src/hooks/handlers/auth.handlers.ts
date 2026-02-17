@@ -127,6 +127,24 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     }
   }
 
+  async function handleDeleteProjectSpace(projectId: string) {
+    if (!state.token) return false;
+
+    try {
+      const result = await api.deleteProjectSpace(projectId, state.token);
+      state.setToken(result.accessToken);
+      state.setCurrentUserRole(result.user.workspaceRole ?? result.user.role);
+      state.setCurrentWorkspaceId(result.user.workspaceId ?? '');
+      await refreshData(result.accessToken, state.selectedYear);
+      await loadMyProjects(result.accessToken);
+      pushToast(t.uiDeleteProjectSpaceSuccess);
+      return true;
+    } catch (error) {
+      pushToast(resolveErrorMessage(error, t.uiDeleteProjectSpaceFailed, errorText));
+      return false;
+    }
+  }
+
   async function loadProjectMembers(projectId: string) {
     if (!state.token) return null;
 
@@ -237,6 +255,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     handleCreateProjectSpace,
     handleSwitchProjectSpace,
     handleUpdateProjectSpaceName,
+    handleDeleteProjectSpace,
     loadProjectMembers,
     handleInviteProjectMember,
     handleUpdateProjectMemberPermission,

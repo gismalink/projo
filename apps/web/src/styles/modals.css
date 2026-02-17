@@ -140,6 +140,12 @@
   gap: 0.32rem;
 }
 
+.project-delete-form {
+  margin-top: 0.2rem;
+  padding-top: 0.5rem !important;
+  border-top: 1px solid var(--ios-border);
+}
+
 .project-settings-inline {
   display: grid;
   align-items: center;

@@ -108,8 +108,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
             <button
               type="button"
               className="create-role-icon-btn team-icon-btn"
-              title={t.importEmployeesTooltip}
               aria-label={t.importEmployeesTooltip}
+              data-tooltip={t.importEmployeesTooltip}
               onClick={openEmployeeImportModal}
             >
               <Icon name="upload" />
@@ -117,8 +117,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
             <button
               type="button"
               className="create-role-icon-btn team-icon-btn"
-              title={t.createEmployeeTooltip}
               aria-label={t.createEmployeeTooltip}
+              data-tooltip={t.createEmployeeTooltip}
               onClick={openEmployeeCreateModal}
             >
               <Icon name="plus" />
@@ -186,8 +186,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
             <button
               type="button"
               className="create-role-icon-btn team-icon-btn"
-              title={t.clearFilter}
               aria-label={t.clearFilter}
+              data-tooltip={t.clearFilter}
               onClick={clearAllFilters}
             >
               <Icon name="refresh" />
@@ -214,8 +214,8 @@ export function PersonnelTab(props: PersonnelTabProps) {
                         <button
                           type="button"
                           className="create-role-icon-btn team-icon-btn"
-                          title={t.editProfileTooltip}
                           aria-label={t.editProfileTooltip}
+                          data-tooltip={t.editProfileTooltip}
                           onClick={() => openEmployeeModal(employee)}
                         >
                           <Icon name="edit" />

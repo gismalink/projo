@@ -225,10 +225,69 @@ button:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .icon-btn:hover {
   background: rgba(10, 132, 255, 0.12);
+}
+
+.icon-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translate(-50%, 4px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(24, 24, 28, 0.96);
+  color: #fff;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.22rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 30;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.icon-btn[data-tooltip]:hover::after,
+.icon-btn[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.14s;
+}
+
+button[data-tooltip] {
+  position: relative;
+}
+
+button[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translate(-50%, 4px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(24, 24, 28, 0.96);
+  color: #fff;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.22rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 30;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+button[data-tooltip]:hover::after,
+button[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.14s;
 }
 
 .project-space-grid {
@@ -245,7 +304,9 @@ button:active {
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 0.3rem;
+  aspect-ratio: 1 / 1;
 }
 
 .project-space-card:hover {
@@ -257,6 +318,66 @@ button:active {
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
+}
+
+.project-space-card-topline strong {
+  overflow-wrap: anywhere;
+}
+
+.project-space-card-create {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  position: relative;
+}
+
+.project-space-card-create[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translate(-50%, 4px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(24, 24, 28, 0.96);
+  color: #fff;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.22rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 30;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.project-space-card-create[data-tooltip]:hover::after,
+.project-space-card-create[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.14s;
+}
+
+.project-space-card-create-plus {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--ios-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ios-text-secondary);
+}
+
+.danger-btn {
+  background: rgba(255, 69, 58, 0.16);
+  border-color: rgba(255, 69, 58, 0.3);
+  color: #a01914;
+  box-shadow: none;
+}
+
+.danger-btn:hover {
+  background: rgba(255, 69, 58, 0.22);
 }
 
 .project-member-actions {
