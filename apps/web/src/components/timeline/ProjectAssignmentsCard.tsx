@@ -203,15 +203,31 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     const spanMs = Math.max(1, sourceEndMs - sourceStartMs);
     const maxDayShift = Math.floor(spanMs / (24 * 60 * 60 * 1000));
 
-    const withDates = points.map((point, index) => {
+    const normalizedPoints = [...points].sort((left, right) => left.xRatio - right.xRatio);
+    const maxUniquePointCount = Math.max(2, maxDayShift + 1);
+    const targetPointCount = Math.min(normalizedPoints.length, maxUniquePointCount);
+    const sampledPoints: CurvePoint[] =
+      targetPointCount <= 2
+        ? [normalizedPoints[0], normalizedPoints[normalizedPoints.length - 1]]
+        : [
+            normalizedPoints[0],
+            ...Array.from({ length: targetPointCount - 2 }, (_, index) => {
+              const ratio = (index + 1) / (targetPointCount - 1);
+              const sourceIndex = Math.max(1, Math.min(normalizedPoints.length - 2, Math.round(ratio * (normalizedPoints.length - 1))));
+              return normalizedPoints[sourceIndex];
+            }),
+            normalizedPoints[normalizedPoints.length - 1],
+          ];
+
+    const withDates = sampledPoints.map((point, index) => {
       if (index === 0) {
         return { date: new Date(sourceStartMs).toISOString(), value: clampPercent(point.value), index };
       }
-      if (index === points.length - 1) {
+      if (index === sampledPoints.length - 1) {
         return { date: new Date(sourceEndMs).toISOString(), value: clampPercent(point.value), index };
       }
 
-      const dayOffset = Math.max(1, Math.min(maxDayShift - 1, Math.round(point.xRatio * maxDayShift)));
+      const dayOffset = Math.max(1, Math.min(Math.max(1, maxDayShift - 1), Math.round(point.xRatio * maxDayShift)));
       return {
         date: new Date(sourceStartMs + dayOffset * 24 * 60 * 60 * 1000).toISOString(),
         value: clampPercent(point.value),
@@ -239,6 +255,52 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       points: withDates.map((point) => ({ date: point.date, value: Number(point.value.toFixed(2)) })),
     };
   };
+
+  const effectiveLoadProfileByAssignmentId = useMemo(() => {
+    const result = new Map<string, { mode: 'curve'; points: Array<{ date: string; value: number }> }>();
+    for (const assignment of sortedAssignments) {
+      const draft = curveDraftByAssignmentId[assignment.id];
+      if (!draft || draft.length < 2) continue;
+      result.set(
+        assignment.id,
+        convertCurvePointsToLoadProfile(draft, assignment.assignmentStartDate, assignment.assignmentEndDate),
+      );
+    }
+    return result;
+  }, [curveDraftByAssignmentId, sortedAssignments]);
+
+  const averageLoadPercentByAssignmentId = useMemo(() => {
+    const result = new Map<string, number>();
+    for (const assignment of sortedAssignments) {
+      const effectiveLoadProfile = effectiveLoadProfileByAssignmentId.get(assignment.id);
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(
+        effectiveLoadProfile
+          ? {
+              ...assignment,
+              loadProfile: effectiveLoadProfile,
+            }
+          : assignment,
+      );
+
+      const start = toUtcDay(new Date(assignment.assignmentStartDate));
+      const end = toUtcDay(new Date(assignment.assignmentEndDate));
+      if (end < start) {
+        result.set(assignment.id, 0);
+        continue;
+      }
+
+      let sum = 0;
+      let days = 0;
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        sum += resolveLoadPercent(cursor);
+        days += 1;
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+      result.set(assignment.id, days > 0 ? Number((sum / days).toFixed(1)) : 0);
+    }
+    return result;
+  }, [effectiveLoadProfileByAssignmentId, sortedAssignments, toUtcDay]);
 
   const buildAssignmentCurveGeometry = (params: {
     widthPx: number;
@@ -399,7 +461,15 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       setActiveCurveDrag(null);
       if (!draft || draft.length < 2 || isUnmountedRef.current) return;
       const payload = convertCurvePointsToLoadProfile(draft, drag.sourceStartIso, drag.sourceEndIso);
-      void onUpdateAssignmentCurve(drag.projectId, drag.assignmentId, payload);
+      void onUpdateAssignmentCurve(drag.projectId, drag.assignmentId, payload).finally(() => {
+        if (isUnmountedRef.current) return;
+        setCurveDraftByAssignmentId((prev) => {
+          if (!prev[drag.assignmentId]) return prev;
+          const next = { ...prev };
+          delete next[drag.assignmentId];
+          return next;
+        });
+      });
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -427,7 +497,15 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
         result.set(assignment.id, { actualHours: 0, lostHours: 0 });
         continue;
       }
-      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
+      const effectiveLoadProfile = effectiveLoadProfileByAssignmentId.get(assignment.id);
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(
+        effectiveLoadProfile
+          ? {
+              ...assignment,
+              loadProfile: effectiveLoadProfile,
+            }
+          : assignment,
+      );
 
       const fixedDailyHours = assignment.plannedHoursPerDay !== null ? Number(assignment.plannedHoursPerDay) : null;
       if (fixedDailyHours !== null && (!Number.isFinite(fixedDailyHours) || fixedDailyHours <= 0)) {
@@ -472,7 +550,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     }
 
     return result;
-  }, [calendarDayByIso, sortedAssignments, vacationsByEmployeeId]);
+  }, [calendarDayByIso, effectiveLoadProfileByAssignmentId, sortedAssignments, vacationsByEmployeeId]);
 
   return (
     <section className="project-card">
@@ -513,7 +591,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                 <div className="assignment-kpi-row">
                   <span className="assignment-kpi-item">
                     <Icon name="users" size={12} />
-                    <span className="assignment-kpi-value">{Number(assignment.allocationPercent)}%</span>
+                    <span className="assignment-kpi-value">{(averageLoadPercentByAssignmentId.get(assignment.id) ?? Number(assignment.allocationPercent)).toFixed(1)}%</span>
                     <span className="timeline-inline-tooltip" role="tooltip">{t.allocationPercent}</span>
                   </span>
                   <span className="assignment-kpi-item">
