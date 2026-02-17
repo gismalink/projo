@@ -8,13 +8,32 @@ import { UpdateTeamTemplateDto } from './dto/update-team-template.dto';
 export class TeamTemplatesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async validateRoleIds(roleIds: string[]) {
+  private async getWorkspaceCompanyId(workspaceId: string): Promise<string | null> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { companyId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return workspace.companyId;
+  }
+
+  private async validateRoleIds(workspaceId: string, roleIds: string[]) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const uniqueRoleIds = Array.from(new Set(roleIds));
     const foundCount = await this.prisma.role.count({
       where: {
         id: {
           in: uniqueRoleIds,
         },
+        ...(companyId
+          ? {
+              OR: [{ companyId }, { companyId: null }],
+            }
+          : { companyId: null }),
       },
     });
 
@@ -25,12 +44,14 @@ export class TeamTemplatesService {
     return uniqueRoleIds;
   }
 
-  create(dto: CreateTeamTemplateDto) {
+  async create(workspaceId: string, dto: CreateTeamTemplateDto) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
     return this.prisma.$transaction(async (tx) => {
-      const roleIds = await this.validateRoleIds(dto.roleIds);
+      const roleIds = await this.validateRoleIds(workspaceId, dto.roleIds);
 
       return tx.projectTeamTemplate.create({
         data: {
+          companyId,
           name: dto.name.trim(),
           roles: {
             create: roleIds.map((roleId, index) => ({
@@ -51,8 +72,14 @@ export class TeamTemplatesService {
     });
   }
 
-  findAll() {
+  async findAll(workspaceId: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
     return this.prisma.projectTeamTemplate.findMany({
+      where: companyId
+        ? {
+            OR: [{ companyId }, { companyId: null }],
+          }
+        : { companyId: null },
       orderBy: { name: 'asc' },
       include: {
         roles: {
@@ -65,9 +92,17 @@ export class TeamTemplatesService {
     });
   }
 
-  async findOne(id: string) {
-    const template = await this.prisma.projectTeamTemplate.findUnique({
-      where: { id },
+  async findOne(workspaceId: string, id: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const template = await this.prisma.projectTeamTemplate.findFirst({
+      where: {
+        id,
+        ...(companyId
+          ? {
+              OR: [{ companyId }, { companyId: null }],
+            }
+          : { companyId: null }),
+      },
       include: {
         roles: {
           orderBy: { position: 'asc' },
@@ -85,12 +120,16 @@ export class TeamTemplatesService {
     return template;
   }
 
-  async update(id: string, dto: UpdateTeamTemplateDto) {
-    await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateTeamTemplateDto) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const template = await this.findOne(workspaceId, id);
+    if (companyId && template.companyId !== companyId) {
+      throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
+    }
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.roleIds) {
-        const roleIds = await this.validateRoleIds(dto.roleIds);
+        const roleIds = await this.validateRoleIds(workspaceId, dto.roleIds);
         await tx.projectTeamTemplateRole.deleteMany({ where: { templateId: id } });
         await tx.projectTeamTemplateRole.createMany({
           data: roleIds.map((roleId, index) => ({
@@ -118,8 +157,12 @@ export class TeamTemplatesService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const template = await this.findOne(workspaceId, id);
+    if (companyId && template.companyId !== companyId) {
+      throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
+    }
     return this.prisma.projectTeamTemplate.delete({ where: { id } });
   }
 }

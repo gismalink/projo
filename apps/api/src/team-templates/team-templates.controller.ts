@@ -1,10 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AppRoleValue, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CreateTeamTemplateDto } from './dto/create-team-template.dto';
 import { UpdateTeamTemplateDto } from './dto/update-team-template.dto';
 import { TeamTemplatesService } from './team-templates.service';
+
+type AuthenticatedRequest = {
+  user: {
+    workspaceId: string;
+  };
+};
 
 @Controller('team-templates')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,25 +19,25 @@ export class TeamTemplatesController {
 
   @Post()
   @Roles(AppRoleValue.ADMIN)
-  create(@Body() dto: CreateTeamTemplateDto) {
-    return this.teamTemplatesService.create(dto);
+  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateTeamTemplateDto) {
+    return this.teamTemplatesService.create(req.user.workspaceId, dto);
   }
 
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
-  findAll() {
-    return this.teamTemplatesService.findAll();
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.teamTemplatesService.findAll(req.user.workspaceId);
   }
 
   @Patch(':id')
   @Roles(AppRoleValue.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateTeamTemplateDto) {
-    return this.teamTemplatesService.update(id, dto);
+  update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateTeamTemplateDto) {
+    return this.teamTemplatesService.update(req.user.workspaceId, id, dto);
   }
 
   @Delete(':id')
   @Roles(AppRoleValue.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.teamTemplatesService.remove(id);
+  remove(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.teamTemplatesService.remove(req.user.workspaceId, id);
   }
 }

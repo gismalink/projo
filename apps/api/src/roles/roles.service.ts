@@ -9,6 +9,19 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getWorkspaceCompanyId(workspaceId: string): Promise<string | null> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { companyId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return workspace.companyId;
+  }
+
   async ensureDefaultRoles() {
     const defaults = [
       { name: 'ADMIN', shortName: 'ADMIN', description: 'System administrator', level: 1, colorHex: DEFAULT_ROLE_COLOR_HEX },
@@ -25,26 +38,48 @@ export class RolesService {
       { name: 'QA_ENGINEER', shortName: 'QA', description: 'QA test engineer', level: 3, colorHex: '#F06A8A' },
     ];
 
-    await Promise.all(
-      defaults.map((role) =>
-        this.prisma.role.upsert({
-          where: { name: role.name },
-          update: {
+    for (const role of defaults) {
+      const existing = await this.prisma.role.findFirst({
+        where: {
+          companyId: null,
+          name: role.name,
+        },
+        select: { id: true },
+      });
+
+      if (existing) {
+        await this.prisma.role.update({
+          where: { id: existing.id },
+          data: {
             colorHex: role.colorHex,
             shortName: role.shortName,
           },
-          create: role,
-        }),
-      ),
-    );
+        });
+        continue;
+      }
+
+      await this.prisma.role.create({
+        data: {
+          ...role,
+          companyId: null,
+        },
+      });
+    }
   }
 
-  create(dto: CreateRoleDto) {
-    return this.prisma.role.create({ data: dto });
+  async create(workspaceId: string, dto: CreateRoleDto) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    return this.prisma.role.create({ data: { ...dto, companyId } });
   }
 
-  findAll() {
+  async findAll(workspaceId: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
     return this.prisma.role.findMany({
+      where: companyId
+        ? {
+            OR: [{ companyId }, { companyId: null }],
+          }
+        : { companyId: null },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -54,21 +89,39 @@ export class RolesService {
     });
   }
 
-  async findOne(id: string) {
-    const role = await this.prisma.role.findUnique({ where: { id } });
+  async findOne(workspaceId: string, id: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id,
+        ...(companyId
+          ? {
+              OR: [{ companyId }, { companyId: null }],
+            }
+          : { companyId: null }),
+      },
+    });
     if (!role) {
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
     return role;
   }
 
-  async update(id: string, dto: UpdateRoleDto) {
-    await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateRoleDto) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const role = await this.findOne(workspaceId, id);
+    if (companyId && role.companyId !== companyId) {
+      throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
+    }
     return this.prisma.role.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const role = await this.findOne(workspaceId, id);
+    if (companyId && role.companyId !== companyId) {
+      throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
+    }
     return this.prisma.role.delete({ where: { id } });
   }
 }

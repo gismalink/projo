@@ -570,6 +570,8 @@
   white-space: nowrap;
   z-index: 25;
   transition: opacity 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .timeline-meta .timeline-inline-tooltip {
@@ -928,7 +930,7 @@
 
 .assignment-track {
   position: relative;
-  height: 20px;
+  height: 30px;
   border-radius: 0;
   border: none;
   background: transparent;
@@ -947,11 +949,66 @@
 .assignment-bar {
   position: absolute;
   top: 50%;
-  height: var(--assignment-fill-height, 16px);
+  height: 24px;
   transform: translateY(-50%);
   border-radius: 0;
-  background: linear-gradient(90deg, #2a9dff 0%, var(--ios-accent) 100%);
+  background: transparent;
   z-index: 3;
+}
+
+.assignment-curve {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  overflow: visible;
+}
+
+.assignment-curve-area {
+  fill: currentColor;
+  fill-opacity: 0.35;
+}
+
+.assignment-curve-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
+}
+
+.assignment-curve-point {
+  fill: currentColor;
+  stroke: #fff;
+  stroke-width: 2;
+  cursor: move;
+  pointer-events: auto;
+}
+
+.assignment-curve-point:hover {
+  r: 5;
+}
+
+.assignment-curve-value-indicator {
+  pointer-events: none;
+}
+
+.assignment-curve-value-indicator circle {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, 0.18);
+  stroke-width: 1;
+}
+
+.assignment-curve-value-indicator text {
+  fill: #1d1d1f;
+  font-size: 7px;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .assignment-plan-handle {
@@ -964,7 +1021,8 @@
 .assignment-plan-handle.left,
 .assignment-plan-handle.right {
   width: 8px;
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
 }
 
 .assignment-plan-handle.left {
@@ -1003,13 +1061,17 @@
   z-index: 4;
 }
 
+.assignment-vacation-tooltip-anchor .timeline-inline-tooltip {
+  z-index: 40;
+}
+
 .assignment-vacation-track {
   position: relative;
   margin-top: 0;
   height: 6px;
   border-radius: 999px;
   background: transparent;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .assignment-vacation-track .track-day-grid {
@@ -1068,6 +1130,8 @@
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s ease 0.28s, visibility 0s linear 0.43s;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .project-plan-tooltip.visible {

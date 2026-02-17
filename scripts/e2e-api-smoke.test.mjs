@@ -348,6 +348,254 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
   }
 });
 
+test('API e2e smoke: assignment curve persists and updates timeline aggregates', async () => {
+  const login = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  assert.equal(login.response.status, 201, 'login endpoint should return 201');
+  assert.equal(typeof login.payload?.accessToken, 'string', 'login should return accessToken');
+
+  const authHeaders = {
+    Authorization: `Bearer ${login.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const employee = await ensureEmployee(authHeaders);
+  const projectCode = `E2E-CURVE-${Date.now()}`;
+  const projectStart = `${year}-05-01T00:00:00.000Z`;
+  const projectEnd = `${year}-05-31T00:00:00.000Z`;
+  const assignmentStart = `${year}-05-05T00:00:00.000Z`;
+  const assignmentEnd = `${year}-05-20T00:00:00.000Z`;
+
+  let createdProjectId = null;
+  let createdAssignmentId = null;
+
+  try {
+    const createdProject = await request('/projects', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        code: projectCode,
+        name: `Curve ${projectCode}`,
+        startDate: projectStart,
+        endDate: projectEnd,
+        status: 'planned',
+        priority: 2,
+        links: [],
+      }),
+    });
+    assert.equal(createdProject.response.status, 201, 'project create endpoint should return 201');
+    createdProjectId = createdProject.payload.id;
+
+    const createdAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate: assignmentStart,
+        assignmentEndDate: assignmentEnd,
+        allocationPercent: 20,
+      }),
+    });
+    assert.equal(createdAssignment.response.status, 201, 'assignment create endpoint should return 201');
+    createdAssignmentId = createdAssignment.payload.id;
+
+    const beforeTimeline = await request(`/timeline/year?year=${year}`, { headers: authHeaders });
+    assert.equal(beforeTimeline.response.status, 200, 'timeline endpoint should return 200');
+    const beforeRow = beforeTimeline.payload.find((row) => row.id === createdProjectId);
+    assert.ok(beforeRow, 'timeline should include created project row');
+    const beforeAllocation = Number(beforeRow.totalAllocationPercent);
+    assert.ok(Number.isFinite(beforeAllocation), 'baseline timeline allocation should be numeric');
+
+    const updateCurve = await request(`/assignments/${createdAssignmentId}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        loadProfile: {
+          mode: 'curve',
+          points: [
+            { date: assignmentStart, value: 100 },
+            { date: assignmentEnd, value: 100 },
+          ],
+        },
+      }),
+    });
+    assert.equal(updateCurve.response.status, 200, 'assignment curve update endpoint should return 200');
+
+    const projectDetail = await request(`/projects/${createdProjectId}`, { headers: authHeaders });
+    assert.equal(projectDetail.response.status, 200, 'project detail endpoint should return 200');
+    const updatedAssignment = (projectDetail.payload?.assignments ?? []).find((item) => item.id === createdAssignmentId);
+    assert.ok(updatedAssignment, 'project detail should include updated assignment');
+    assert.equal(updatedAssignment.loadProfile?.mode, 'curve', 'assignment should persist curve mode');
+    assert.ok(Array.isArray(updatedAssignment.loadProfile?.points), 'assignment should persist curve points array');
+    assert.equal(updatedAssignment.loadProfile.points.length >= 2, true, 'curve profile should keep at least two points');
+
+    const afterTimeline = await request(`/timeline/year?year=${year}`, { headers: authHeaders });
+    assert.equal(afterTimeline.response.status, 200, 'timeline endpoint should return 200 after curve update');
+    const afterRow = afterTimeline.payload.find((row) => row.id === createdProjectId);
+    assert.ok(afterRow, 'timeline should include created project row after curve update');
+    const afterAllocation = Number(afterRow.totalAllocationPercent);
+    assert.ok(Number.isFinite(afterAllocation), 'updated timeline allocation should be numeric');
+    assert.ok(
+      afterAllocation > beforeAllocation + 50,
+      `curve update should materially increase allocation (${beforeAllocation} -> ${afterAllocation})`,
+    );
+  } finally {
+    if (createdAssignmentId) {
+      await request(`/assignments/${createdAssignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (createdProjectId) {
+      await request(`/projects/${createdProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+  }
+});
+
+test('API e2e smoke: assignment load profile flat-curve-flat transition recalculates timeline', async () => {
+  const login = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  assert.equal(login.response.status, 201, 'login endpoint should return 201');
+  assert.equal(typeof login.payload?.accessToken, 'string', 'login should return accessToken');
+
+  const authHeaders = {
+    Authorization: `Bearer ${login.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const employee = await ensureEmployee(authHeaders);
+  const projectCode = `E2E-FCF-${Date.now()}`;
+  const projectStart = `${year}-06-01T00:00:00.000Z`;
+  const projectEnd = `${year}-06-30T00:00:00.000Z`;
+  const assignmentStart = `${year}-06-05T00:00:00.000Z`;
+  const assignmentEnd = `${year}-06-20T00:00:00.000Z`;
+
+  let createdProjectId = null;
+  let createdAssignmentId = null;
+
+  try {
+    const createdProject = await request('/projects', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        code: projectCode,
+        name: `FlatCurveFlat ${projectCode}`,
+        startDate: projectStart,
+        endDate: projectEnd,
+        status: 'planned',
+        priority: 2,
+        links: [],
+      }),
+    });
+    assert.equal(createdProject.response.status, 201, 'project create endpoint should return 201');
+    createdProjectId = createdProject.payload.id;
+
+    const createdAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate: assignmentStart,
+        assignmentEndDate: assignmentEnd,
+        allocationPercent: 30,
+      }),
+    });
+    assert.equal(createdAssignment.response.status, 201, 'assignment create endpoint should return 201');
+    createdAssignmentId = createdAssignment.payload.id;
+
+    const beforeTimeline = await request(`/timeline/year?year=${year}`, { headers: authHeaders });
+    assert.equal(beforeTimeline.response.status, 200, 'timeline endpoint should return 200 before updates');
+    const beforeRow = beforeTimeline.payload.find((row) => row.id === createdProjectId);
+    assert.ok(beforeRow, 'timeline should include created project row');
+    const beforeAllocation = Number(beforeRow.totalAllocationPercent);
+
+    const setCurve = await request(`/assignments/${createdAssignmentId}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        loadProfile: {
+          mode: 'curve',
+          points: [
+            { date: assignmentStart, value: 100 },
+            { date: assignmentEnd, value: 100 },
+          ],
+        },
+      }),
+    });
+    assert.equal(setCurve.response.status, 200, 'curve update endpoint should return 200');
+
+    const afterCurveTimeline = await request(`/timeline/year?year=${year}`, { headers: authHeaders });
+    assert.equal(afterCurveTimeline.response.status, 200, 'timeline endpoint should return 200 after curve update');
+    const afterCurveRow = afterCurveTimeline.payload.find((row) => row.id === createdProjectId);
+    assert.ok(afterCurveRow, 'timeline should include created project row after curve update');
+    const afterCurveAllocation = Number(afterCurveRow.totalAllocationPercent);
+    assert.ok(
+      afterCurveAllocation > beforeAllocation + 40,
+      `curve should materially increase allocation (${beforeAllocation} -> ${afterCurveAllocation})`,
+    );
+
+    const setFlat = await request(`/assignments/${createdAssignmentId}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({
+        allocationPercent: 40,
+        loadProfile: {
+          mode: 'flat',
+        },
+      }),
+    });
+    assert.equal(setFlat.response.status, 200, 'flat update endpoint should return 200');
+
+    const projectDetail = await request(`/projects/${createdProjectId}`, { headers: authHeaders });
+    assert.equal(projectDetail.response.status, 200, 'project detail endpoint should return 200');
+    const updatedAssignment = (projectDetail.payload?.assignments ?? []).find((item) => item.id === createdAssignmentId);
+    assert.ok(updatedAssignment, 'project detail should include assignment after flat update');
+    assert.equal(updatedAssignment.loadProfile?.mode, 'flat', 'assignment should persist flat mode');
+
+    const afterFlatTimeline = await request(`/timeline/year?year=${year}`, { headers: authHeaders });
+    assert.equal(afterFlatTimeline.response.status, 200, 'timeline endpoint should return 200 after flat update');
+    const afterFlatRow = afterFlatTimeline.payload.find((row) => row.id === createdProjectId);
+    assert.ok(afterFlatRow, 'timeline should include created project row after flat update');
+    const afterFlatAllocation = Number(afterFlatRow.totalAllocationPercent);
+    assert.ok(
+      afterFlatAllocation < afterCurveAllocation - 40,
+      `flat should materially reduce allocation (${afterCurveAllocation} -> ${afterFlatAllocation})`,
+    );
+    assert.ok(
+      Math.abs(afterFlatAllocation - 40) <= 0.5,
+      `flat allocation should return near explicit value (expected 40, got ${afterFlatAllocation})`,
+    );
+  } finally {
+    if (createdAssignmentId) {
+      await request(`/assignments/${createdAssignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (createdProjectId) {
+      await request(`/projects/${createdProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+  }
+});
+
 test('API e2e smoke: auth project member role update and removal', async () => {
   const loginOwner = await request('/auth/login', {
     method: 'POST',

@@ -8,6 +8,39 @@ import { UpdateVacationDto } from './dto/update-vacation.dto';
 export class VacationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerUserId: true, companyId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
+  }
+
+  private async ensureEmployeeExistsForWorkspaceScope(workspaceId: string, employeeId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id: employeeId,
+        workspace: {
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
+    }
+  }
+
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
       throw new BadRequestException(ErrorCode.VACATION_DATE_RANGE_INVALID);
@@ -36,10 +69,7 @@ export class VacationsService {
     const endDate = new Date(dto.endDate);
     this.ensureDateRange(startDate, endDate);
 
-    const employee = await this.prisma.employee.findFirst({ where: { id: dto.employeeId, workspaceId } });
-    if (!employee) {
-      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
-    }
+    await this.ensureEmployeeExistsForWorkspaceScope(workspaceId, dto.employeeId);
 
     await this.ensureNoOverlap(workspaceId, dto.employeeId, startDate, endDate);
 
@@ -95,10 +125,7 @@ export class VacationsService {
     const nextEnd = dto.endDate ? new Date(dto.endDate) : existing.endDate;
     const nextEmployeeId = dto.employeeId ?? existing.employeeId;
 
-    const employee = await this.prisma.employee.findFirst({ where: { id: nextEmployeeId, workspaceId } });
-    if (!employee) {
-      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
-    }
+    await this.ensureEmployeeExistsForWorkspaceScope(workspaceId, nextEmployeeId);
 
     this.ensureDateRange(nextStart, nextEnd);
     await this.ensureNoOverlap(workspaceId, nextEmployeeId, nextStart, nextEnd, id);

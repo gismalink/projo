@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { AppState } from './useAppState';
-import { daysInYear, overlapDaysInYear, roleColorOrDefault } from './app-helpers';
+import { createAssignmentLoadPercentResolver, daysInYear, roleColorOrDefault } from './app-helpers';
 
 export function useAppDerivedData(state: AppState, t: Record<string, string>) {
   const sortedTimeline = useMemo(() => {
@@ -64,15 +64,25 @@ export function useAppDerivedData(state: AppState, t: Record<string, string>) {
   const utilizationByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
     const totalDays = daysInYear(state.selectedYear);
+    const yearStart = new Date(Date.UTC(state.selectedYear, 0, 1));
+    const yearEnd = new Date(Date.UTC(state.selectedYear, 11, 31));
 
     for (const assignment of state.assignments) {
       const start = new Date(assignment.assignmentStartDate);
       const end = new Date(assignment.assignmentEndDate);
-      const overlapDays = overlapDaysInYear(start, end, state.selectedYear);
-      if (overlapDays <= 0) continue;
+      const effectiveStart = start > yearStart ? start : yearStart;
+      const effectiveEnd = end < yearEnd ? end : yearEnd;
+      if (effectiveEnd < effectiveStart) continue;
 
-      const allocation = Number(assignment.allocationPercent);
-      const weighted = (allocation * overlapDays) / totalDays;
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
+      let weighted = 0;
+      const cursor = new Date(Date.UTC(effectiveStart.getUTCFullYear(), effectiveStart.getUTCMonth(), effectiveStart.getUTCDate()));
+      const cursorEnd = new Date(Date.UTC(effectiveEnd.getUTCFullYear(), effectiveEnd.getUTCMonth(), effectiveEnd.getUTCDate()));
+      while (cursor <= cursorEnd) {
+        weighted += resolveLoadPercent(cursor) / totalDays;
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+
       map[assignment.employeeId] = Number(((map[assignment.employeeId] ?? 0) + weighted).toFixed(1));
     }
 
@@ -91,8 +101,7 @@ export function useAppDerivedData(state: AppState, t: Record<string, string>) {
     });
 
     for (const assignment of state.assignments) {
-      const allocation = Number(assignment.allocationPercent);
-      if (!Number.isFinite(allocation) || allocation <= 0) continue;
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const start = new Date(assignment.assignmentStartDate);
       const end = new Date(assignment.assignmentEndDate);
@@ -106,8 +115,14 @@ export function useAppDerivedData(state: AppState, t: Record<string, string>) {
         const overlapEnd = end < month.end ? end : month.end;
         if (overlapEnd < overlapStart) continue;
 
-        const overlapDays = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / 86400000) + 1;
-        const weighted = (allocation * overlapDays) / month.days;
+        let weighted = 0;
+        const cursor = new Date(Date.UTC(overlapStart.getUTCFullYear(), overlapStart.getUTCMonth(), overlapStart.getUTCDate()));
+        const cursorEnd = new Date(Date.UTC(overlapEnd.getUTCFullYear(), overlapEnd.getUTCMonth(), overlapEnd.getUTCDate()));
+        while (cursor <= cursorEnd) {
+          weighted += resolveLoadPercent(cursor) / month.days;
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+
         totalsByEmployee[assignment.employeeId][monthIndex] += weighted;
       }
     }

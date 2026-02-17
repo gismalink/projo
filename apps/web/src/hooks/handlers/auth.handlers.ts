@@ -184,6 +184,33 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     return false;
   }
 
+  async function handleCopyProjectSpace(projectId: string, name: string) {
+    if (!state.token) return false;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      pushToast(t.uiProjectNameRequired);
+      return false;
+    }
+
+    const copied = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.copyProjectSpace(projectId, trimmedName, state.token as string);
+        await loadMyProjects(state.token as string);
+      },
+      fallbackMessage: t.uiCopyProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (copied) {
+      pushToast(t.uiCopyProjectSpaceSuccess);
+      return true;
+    }
+
+    return false;
+  }
+
   async function loadProjectMembers(projectId: string) {
     if (!state.token) return null;
 
@@ -333,6 +360,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     handleSwitchProjectSpace,
     handleUpdateProjectSpaceName,
     handleDeleteProjectSpace,
+    handleCopyProjectSpace,
     loadProjectMembers,
     handleInviteProjectMember,
     handleUpdateProjectMemberPermission,

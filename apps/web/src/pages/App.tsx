@@ -4,11 +4,14 @@ import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
+import { AccountModal } from '../components/modals/AccountModal';
+import { AuthGate } from '../components/modals/AuthGate';
 import { EmployeeCreateModal } from '../components/modals/EmployeeCreateModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { ProjectSettingsModal } from '../components/modals/ProjectSettingsModal';
 import { Icon } from '../components/Icon';
 import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
@@ -211,6 +214,26 @@ export function App() {
     setIsProjectHomeOpen(false);
   };
 
+  const buildCopiedPlanName = (sourceName: string) => {
+    const trimmed = sourceName.trim();
+    const baseName = trimmed.replace(/_v\(\d+\)$/u, '');
+    const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const versionPattern = new RegExp(`^${escapeRegExp(baseName)}_v\\((\\d+)\\)$`, 'u');
+    const allNames = [...app.myProjectSpaces, ...app.sharedProjectSpaces].map((item) => item.name.trim());
+    const maxVersion = allNames.reduce((max, name) => {
+      const match = name.match(versionPattern);
+      if (!match) return max;
+      const parsed = Number(match[1]);
+      return Number.isFinite(parsed) ? Math.max(max, parsed) : max;
+    }, 0);
+    return `${baseName}_v(${maxVersion + 1})`;
+  };
+
+  const handleCopyProjectSpaceCard = async (projectId: string, sourceName: string) => {
+    const copiedName = buildCopiedPlanName(sourceName);
+    await app.handleCopyProjectSpace(projectId, copiedName);
+  };
+
   const handleOpenProject = async (projectId: string) => {
     await app.handleSwitchProjectSpace(projectId);
     setIsProjectHomeOpen(false);
@@ -394,70 +417,26 @@ export function App() {
       </div>
 
       {!app.token ? (
-        <div className="modal-backdrop">
-          <article className="modal-card auth-modal">
-            <div className="tabs auth-tabs" style={{ marginBottom: 12 }}>
-            <button type="button" className={authMode === 'login' ? 'tab active' : 'tab'} onClick={() => setAuthMode('login')}>
-              {t.login}
-            </button>
-            <button type="button" className={authMode === 'register' ? 'tab active' : 'tab'} onClick={() => setAuthMode('register')}>
-              {t.register}
-            </button>
-            </div>
-
-          {authMode === 'login' ? (
-            <form onSubmit={app.handleLogin} className="timeline-form">
-              <h2>{t.login}</h2>
-              <label>
-                <span className="field-label required">{t.email}</span>
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={app.email}
-                  required
-                  onChange={(e) => app.setEmail(e.target.value)}
-                />
-              </label>
-              <label>
-                <span className="field-label required">{t.password}</span>
-                <input type="password" placeholder="••••••••" value={app.password} required onChange={(e) => app.setPassword(e.target.value)} />
-              </label>
-              <button type="submit">{t.signIn}</button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegisterSubmit} className="timeline-form">
-              <h2>{t.register}</h2>
-              <label>
-                <span className="field-label required">{t.fullName}</span>
-                <input value={registerFullName} placeholder={t.fullName} required onChange={(e) => setRegisterFullName(e.target.value)} />
-              </label>
-              <label>
-                <span className="field-label required">{t.email}</span>
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={registerEmail}
-                  required
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                />
-              </label>
-              <label>
-                <span className="field-label required">{t.password}</span>
-                <input type="password" placeholder="••••••••" value={registerPassword} required onChange={(e) => setRegisterPassword(e.target.value)} />
-              </label>
-              <label>
-                <span className="field-label required">{t.confirmPassword}</span>
-                <input type="password" placeholder="••••••••" value={registerPasswordConfirm} required onChange={(e) => setRegisterPasswordConfirm(e.target.value)} />
-              </label>
-              <button type="submit">{t.createAccount}</button>
-            </form>
-          )}
-          </article>
-        </div>
+        <AuthGate
+          isOpen={!app.token}
+          t={t}
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          email={app.email}
+          setEmail={app.setEmail}
+          password={app.password}
+          setPassword={app.setPassword}
+          registerEmail={registerEmail}
+          setRegisterEmail={setRegisterEmail}
+          registerFullName={registerFullName}
+          setRegisterFullName={setRegisterFullName}
+          registerPassword={registerPassword}
+          setRegisterPassword={setRegisterPassword}
+          registerPasswordConfirm={registerPasswordConfirm}
+          setRegisterPasswordConfirm={setRegisterPasswordConfirm}
+          onLoginSubmit={app.handleLogin}
+          onRegisterSubmit={handleRegisterSubmit}
+        />
       ) : (
         <>
 
@@ -470,20 +449,34 @@ export function App() {
                         <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
                           <div className="project-space-card-topline">
                             <strong>{item.name}</strong>
-                            {item.isOwner || item.role === 'PM' ? (
+                            <div className="project-space-card-actions">
                               <button
                                 type="button"
                                 className="icon-btn"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  void handleOpenProjectSettingsById(item.id);
+                                  void handleCopyProjectSpaceCard(item.id, item.name);
                                 }}
-                                aria-label={t.projectSettings}
-                                data-tooltip={t.projectSettings}
+                                aria-label={t.copyProjectSpace}
+                                data-tooltip={t.copyProjectSpace}
                               >
-                                <Icon name="edit" />
+                                <Icon name="copy" />
                               </button>
-                            ) : null}
+                              {item.isOwner || item.role === 'PM' ? (
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleOpenProjectSettingsById(item.id);
+                                  }}
+                                  aria-label={t.projectSettings}
+                                  data-tooltip={t.projectSettings}
+                                >
+                                  <Icon name="edit" />
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                           <span>{item.role}</span>
                         </div>
@@ -536,111 +529,29 @@ export function App() {
                 <></>
               )}
 
-          {isProjectSettingsOpen ? (
-            <div className="modal-backdrop">
-              <article className="modal-card auth-modal project-settings-modal">
-                <div className="section-header" style={{ marginBottom: 12 }}>
-                  <h3>{t.projectSettings}</h3>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={closeProjectSettings}
-                  >
-                    {t.close}
-                  </button>
-                </div>
-                <div className="project-settings-body">
-                  {isOwner ? (
-                    <form onSubmit={handleUpdateProjectNameSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                      <label>
-                        <span className="field-label required">{t.projectName}</span>
-                      </label>
-                      <div className="project-settings-inline project-settings-inline-name">
-                        <input value={projectSettingsNameDraft} placeholder={t.projectName} required onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
-                        <button type="submit">{t.save}</button>
-                      </div>
-                    </form>
-                  ) : null}
-
-                  <h4>{t.participants}</h4>
-                  <label>
-                    <span className="field-label optional">{t.searchParticipants}</span>
-                    <input value={projectMemberSearch} placeholder={t.searchParticipants} onChange={(e) => setProjectMemberSearch(e.target.value)} />
-                  </label>
-                  <ul>
-                    {filteredProjectMembers.map((member) => (
-                      <li key={member.userId} className="project-member-item">
-                        <div className="project-member-meta">
-                          <strong>{member.fullName}</strong>
-                          <div>{member.email}</div>
-                        </div>
-                        {member.isOwner ? (
-                          <span>{t.owner}</span>
-                        ) : canInviteParticipants ? (
-                          <div className="project-member-actions">
-                            <select
-                              value={member.role === 'PM' ? 'editor' : 'viewer'}
-                              onChange={(e) => void handleUpdateMemberPermission(member.userId, e.target.value as 'viewer' | 'editor')}
-                              aria-label={t.permission}
-                            >
-                              <option value="viewer">{t.permissionViewer}</option>
-                              <option value="editor">{t.permissionEditor}</option>
-                            </select>
-                            <button
-                              type="button"
-                              className="icon-btn"
-                              onClick={() => void handleRemoveMember(member.userId)}
-                              aria-label={t.remove}
-                              data-tooltip={t.remove}
-                            >
-                              <Icon name="x" />
-                            </button>
-                          </div>
-                        ) : (
-                          <span>{member.role}</span>
-                        )}
-                      </li>
-                    ))}
-                    {filteredProjectMembers.length === 0 ? <li>{t.noParticipantsFound}</li> : null}
-                  </ul>
-
-                  {canInviteParticipants ? (
-                    <>
-                      <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                        <label>
-                          <span className="field-label required">{t.inviteByEmail}</span>
-                        </label>
-                        <div className="project-settings-inline project-settings-inline-invite">
-                          <input
-                            type="email"
-                            inputMode="email"
-                            autoComplete="email"
-                            placeholder="name@example.com"
-                            value={inviteEmail}
-                            required
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                          />
-                          <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
-                            <option value="viewer">{t.permissionViewer}</option>
-                            <option value="editor">{t.permissionEditor}</option>
-                          </select>
-                          <button type="submit">{t.invite}</button>
-                        </div>
-                      </form>
-
-                      <form onSubmit={handleDeleteProjectSubmit} className="project-settings-form project-delete-form" style={{ padding: 0 }}>
-                        <label>
-                          <span className="field-label required">{t.deleteConfirmLabel}</span>
-                          <input value={deleteProjectConfirmText} placeholder="delete" required onChange={(e) => setDeleteProjectConfirmText(e.target.value)} />
-                        </label>
-                        <button type="submit" className="danger-btn">{t.deleteProject}</button>
-                      </form>
-                    </>
-                  ) : null}
-                </div>
-              </article>
-            </div>
-          ) : null}
+          <ProjectSettingsModal
+            isOpen={isProjectSettingsOpen}
+            t={t}
+            isOwner={isOwner}
+            canInviteParticipants={canInviteParticipants}
+            projectSettingsNameDraft={projectSettingsNameDraft}
+            setProjectSettingsNameDraft={setProjectSettingsNameDraft}
+            projectMemberSearch={projectMemberSearch}
+            setProjectMemberSearch={setProjectMemberSearch}
+            filteredProjectMembers={filteredProjectMembers}
+            inviteEmail={inviteEmail}
+            setInviteEmail={setInviteEmail}
+            invitePermission={invitePermission}
+            setInvitePermission={setInvitePermission}
+            deleteProjectConfirmText={deleteProjectConfirmText}
+            setDeleteProjectConfirmText={setDeleteProjectConfirmText}
+            onClose={closeProjectSettings}
+            onUpdateProjectNameSubmit={handleUpdateProjectNameSubmit}
+            onUpdateMemberPermission={handleUpdateMemberPermission}
+            onRemoveMember={handleRemoveMember}
+            onInviteSubmit={handleInviteSubmit}
+            onDeleteProjectSubmit={handleDeleteProjectSubmit}
+          />
 
           {!isProjectHomeOpen ? (
             <>
@@ -842,6 +753,7 @@ export function App() {
               onYearChange={app.handleYearChange}
               onDeleteAssignment={app.handleDeleteAssignment}
               onAdjustAssignmentPlan={app.handleAdjustAssignmentPlan}
+              onUpdateAssignmentCurve={app.handleUpdateAssignmentCurve}
               onMoveProject={app.handleMoveProject}
               onAdjustProjectPlan={app.handleAdjustProjectPlan}
               timelineStyle={timelineStyle}
@@ -944,55 +856,24 @@ export function App() {
             </>
           ) : null}
 
-          {isAccountModalOpen ? (
-            <div className="modal-backdrop">
-              <article className="modal-card auth-modal">
-                <div className="section-header">
-                  <h3>{t.account}</h3>
-                  <div className="lang-toggle">
-                    <button type="button" className="ghost-btn" onClick={() => setIsAccountModalOpen(false)}>
-                      {t.close}
-                    </button>
-                    <button type="button" className="ghost-btn" onClick={() => void handleLogoutClick()}>
-                      {t.logout}
-                    </button>
-                  </div>
-                </div>
-                <div className="timeline-form">
-                  <label>
-                    <span className="field-label">{t.email}</span>
-                    <input value={app.currentUserEmail} readOnly />
-                  </label>
-                  <label>
-                    <span className="field-label">{t.workspace}</span>
-                    <input value={app.currentWorkspaceId || '-'} readOnly />
-                  </label>
-                  <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
-                    <label>
-                      <span className="field-label required">{t.fullName}</span>
-                      <input value={accountFullNameDraft} placeholder={t.fullName} required onChange={(e) => setAccountFullNameDraft(e.target.value)} />
-                    </label>
-                    <button type="submit">{t.saveProfile}</button>
-                  </form>
-                  <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
-                    <label>
-                      <span className="field-label required">{t.currentPassword}</span>
-                      <input type="password" placeholder="••••••••" value={currentPassword} required onChange={(e) => setCurrentPassword(e.target.value)} />
-                    </label>
-                    <label>
-                      <span className="field-label required">{t.newPassword}</span>
-                      <input type="password" placeholder="••••••••" value={newPassword} required onChange={(e) => setNewPassword(e.target.value)} />
-                    </label>
-                    <label>
-                      <span className="field-label required">{t.confirmPassword}</span>
-                      <input type="password" placeholder="••••••••" value={newPasswordConfirm} required onChange={(e) => setNewPasswordConfirm(e.target.value)} />
-                    </label>
-                    <button type="submit">{t.changePassword}</button>
-                  </form>
-                </div>
-              </article>
-            </div>
-          ) : null}
+          <AccountModal
+            isOpen={isAccountModalOpen}
+            t={t}
+            currentUserEmail={app.currentUserEmail}
+            currentWorkspaceId={app.currentWorkspaceId}
+            accountFullNameDraft={accountFullNameDraft}
+            setAccountFullNameDraft={setAccountFullNameDraft}
+            currentPassword={currentPassword}
+            setCurrentPassword={setCurrentPassword}
+            newPassword={newPassword}
+            setNewPassword={setNewPassword}
+            newPasswordConfirm={newPasswordConfirm}
+            setNewPasswordConfirm={setNewPasswordConfirm}
+            onClose={() => setIsAccountModalOpen(false)}
+            onLogout={handleLogoutClick}
+            onUpdateProfileSubmit={handleUpdateProfileSubmit}
+            onChangePasswordSubmit={handleChangePasswordSubmit}
+          />
 
         </>
       )}

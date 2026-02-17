@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsDateString, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { AssignmentLoadProfileDto } from './load-profile.dto';
 
 export class CreateAssignmentDto {
   @IsString()
@@ -30,4 +31,9 @@ export class CreateAssignmentDto {
   @IsOptional()
   @IsString()
   roleOnProject?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AssignmentLoadProfileDto)
+  loadProfile?: AssignmentLoadProfileDto;
 }

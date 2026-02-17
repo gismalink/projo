@@ -1,5 +1,5 @@
 import { FormEvent } from 'react';
-import { api } from '../../api/client';
+import { api, AssignmentItem } from '../../api/client';
 import { isoToInputDate } from '../app-helpers';
 import { HandlerDeps } from './handler-deps';
 import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
@@ -120,11 +120,69 @@ export function createAssignmentsHandlers({
     });
   }
 
+  async function handleUpdateAssignmentCurve(
+    projectId: string,
+    assignmentId: string,
+    loadProfile: {
+      mode: 'curve';
+      points: Array<{ date: string; value: number }>;
+    },
+  ) {
+    if (!state.token) return;
+    const updated = await runWithErrorToastVoid({
+      operation: async () => {
+        const updated = (await api.updateAssignment(
+          assignmentId,
+          {
+            loadProfile,
+          },
+          state.token as string,
+        )) as AssignmentItem;
+
+        state.setAssignments((prev) => prev.map((item) => (item.id === assignmentId ? { ...item, ...updated } : item)));
+        state.setProjectDetails((prev) => {
+          const detail = prev[projectId];
+          if (!detail) return prev;
+
+          const nextAssignments = detail.assignments.map((assignment) =>
+            assignment.id === assignmentId
+              ? {
+                  ...assignment,
+                  assignmentStartDate: updated.assignmentStartDate,
+                  assignmentEndDate: updated.assignmentEndDate,
+                  allocationPercent: updated.allocationPercent,
+                  loadProfile: updated.loadProfile ?? null,
+                  plannedHoursPerDay: updated.plannedHoursPerDay,
+                  roleOnProject: updated.roleOnProject,
+                }
+              : assignment,
+          );
+
+          return {
+            ...prev,
+            [projectId]: {
+              ...detail,
+              assignments: nextAssignments,
+            },
+          };
+        });
+
+        await refreshData(state.token as string, state.selectedYear, projectId);
+      },
+      fallbackMessage: t.uiUpdateAssignmentFailed,
+      errorText,
+      pushToast,
+    });
+
+    return Boolean(updated);
+  }
+
   return {
     handleEditorAssignmentChange,
     handleCreateAssignment,
     handleUpdateAssignment,
     handleDeleteAssignment,
     handleAdjustAssignmentPlan,
+    handleUpdateAssignmentCurve,
   };
 }

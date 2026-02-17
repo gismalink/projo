@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { createAssignmentLoadPercentResolver } from '../common/load-profile.utils';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -19,8 +20,19 @@ const PROJECT_PERSON_SELECT = {
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async ensureTeamTemplateExists(templateId: string) {
-    const template = await this.prisma.projectTeamTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
+  private async ensureTeamTemplateExists(workspaceId: string, templateId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
+    const template = await this.prisma.projectTeamTemplate.findFirst({
+      where: {
+        id: templateId,
+        ...(scope.companyId
+          ? {
+              OR: [{ companyId: scope.companyId }, { companyId: null }],
+            }
+          : { companyId: null }),
+      },
+      select: { id: true },
+    });
     if (!template) {
       throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
     }
@@ -64,7 +76,7 @@ export class ProjectsService {
     this.ensureDateRange(startDate, endDate);
 
     if (dto.teamTemplateId) {
-      await this.ensureTeamTemplateExists(dto.teamTemplateId);
+      await this.ensureTeamTemplateExists(workspaceId, dto.teamTemplateId);
     }
 
     return this.prisma.project
@@ -92,8 +104,33 @@ export class ProjectsService {
     }
   }
 
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerUserId: true, companyId: true },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
+  }
+
   private async ensureEmployeeExists(workspaceId: string, employeeId: string) {
-    const employee = await this.prisma.employee.findFirst({ where: { id: employeeId, workspaceId }, select: { id: true } });
+    const scope = await this.getWorkspaceScope(workspaceId);
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id: employeeId,
+        workspace: {
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
+        },
+      },
+      select: { id: true },
+    });
     if (!employee) {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
@@ -320,10 +357,11 @@ export class ProjectsService {
 
     for (const assignment of project.assignments) {
       const assignmentDays = this.listUtcDays(assignment.assignmentStartDate, assignment.assignmentEndDate);
-      const dailyHours =
-        assignment.plannedHoursPerDay !== null
-          ? Number(assignment.plannedHoursPerDay)
-          : (Number(assignment.employee.defaultCapacityHoursPerDay) * Number(assignment.allocationPercent)) / 100;
+      const fixedDailyHours = assignment.plannedHoursPerDay !== null ? Number(assignment.plannedHoursPerDay) : null;
+      if (fixedDailyHours !== null && (!Number.isFinite(fixedDailyHours) || fixedDailyHours <= 0)) {
+        continue;
+      }
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const employeeVacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
 
@@ -337,6 +375,14 @@ export class ProjectsService {
             })();
 
         if (!isWorkingDay) continue;
+
+        const dailyHours =
+          fixedDailyHours !== null
+            ? fixedDailyHours
+            : (Number(assignment.employee.defaultCapacityHoursPerDay) * resolveLoadPercent(day)) / 100;
+        if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
+          continue;
+        }
 
         totalPlannedHours += dailyHours;
 
@@ -397,7 +443,7 @@ export class ProjectsService {
     await this.findOne(workspaceId, id);
 
     if (dto.teamTemplateId) {
-      await this.ensureTeamTemplateExists(dto.teamTemplateId);
+      await this.ensureTeamTemplateExists(workspaceId, dto.teamTemplateId);
     }
 
     if (dto.startDate && dto.endDate) {

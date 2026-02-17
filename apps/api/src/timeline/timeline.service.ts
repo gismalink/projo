@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getAverageAssignmentLoadPercent } from '../common/load-profile.utils';
 import { PrismaService } from '../common/prisma.service';
 
 @Injectable()
@@ -27,6 +28,7 @@ export class TimelineService {
               },
             },
             allocationPercent: true,
+            loadProfile: true,
             assignmentStartDate: true,
             assignmentEndDate: true,
             plannedHoursPerDay: true,
@@ -37,19 +39,20 @@ export class TimelineService {
     });
 
     return projects.map((project) => {
-      const totalAllocationPercent = project.assignments.reduce(
-        (sum, assignment) => sum + Number(assignment.allocationPercent),
-        0,
-      );
+      const totalAllocationPercent = project.assignments.reduce((sum, assignment) => {
+        return sum + getAverageAssignmentLoadPercent(assignment);
+      }, 0);
 
       const totalPlannedHoursPerDay = project.assignments.reduce((sum, assignment) => {
         if (assignment.plannedHoursPerDay !== null) {
           return sum + Number(assignment.plannedHoursPerDay);
         }
 
+        const averageLoadPercent = getAverageAssignmentLoadPercent(assignment);
+
         return (
           sum +
-          (Number(assignment.employee.defaultCapacityHoursPerDay) * Number(assignment.allocationPercent)) / 100
+          (Number(assignment.employee.defaultCapacityHoursPerDay) * averageLoadPercent) / 100
         );
       }, 0);
 

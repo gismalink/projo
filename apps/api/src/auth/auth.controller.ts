@@ -79,6 +79,16 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('projects/:projectId/copy')
+  copyProject(
+    @Req() req: AuthenticatedRequest,
+    @Param('projectId') projectId: string,
+    @Body() dto: CreateProjectSpaceDto,
+  ) {
+    return this.authService.copyProjectSpace(req.user.userId, projectId, dto.name);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('projects/:projectId/members')
   getProjectMembers(@Req() req: AuthenticatedRequest, @Param('projectId') projectId: string) {
     return this.authService.getProjectMembers(req.user.userId, projectId);
