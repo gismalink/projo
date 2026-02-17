@@ -139,6 +139,8 @@ export function App() {
 
   const handleRemoveMember = async (targetUserId: string) => {
     if (!editingProjectId) return;
+    if (!window.confirm(t.confirmRemoveProjectMember)) return;
+
     const members = await app.handleRemoveProjectMember(editingProjectId, targetUserId);
     if (members) {
       setProjectMembers(members);

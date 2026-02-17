@@ -348,6 +348,90 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
   }
 });
 
+test('API e2e smoke: auth project member role update and removal', async () => {
+  const loginOwner = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  assert.equal(loginOwner.response.status, 201, 'owner login endpoint should return 201');
+  assert.equal(typeof loginOwner.payload?.accessToken, 'string', 'owner login should return accessToken');
+
+  const ownerHeaders = {
+    Authorization: `Bearer ${loginOwner.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const invitedEmail = `e2e-member-${seed}@projo.local`;
+  const invitedPassword = `E2eMember!${seed}`;
+
+  const invitedRegister = await request('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: invitedEmail,
+      fullName: `E2E Member ${seed}`,
+      password: invitedPassword,
+    }),
+  });
+  assert.equal(invitedRegister.response.status, 201, 'invited user register should return 201');
+  assert.equal(typeof invitedRegister.payload?.user?.id, 'string', 'invited user id should be available');
+
+  const createProjectSpace = await request('/auth/projects', {
+    method: 'POST',
+    headers: ownerHeaders,
+    body: JSON.stringify({ name: `E2E Project Space ${seed}` }),
+  });
+  assert.equal(createProjectSpace.response.status, 201, 'project-space create should return 201');
+
+  const ownerProjectToken = createProjectSpace.payload?.accessToken;
+  assert.equal(typeof ownerProjectToken, 'string', 'project-space create should return updated access token');
+
+  const ownerProjectHeaders = {
+    Authorization: `Bearer ${ownerProjectToken}`,
+    'Content-Type': 'application/json',
+  };
+  const projectId = createProjectSpace.payload?.user?.workspaceId;
+  assert.equal(typeof projectId, 'string', 'created project-space id should be available via workspaceId');
+
+  const invite = await request(`/auth/projects/${projectId}/invite`, {
+    method: 'POST',
+    headers: ownerProjectHeaders,
+    body: JSON.stringify({ email: invitedEmail, permission: 'editor' }),
+  });
+  assert.equal(invite.response.status, 201, 'invite should return 201');
+  assert.ok(
+    Array.isArray(invite.payload?.members) && invite.payload.members.some((item) => item.email === invitedEmail.toLowerCase() && item.role === 'PM'),
+    'invite response should include invited member with PM role',
+  );
+
+  const invitedUserId = invite.payload.members.find((item) => item.email === invitedEmail.toLowerCase())?.userId;
+  assert.equal(typeof invitedUserId, 'string', 'invited member userId should be present');
+
+  const updateRole = await request(`/auth/projects/${projectId}/members/${invitedUserId}`, {
+    method: 'PATCH',
+    headers: ownerProjectHeaders,
+    body: JSON.stringify({ permission: 'viewer' }),
+  });
+  assert.equal(updateRole.response.status, 200, 'member permission update should return 200');
+  assert.ok(
+    Array.isArray(updateRole.payload?.members) && updateRole.payload.members.some((item) => item.userId === invitedUserId && item.role === 'VIEWER'),
+    'updated member should have VIEWER role',
+  );
+
+  const removeMember = await request(`/auth/projects/${projectId}/members/${invitedUserId}`, {
+    method: 'DELETE',
+    headers: ownerProjectHeaders,
+  });
+  assert.equal(removeMember.response.status, 200, 'member removal should return 200');
+  assert.ok(
+    Array.isArray(removeMember.payload?.members) && !removeMember.payload.members.some((item) => item.userId === invitedUserId),
+    'removed member should not be present in members response',
+  );
+});
+
 test('API e2e smoke: account register + me + password change', async () => {
   const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   const accountEmail = `e2e-user-${seed}@projo.local`;
