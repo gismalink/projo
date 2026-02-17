@@ -100,9 +100,10 @@ export class EmployeesService {
     return rows;
   }
 
-  create(dto: CreateEmployeeDto) {
+  create(workspaceId: string, dto: CreateEmployeeDto) {
     return this.prisma.employee.create({
       data: {
+        workspaceId,
         ...dto,
         defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay ?? STANDARD_DAY_HOURS,
       },
@@ -110,16 +111,20 @@ export class EmployeesService {
     });
   }
 
-  findAll() {
+  findAll(workspaceId: string) {
     return this.prisma.employee.findMany({
+      where: { workspaceId },
       include: { role: true, department: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(id: string) {
-    const employee = await this.prisma.employee.findUnique({
-      where: { id },
+  async findOne(workspaceId: string, id: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id,
+        workspaceId,
+      },
       include: { role: true, department: true },
     });
 
@@ -130,8 +135,8 @@ export class EmployeesService {
     return employee;
   }
 
-  async update(id: string, dto: UpdateEmployeeDto) {
-    await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateEmployeeDto) {
+    await this.findOne(workspaceId, id);
     return this.prisma.employee.update({
       where: { id },
       data: dto,
@@ -139,12 +144,12 @@ export class EmployeesService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    await this.findOne(workspaceId, id);
     return this.prisma.employee.delete({ where: { id } });
   }
 
-  async importCsv(csv: string) {
+  async importCsv(workspaceId: string, csv: string) {
     const rows = this.parseCsvRows(csv);
     if (rows.length === 0) {
       return { total: 0, created: 0, updated: 0, errors: ['Invalid CSV or missing required columns'] };
@@ -185,7 +190,12 @@ export class EmployeesService {
       }
 
       const existing = await this.prisma.employee.findUnique({
-        where: { email: row.email },
+        where: {
+          workspaceId_email: {
+            workspaceId,
+            email: row.email,
+          },
+        },
         select: { id: true },
       });
 
@@ -207,6 +217,7 @@ export class EmployeesService {
 
       await this.prisma.employee.create({
         data: {
+          workspaceId,
           fullName: row.fullName,
           email: row.email,
           roleId,

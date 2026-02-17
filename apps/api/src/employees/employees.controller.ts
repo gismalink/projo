@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AppRoleValue, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -7,6 +7,12 @@ import { ImportEmployeesCsvDto } from './dto/import-employees-csv.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeesService } from './employees.service';
 
+type AuthenticatedRequest = {
+  user: {
+    workspaceId: string;
+  };
+};
+
 @Controller('employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeesController {
@@ -14,31 +20,31 @@ export class EmployeesController {
 
   @Post()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
-  create(@Body() dto: CreateEmployeeDto) {
-    return this.employeesService.create(dto);
+  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateEmployeeDto) {
+    return this.employeesService.create(req.user.workspaceId, dto);
   }
 
   @Post('import-csv')
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
-  importCsv(@Body() dto: ImportEmployeesCsvDto) {
-    return this.employeesService.importCsv(dto.csv);
+  importCsv(@Req() req: AuthenticatedRequest, @Body() dto: ImportEmployeesCsvDto) {
+    return this.employeesService.importCsv(req.user.workspaceId, dto.csv);
   }
 
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
-  findAll() {
-    return this.employeesService.findAll();
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.employeesService.findAll(req.user.workspaceId);
   }
 
   @Patch(':id')
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
-  update(@Param('id') id: string, @Body() dto: UpdateEmployeeDto) {
-    return this.employeesService.update(id, dto);
+  update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateEmployeeDto) {
+    return this.employeesService.update(req.user.workspaceId, id, dto);
   }
 
   @Delete(':id')
   @Roles(AppRoleValue.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.employeesService.remove(id);
+  remove(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.employeesService.remove(req.user.workspaceId, id);
   }
 }

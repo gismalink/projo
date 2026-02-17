@@ -58,7 +58,7 @@ export class ProjectsService {
     throw error;
   }
 
-  async create(dto: CreateProjectDto) {
+  async create(workspaceId: string, dto: CreateProjectDto) {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
     this.ensureDateRange(startDate, endDate);
@@ -70,6 +70,7 @@ export class ProjectsService {
     return this.prisma.project
       .create({
         data: {
+          workspaceId,
           code: dto.code,
           name: dto.name,
           description: dto.description,
@@ -84,25 +85,30 @@ export class ProjectsService {
       .catch((error) => this.handlePrismaError(error));
   }
 
-  private async ensureProjectExists(projectId: string) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
+  private async ensureProjectExists(workspaceId: string, projectId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, workspaceId }, select: { id: true } });
     if (!project) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
   }
 
-  private async ensureEmployeeExists(employeeId: string) {
-    const employee = await this.prisma.employee.findUnique({ where: { id: employeeId }, select: { id: true } });
+  private async ensureEmployeeExists(workspaceId: string, employeeId: string) {
+    const employee = await this.prisma.employee.findFirst({ where: { id: employeeId, workspaceId }, select: { id: true } });
     if (!employee) {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
   }
 
-  async listMembers(projectId: string) {
-    await this.ensureProjectExists(projectId);
+  async listMembers(workspaceId: string, projectId: string) {
+    await this.ensureProjectExists(workspaceId, projectId);
 
     return this.prisma.projectMember.findMany({
-      where: { projectId },
+      where: {
+        projectId,
+        project: {
+          workspaceId,
+        },
+      },
       include: {
         employee: {
           include: {
@@ -115,8 +121,8 @@ export class ProjectsService {
     });
   }
 
-  async addMember(projectId: string, employeeId: string) {
-    await Promise.all([this.ensureProjectExists(projectId), this.ensureEmployeeExists(employeeId)]);
+  async addMember(workspaceId: string, projectId: string, employeeId: string) {
+    await Promise.all([this.ensureProjectExists(workspaceId, projectId), this.ensureEmployeeExists(workspaceId, employeeId)]);
 
     const existing = await this.prisma.projectMember.findUnique({
       where: {
@@ -148,8 +154,8 @@ export class ProjectsService {
     });
   }
 
-  async removeMember(projectId: string, employeeId: string) {
-    await this.ensureProjectExists(projectId);
+  async removeMember(workspaceId: string, projectId: string, employeeId: string) {
+    await this.ensureProjectExists(workspaceId, projectId);
 
     const existing = await this.prisma.projectMember.findUnique({
       where: {
@@ -177,8 +183,9 @@ export class ProjectsService {
     return { success: true };
   }
 
-  findAll() {
+  findAll(workspaceId: string) {
     return this.prisma.project.findMany({
+      where: { workspaceId },
       include: {
         teamTemplate: {
           select: {
@@ -194,9 +201,12 @@ export class ProjectsService {
     });
   }
 
-  async findOne(id: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id },
+  async findOne(workspaceId: string, id: string) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id,
+        workspaceId,
+      },
       include: {
         teamTemplate: {
           include: {
@@ -383,8 +393,8 @@ export class ProjectsService {
     };
   }
 
-  async update(id: string, dto: UpdateProjectDto) {
-    await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateProjectDto) {
+    await this.findOne(workspaceId, id);
 
     if (dto.teamTemplateId) {
       await this.ensureTeamTemplateExists(dto.teamTemplateId);
@@ -412,8 +422,8 @@ export class ProjectsService {
       .catch((error) => this.handlePrismaError(error));
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    await this.findOne(workspaceId, id);
     return this.prisma.project.delete({ where: { id } });
   }
 }

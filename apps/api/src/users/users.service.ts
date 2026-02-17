@@ -3,12 +3,85 @@ import { AppRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
 
+type UserAuthContext = {
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    appRole: AppRole;
+    passwordHash: string;
+  };
+  workspaceId: string;
+  workspaceRole: AppRole;
+};
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
+  }
+
+  private workspaceNameForUser(fullName: string) {
+    const trimmed = fullName.trim();
+    return trimmed ? `${trimmed} workspace` : 'Personal workspace';
+  }
+
+  private async ensureActiveWorkspaceForUser(userId: string): Promise<{ workspaceId: string; workspaceRole: AppRole }> {
+    const userWithMemberships = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        workspaceMemberships: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!userWithMemberships) {
+      throw new Error('User not found while resolving workspace context');
+    }
+
+    if (!userWithMemberships.workspaceMemberships.length) {
+      const workspace = await this.prisma.workspace.create({
+        data: {
+          name: this.workspaceNameForUser(userWithMemberships.fullName),
+          ownerUserId: userWithMemberships.id,
+        },
+      });
+
+      const membership = await this.prisma.workspaceMember.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: userWithMemberships.id,
+          role: userWithMemberships.appRole,
+        },
+      });
+
+      await this.prisma.user.update({
+        where: { id: userWithMemberships.id },
+        data: { activeWorkspaceId: workspace.id },
+      });
+
+      return {
+        workspaceId: workspace.id,
+        workspaceRole: membership.role,
+      };
+    }
+
+    let membership = userWithMemberships.workspaceMemberships.find((item) => item.workspaceId === userWithMemberships.activeWorkspaceId);
+    if (!membership) {
+      membership = userWithMemberships.workspaceMemberships[0];
+      await this.prisma.user.update({
+        where: { id: userWithMemberships.id },
+        data: { activeWorkspaceId: membership.workspaceId },
+      });
+    }
+
+    return {
+      workspaceId: membership.workspaceId,
+      workspaceRole: membership.role,
+    };
   }
 
   async ensureBootstrapAdmin() {
@@ -26,21 +99,24 @@ export class UsersService {
     });
 
     if (existing) {
+      await this.ensureActiveWorkspaceForUser(existing.id);
       if (legacyBootstrapPassword) {
         const isLegacyPassword = await bcrypt.compare(legacyBootstrapPassword, existing.passwordHash);
         if (isLegacyPassword) {
           const passwordHash = await bcrypt.hash(bootstrapPassword, 10);
-          return this.prisma.user.update({
+          const updated = await this.prisma.user.update({
             where: { id: existing.id },
             data: { passwordHash },
           });
+          await this.ensureActiveWorkspaceForUser(updated.id);
+          return updated;
         }
       }
       return existing;
     }
 
     const passwordHash = await bcrypt.hash(bootstrapPassword, 10);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         email: bootstrapEmail,
         fullName: 'System Admin',
@@ -48,6 +124,9 @@ export class UsersService {
         appRole: AppRole.ADMIN,
       },
     });
+
+    await this.ensureActiveWorkspaceForUser(created.id);
+    return created;
   }
 
   findByEmail(email: string) {
@@ -59,7 +138,7 @@ export class UsersService {
   }
 
   async createUser(payload: { email: string; fullName: string; passwordHash: string; appRole?: AppRole }) {
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         email: this.normalizeEmail(payload.email),
         fullName: payload.fullName.trim(),
@@ -67,6 +146,33 @@ export class UsersService {
         appRole: payload.appRole ?? AppRole.VIEWER,
       },
     });
+
+    await this.ensureActiveWorkspaceForUser(created.id);
+    return created;
+  }
+
+  async resolveAuthContextByUserId(userId: string): Promise<UserAuthContext | null> {
+    const user = await this.findById(userId);
+    if (!user) {
+      return null;
+    }
+
+    const { workspaceId, workspaceRole } = await this.ensureActiveWorkspaceForUser(user.id);
+
+    return {
+      user,
+      workspaceId,
+      workspaceRole,
+    };
+  }
+
+  async resolveAuthContextByEmail(email: string): Promise<UserAuthContext | null> {
+    const user = await this.findByEmail(email);
+    if (!user) {
+      return null;
+    }
+
+    return this.resolveAuthContextByUserId(user.id);
   }
 
   async updateProfile(userId: string, payload: { fullName: string }) {

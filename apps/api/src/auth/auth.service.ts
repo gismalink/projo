@@ -13,6 +13,8 @@ type LoginResponse = {
     email: string;
     fullName: string;
     role: string;
+    workspaceId: string;
+    workspaceRole: string;
   };
 };
 
@@ -21,6 +23,8 @@ type AccountUser = {
   email: string;
   fullName: string;
   role: string;
+  workspaceId: string;
+  workspaceRole: string;
 };
 
 @Injectable()
@@ -34,40 +38,59 @@ export class AuthService {
     return email.trim().toLowerCase();
   }
 
-  private mapUser(user: { id: string; email: string; fullName: string; appRole: string }): AccountUser {
+  private mapUser(payload: {
+    user: { id: string; email: string; fullName: string; appRole: string };
+    workspaceId: string;
+    workspaceRole: string;
+  }): AccountUser {
     return {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.appRole,
+      id: payload.user.id,
+      email: payload.user.email,
+      fullName: payload.user.fullName,
+      role: payload.user.appRole,
+      workspaceId: payload.workspaceId,
+      workspaceRole: payload.workspaceRole,
     };
   }
 
-  private async issueAccessToken(user: { id: string; email: string; appRole: string }) {
-    const role = user.appRole as unknown as AppRoleValue;
+  private async issueAccessToken(payload: {
+    user: { id: string; email: string; appRole: string };
+    workspaceId: string;
+    workspaceRole: string;
+  }) {
+    const role = payload.workspaceRole as unknown as AppRoleValue;
     return this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
+      sub: payload.user.id,
+      email: payload.user.email,
       role,
+      workspaceId: payload.workspaceId,
     });
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    const user = await this.usersService.findByEmail(this.normalizeEmail(email));
-    if (!user) {
+    const context = await this.usersService.resolveAuthContextByEmail(this.normalizeEmail(email));
+    if (!context) {
       throw new UnauthorizedException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    const isValid = await bcrypt.compare(password, context.user.passwordHash);
     if (!isValid) {
       throw new UnauthorizedException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
-    const accessToken = await this.issueAccessToken(user);
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
 
     return {
       accessToken,
-      user: this.mapUser(user),
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
     };
   }
 
@@ -86,20 +109,38 @@ export class AuthService {
       appRole: AppRole.VIEWER,
     });
 
-    const accessToken = await this.issueAccessToken(created);
+    const context = await this.usersService.resolveAuthContextByUserId(created.id);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
 
     return {
       accessToken,
-      user: this.mapUser(created),
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
     };
   }
 
   async getMe(userId: string): Promise<AccountUser> {
-    const user = await this.usersService.findById(userId);
-    if (!user) {
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
       throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
     }
-    return this.mapUser(user);
+
+    return this.mapUser({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
   }
 
   async updateMe(userId: string, fullName: string): Promise<AccountUser> {
@@ -108,7 +149,17 @@ export class AuthService {
       throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
     }
     const updated = await this.usersService.updateProfile(userId, { fullName });
-    return this.mapUser(updated);
+
+    const context = await this.usersService.resolveAuthContextByUserId(updated.id);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    return this.mapUser({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
