@@ -264,16 +264,11 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     }
 
     let linePath = `M ${mappedPoints[0].x.toFixed(3)} ${mappedPoints[0].y.toFixed(3)}`;
-    for (let index = 1; index < mappedPoints.length - 1; index += 1) {
+    for (let index = 1; index < mappedPoints.length; index += 1) {
       const current = mappedPoints[index];
-      const next = mappedPoints[index + 1];
-      const midX = (current.x + next.x) / 2;
-      const midY = (current.y + next.y) / 2;
-      linePath += ` Q ${current.x.toFixed(3)} ${current.y.toFixed(3)} ${midX.toFixed(3)} ${midY.toFixed(3)}`;
+      linePath += ` L ${current.x.toFixed(3)} ${current.y.toFixed(3)}`;
     }
-    const penultimate = mappedPoints[mappedPoints.length - 2];
     const last = mappedPoints[mappedPoints.length - 1];
-    linePath += ` Q ${penultimate.x.toFixed(3)} ${penultimate.y.toFixed(3)} ${last.x.toFixed(3)} ${last.y.toFixed(3)}`;
 
     const first = mappedPoints[0];
     const areaPath = `${linePath} L ${last.x.toFixed(3)} ${heightPx.toFixed(3)} L ${first.x.toFixed(3)} ${heightPx.toFixed(3)} Z`;

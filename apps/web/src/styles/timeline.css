@@ -570,6 +570,8 @@
   white-space: nowrap;
   z-index: 25;
   transition: opacity 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .timeline-meta .timeline-inline-tooltip {
@@ -961,6 +963,7 @@
   height: 100%;
   pointer-events: none;
   z-index: 6;
+  overflow: visible;
 }
 
 .assignment-curve-area {
@@ -1039,13 +1042,17 @@
   z-index: 4;
 }
 
+.assignment-vacation-tooltip-anchor .timeline-inline-tooltip {
+  z-index: 40;
+}
+
 .assignment-vacation-track {
   position: relative;
   margin-top: 0;
   height: 6px;
   border-radius: 999px;
   background: transparent;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .assignment-vacation-track .track-day-grid {
@@ -1104,6 +1111,8 @@
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s ease 0.28s, visibility 0s linear 0.43s;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .project-plan-tooltip.visible {
