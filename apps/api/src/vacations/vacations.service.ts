@@ -14,9 +14,10 @@ export class VacationsService {
     }
   }
 
-  private async ensureNoOverlap(employeeId: string, startDate: Date, endDate: Date, excludeId?: string) {
+  private async ensureNoOverlap(workspaceId: string, employeeId: string, startDate: Date, endDate: Date, excludeId?: string) {
     const overlaps = await this.prisma.vacation.findFirst({
       where: {
+        workspaceId,
         employeeId,
         ...(excludeId ? { NOT: { id: excludeId } } : {}),
         startDate: { lte: endDate },
@@ -30,20 +31,21 @@ export class VacationsService {
     }
   }
 
-  async create(dto: CreateVacationDto) {
+  async create(workspaceId: string, dto: CreateVacationDto) {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
     this.ensureDateRange(startDate, endDate);
 
-    const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId } });
+    const employee = await this.prisma.employee.findFirst({ where: { id: dto.employeeId, workspaceId } });
     if (!employee) {
       throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
 
-    await this.ensureNoOverlap(dto.employeeId, startDate, endDate);
+    await this.ensureNoOverlap(workspaceId, dto.employeeId, startDate, endDate);
 
     return this.prisma.vacation.create({
       data: {
+        workspaceId,
         employeeId: dto.employeeId,
         startDate,
         endDate,
@@ -58,8 +60,9 @@ export class VacationsService {
     });
   }
 
-  findAll() {
+  findAll(workspaceId: string) {
     return this.prisma.vacation.findMany({
+      where: { workspaceId },
       include: {
         employee: {
           include: { role: true },
@@ -69,9 +72,9 @@ export class VacationsService {
     });
   }
 
-  async findOne(id: string) {
-    const vacation = await this.prisma.vacation.findUnique({
-      where: { id },
+  async findOne(workspaceId: string, id: string) {
+    const vacation = await this.prisma.vacation.findFirst({
+      where: { id, workspaceId },
       include: {
         employee: {
           include: { role: true },
@@ -86,13 +89,19 @@ export class VacationsService {
     return vacation;
   }
 
-  async update(id: string, dto: UpdateVacationDto) {
-    const existing = await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateVacationDto) {
+    const existing = await this.findOne(workspaceId, id);
     const nextStart = dto.startDate ? new Date(dto.startDate) : existing.startDate;
     const nextEnd = dto.endDate ? new Date(dto.endDate) : existing.endDate;
     const nextEmployeeId = dto.employeeId ?? existing.employeeId;
+
+    const employee = await this.prisma.employee.findFirst({ where: { id: nextEmployeeId, workspaceId } });
+    if (!employee) {
+      throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
+    }
+
     this.ensureDateRange(nextStart, nextEnd);
-    await this.ensureNoOverlap(nextEmployeeId, nextStart, nextEnd, id);
+    await this.ensureNoOverlap(workspaceId, nextEmployeeId, nextStart, nextEnd, id);
 
     return this.prisma.vacation.update({
       where: { id },
@@ -111,8 +120,8 @@ export class VacationsService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    await this.findOne(workspaceId, id);
     return this.prisma.vacation.delete({ where: { id } });
   }
 }

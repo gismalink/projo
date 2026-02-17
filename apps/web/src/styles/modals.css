@@ -122,6 +122,63 @@
   box-shadow: var(--ios-shadow);
 }
 
+.auth-modal {
+  width: min(420px, 100%);
+}
+
+.project-settings-modal {
+  width: min(640px, 100%);
+}
+
+.project-settings-body {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.project-settings-form {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.project-settings-inline {
+  display: grid;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.project-settings-inline-name {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.project-settings-inline-invite {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) auto;
+}
+
+.project-member-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.48rem;
+}
+
+.project-member-meta {
+  min-width: 0;
+}
+
+.project-member-meta strong,
+.project-member-meta div {
+  overflow-wrap: anywhere;
+}
+
+.project-member-item .project-member-actions {
+  flex-wrap: nowrap;
+}
+
+.auth-tabs {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .employee-meta-compact {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -176,5 +233,15 @@
 @media (max-width: 680px) {
   .settings-columns {
     grid-template-columns: 1fr;
+  }
+
+  .project-settings-inline-name,
+  .project-settings-inline-invite,
+  .project-member-item {
+    grid-template-columns: 1fr;
+  }
+
+  .project-member-item .project-member-actions {
+    justify-content: flex-start;
   }
 }

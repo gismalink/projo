@@ -5,12 +5,13 @@ import { PrismaService } from '../common/prisma.service';
 export class TimelineService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getYearTimeline(year: number) {
+  async getYearTimeline(workspaceId: string, year: number) {
     const yearStart = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
     const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
 
     const projects = await this.prisma.project.findMany({
       where: {
+        workspaceId,
         startDate: { lte: yearEnd },
         endDate: { gte: yearStart },
       },

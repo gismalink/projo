@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { api, GradeItem } from '../api/client';
+import { api, GradeItem, ProjectMemberItem } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
@@ -9,6 +9,7 @@ import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { Icon } from '../components/Icon';
 import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
@@ -20,6 +21,16 @@ import { Lang } from './app-types';
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isProjectHomeOpen, setIsProjectHomeOpen] = useState(false);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [projectSettingsProjectId, setProjectSettingsProjectId] = useState('');
+  const [projectSettingsNameDraft, setProjectSettingsNameDraft] = useState('');
+  const [newProjectSpaceName, setNewProjectSpaceName] = useState('');
+  const [projectMembers, setProjectMembers] = useState<ProjectMemberItem[]>([]);
+  const [projectMemberSearch, setProjectMemberSearch] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePermission, setInvitePermission] = useState<'viewer' | 'editor'>('viewer');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerFullName, setRegisterFullName] = useState('');
@@ -65,6 +76,54 @@ export function App() {
     setAccountFullNameDraft(app.currentUserFullName || '');
   }, [app.currentUserFullName, app.token]);
 
+  useEffect(() => {
+    if (!app.token) {
+      setIsAccountModalOpen(false);
+      setIsProjectHomeOpen(false);
+      setIsProjectSettingsOpen(false);
+      setProjectSettingsProjectId('');
+      setProjectSettingsNameDraft('');
+      return;
+    }
+
+    setIsProjectHomeOpen(true);
+    void app.loadMyProjects();
+  }, [app.token]);
+
+  const currentProjectName =
+    app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
+    app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
+    '-';
+  const currentProjectAccess =
+    app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
+    app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
+    null;
+  const settingsProjectAccess =
+    (projectSettingsProjectId
+      ? app.myProjectSpaces.find((item) => item.id === projectSettingsProjectId) ||
+        app.sharedProjectSpaces.find((item) => item.id === projectSettingsProjectId)
+      : null) || currentProjectAccess;
+  const editingProjectId = projectSettingsProjectId || app.activeProjectSpaceId;
+  const isOwner = Boolean(currentProjectAccess?.isOwner);
+  const isEditor = app.currentUserRole === 'PM';
+  const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
+  const canViewParticipants = isOwner || isEditor;
+  const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
+  const projectMemberSearchValue = projectMemberSearch.trim().toLowerCase();
+  const filteredProjectMembers = projectMembers.filter((member) => {
+    if (!projectMemberSearchValue) return true;
+    return (
+      member.fullName.toLowerCase().includes(projectMemberSearchValue) ||
+      member.email.toLowerCase().includes(projectMemberSearchValue)
+    );
+  });
+
+  useEffect(() => {
+    if (!isOwner && app.activeTab !== 'timeline') {
+      app.setActiveTab('timeline');
+    }
+  }, [app.activeTab, app.setActiveTab, isOwner]);
+
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
       event.preventDefault();
@@ -77,6 +136,24 @@ export function App() {
       fullName: registerFullName,
       password: registerPassword,
     });
+  };
+
+  const handleUpdateMemberPermission = async (targetUserId: string, permission: 'viewer' | 'editor') => {
+    if (!editingProjectId) return;
+    const members = await app.handleUpdateProjectMemberPermission(editingProjectId, targetUserId, permission);
+    if (members) {
+      setProjectMembers(members);
+    }
+  };
+
+  const handleRemoveMember = async (targetUserId: string) => {
+    if (!editingProjectId) return;
+    if (!window.confirm(t.confirmRemoveProjectMember)) return;
+
+    const members = await app.handleRemoveProjectMember(editingProjectId, targetUserId);
+    if (members) {
+      setProjectMembers(members);
+    }
   };
 
   const handleUpdateProfileSubmit = async (event: FormEvent) => {
@@ -97,32 +174,154 @@ export function App() {
     setNewPasswordConfirm('');
   };
 
+  const handleLogoutClick = async () => {
+    await app.handleLogout();
+    setIsAccountModalOpen(false);
+    setIsProjectHomeOpen(false);
+  };
+
+  const handleCreateProjectSpaceSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    await app.handleCreateProjectSpace(newProjectSpaceName);
+    setNewProjectSpaceName('');
+    setIsProjectHomeOpen(false);
+  };
+
+  const handleOpenProject = async (projectId: string) => {
+    await app.handleSwitchProjectSpace(projectId);
+    setIsProjectHomeOpen(false);
+    setIsProjectSettingsOpen(false);
+  };
+
+  const handleOpenProjectSettings = async () => {
+    const projectId = app.activeProjectSpaceId;
+    if (!projectId) return;
+
+    const projectAccess =
+      app.myProjectSpaces.find((item) => item.id === projectId) ||
+      app.sharedProjectSpaces.find((item) => item.id === projectId);
+    if (!projectAccess) return;
+
+    const members = await app.loadProjectMembers(projectId);
+    if (members) {
+      setProjectSettingsProjectId(projectId);
+      setProjectSettingsNameDraft(projectAccess.name);
+      setProjectMembers(members);
+      setProjectMemberSearch('');
+      setIsProjectSettingsOpen(true);
+    }
+  };
+
+  const handleOpenProjectSettingsById = async (projectId: string) => {
+    const projectAccess =
+      app.myProjectSpaces.find((item) => item.id === projectId) ||
+      app.sharedProjectSpaces.find((item) => item.id === projectId);
+    if (!projectAccess) return;
+
+    const members = await app.loadProjectMembers(projectId);
+    if (members) {
+      setProjectSettingsProjectId(projectId);
+      setProjectSettingsNameDraft(projectAccess.name);
+      setProjectMembers(members);
+      setProjectMemberSearch('');
+      setIsProjectSettingsOpen(true);
+    }
+  };
+
+  const handleUpdateProjectNameSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingProjectId) return;
+
+    const success = await app.handleUpdateProjectSpaceName(editingProjectId, projectSettingsNameDraft);
+    if (success) {
+      const updatedAccess =
+        app.myProjectSpaces.find((item) => item.id === editingProjectId) ||
+        app.sharedProjectSpaces.find((item) => item.id === editingProjectId);
+      if (updatedAccess) {
+        setProjectSettingsNameDraft(updatedAccess.name);
+      }
+    }
+  };
+
+  const handleInviteSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!app.activeProjectSpaceId) return;
+
+    const members = await app.handleInviteProjectMember(app.activeProjectSpaceId, inviteEmail, invitePermission);
+    if (members) {
+      setProjectMembers(members);
+      setInviteEmail('');
+    }
+  };
+
   return (
     <main className="container">
       <div className="section-header">
         <div>
-          <h1>{t.appTitle}</h1>
+          {app.token && !isProjectHomeOpen ? (
+            <div className="project-top-panel">
+              <div className="project-top-main">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setIsProjectHomeOpen(true)}
+                  aria-label={t.home}
+                  title={t.home}
+                >
+                  <Icon name="grid" />
+                </button>
+                <h3>{currentProjectName}</h3>
+              </div>
+              <div className="project-top-actions">
+                {canViewParticipants ? (
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => void handleOpenProjectSettings()}
+                    aria-label={isOwner ? t.projectSettings : t.participants}
+                    title={isOwner ? t.projectSettings : t.participants}
+                  >
+                    <Icon name="edit" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <h1>{t.appTitle}</h1>
+          )}
         </div>
-        <div className="lang-toggle">
-          <button type="button" className={lang === 'ru' ? 'tab active' : 'tab'} onClick={() => setLang('ru')}>
-            RU
-          </button>
-          <button type="button" className={lang === 'en' ? 'tab active' : 'tab'} onClick={() => setLang('en')}>
-            EN
-          </button>
+        <div className="header-controls">
+          {app.token ? (
+            <button
+              type="button"
+              className={isAccountModalOpen ? 'tab active' : 'tab'}
+              onClick={() => setIsAccountModalOpen((prev) => !prev)}
+            >
+              {app.currentUserFullName || t.account}
+            </button>
+          ) : null}
+          <div className="lang-toggle">
+            <button type="button" className={lang === 'ru' ? 'tab active' : 'tab'} onClick={() => setLang('ru')}>
+              RU
+            </button>
+            <button type="button" className={lang === 'en' ? 'tab active' : 'tab'} onClick={() => setLang('en')}>
+              EN
+            </button>
+          </div>
         </div>
       </div>
 
       {!app.token ? (
-        <article className="card">
-          <div className="tabs" style={{ marginBottom: 12 }}>
+        <div className="modal-backdrop">
+          <article className="modal-card auth-modal">
+            <div className="tabs auth-tabs" style={{ marginBottom: 12 }}>
             <button type="button" className={authMode === 'login' ? 'tab active' : 'tab'} onClick={() => setAuthMode('login')}>
               {t.login}
             </button>
             <button type="button" className={authMode === 'register' ? 'tab active' : 'tab'} onClick={() => setAuthMode('register')}>
               {t.register}
             </button>
-          </div>
+            </div>
 
           {authMode === 'login' ? (
             <form onSubmit={app.handleLogin} className="timeline-form">
@@ -159,62 +358,189 @@ export function App() {
               <button type="submit">{t.createAccount}</button>
             </form>
           )}
-        </article>
+          </article>
+        </div>
       ) : (
         <>
-          <article className="card" style={{ marginBottom: 12 }}>
-            <div className="section-header">
-              <h3>{t.account}</h3>
-              <button type="button" className="ghost-btn" onClick={() => void app.handleLogout()}>
-                {t.logout}
-              </button>
-            </div>
-            <div className="timeline-form">
-              <label>
-                {t.email}
-                <input value={app.currentUserEmail} readOnly />
-              </label>
-              <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
-                <label>
-                  {t.fullName}
-                  <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
-                </label>
-                <button type="submit">{t.saveProfile}</button>
-              </form>
-              <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
-                <label>
-                  {t.currentPassword}
-                  <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                </label>
-                <label>
-                  {t.newPassword}
-                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                </label>
-                <label>
-                  {t.confirmPassword}
-                  <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
-                </label>
-                <button type="submit">{t.changePassword}</button>
-              </form>
-            </div>
-          </article>
 
-          <div className="tabs">
-            <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
-              {t.tabTimeline}
-            </button>
-            <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
-              {t.tabPersonnel}
-            </button>
-            <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
-              {t.tabRoles}
-            </button>
-            <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
-              {t.tabInstruction}
-            </button>
-          </div>
+              {isProjectHomeOpen ? (
+                <article className="card" style={{ marginBottom: 12 }}>
+                  <h3>{t.projectHomeTitle}</h3>
+                  <div className="timeline-form">
+                    <h4>{t.myProjects}</h4>
+                    <div className="project-space-grid">
+                      {app.myProjectSpaces.map((item) => (
+                        <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
+                          <div className="project-space-card-topline">
+                            <strong>{item.name}</strong>
+                            {item.isOwner || item.role === 'PM' ? (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleOpenProjectSettingsById(item.id);
+                                }}
+                                aria-label={t.projectSettings}
+                                title={t.projectSettings}
+                              >
+                                <Icon name="edit" />
+                              </button>
+                            ) : null}
+                          </div>
+                          <span>{item.role}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <form onSubmit={handleCreateProjectSpaceSubmit} className="timeline-form" style={{ padding: 0 }}>
+                      <label>
+                        {t.projectName}
+                        <input value={newProjectSpaceName} onChange={(e) => setNewProjectSpaceName(e.target.value)} />
+                      </label>
+                      <button type="submit">{t.createProjectSpace}</button>
+                    </form>
 
-          {app.activeTab === 'personnel' ? (
+                    <h4>{t.sharedProjects}</h4>
+                    {app.sharedProjectSpaces.length === 0 ? (
+                      <p className="muted">{t.noSharedProjects}</p>
+                    ) : (
+                      <div className="project-space-grid">
+                        {app.sharedProjectSpaces.map((item) => (
+                          <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
+                            <div className="project-space-card-topline">
+                              <strong>{item.name}</strong>
+                              {item.isOwner || item.role === 'PM' ? (
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleOpenProjectSettingsById(item.id);
+                                  }}
+                                  aria-label={t.participants}
+                                  title={t.participants}
+                                >
+                                  <Icon name="edit" />
+                                </button>
+                              ) : null}
+                            </div>
+                            <span>{item.role}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ) : (
+                <></>
+              )}
+
+          {isProjectSettingsOpen ? (
+            <div className="modal-backdrop">
+              <article className="modal-card auth-modal project-settings-modal">
+                <div className="section-header" style={{ marginBottom: 12 }}>
+                  <h3>{t.projectSettings}</h3>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => {
+                      setIsProjectSettingsOpen(false);
+                      setProjectSettingsProjectId('');
+                      setProjectSettingsNameDraft('');
+                      setProjectMemberSearch('');
+                    }}
+                  >
+                    {t.close}
+                  </button>
+                </div>
+                <div className="project-settings-body">
+                  {isOwner ? (
+                    <form onSubmit={handleUpdateProjectNameSubmit} className="project-settings-form" style={{ padding: 0 }}>
+                      <label>{t.projectName}</label>
+                      <div className="project-settings-inline project-settings-inline-name">
+                        <input value={projectSettingsNameDraft} onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
+                        <button type="submit">{t.save}</button>
+                      </div>
+                    </form>
+                  ) : null}
+
+                  <h4>{t.participants}</h4>
+                  <label>
+                    {t.searchParticipants}
+                    <input value={projectMemberSearch} onChange={(e) => setProjectMemberSearch(e.target.value)} />
+                  </label>
+                  <ul>
+                    {filteredProjectMembers.map((member) => (
+                      <li key={member.userId} className="project-member-item">
+                        <div className="project-member-meta">
+                          <strong>{member.fullName}</strong>
+                          <div>{member.email}</div>
+                        </div>
+                        {member.isOwner ? (
+                          <span>{t.owner}</span>
+                        ) : canInviteParticipants ? (
+                          <div className="project-member-actions">
+                            <select
+                              value={member.role === 'PM' ? 'editor' : 'viewer'}
+                              onChange={(e) => void handleUpdateMemberPermission(member.userId, e.target.value as 'viewer' | 'editor')}
+                              aria-label={t.permission}
+                            >
+                              <option value="viewer">{t.permissionViewer}</option>
+                              <option value="editor">{t.permissionEditor}</option>
+                            </select>
+                            <button type="button" className="icon-btn" onClick={() => void handleRemoveMember(member.userId)} aria-label={t.remove}>
+                              <Icon name="x" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span>{member.role}</span>
+                        )}
+                      </li>
+                    ))}
+                    {filteredProjectMembers.length === 0 ? <li>{t.noParticipantsFound}</li> : null}
+                  </ul>
+
+                  {canInviteParticipants ? (
+                    <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
+                      <label>{t.inviteByEmail}</label>
+                      <div className="project-settings-inline project-settings-inline-invite">
+                        <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+                        <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
+                          <option value="viewer">{t.permissionViewer}</option>
+                          <option value="editor">{t.permissionEditor}</option>
+                        </select>
+                        <button type="submit">{t.invite}</button>
+                      </div>
+                    </form>
+                  ) : null}
+                </div>
+              </article>
+            </div>
+          ) : null}
+
+          {!isProjectHomeOpen ? (
+            <>
+
+              <div className="tabs">
+                <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
+                  {t.tabTimeline}
+                </button>
+                {isOwner ? (
+                  <>
+                    <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
+                      {t.tabPersonnel}
+                    </button>
+                    <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
+                      {t.tabRoles}
+                    </button>
+                    <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
+                      {t.tabInstruction}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              {isOwner && app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
               locale={locale}
@@ -264,9 +590,10 @@ export function App() {
               utilizationColor={utilizationColor}
               grades={grades}
             />
-          ) : null}
+              ) : null}
 
-          <EmployeeCreateModal
+              {isOwner ? (
+                <EmployeeCreateModal
             t={t}
             roles={app.roles}
             departments={app.departments}
@@ -288,9 +615,10 @@ export function App() {
             setEmployeeGrade={app.setEmployeeGrade}
             setEmployeeStatus={app.setEmployeeStatus}
             setEmployeeSalary={app.setEmployeeSalary}
-          />
+                />
+              ) : null}
 
-          {app.activeTab === 'roles' ? (
+              {isOwner && app.activeTab === 'roles' ? (
             <RolesTab
               t={t}
               roles={app.roles}
@@ -375,16 +703,16 @@ export function App() {
                 });
               }}
             />
-          ) : null}
+              ) : null}
 
-          {app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
+              {isOwner && app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
 
-          {app.activeTab === 'timeline' ? (
+              {app.activeTab === 'timeline' ? (
             <TimelineTab
               t={t}
               locale={locale}
               months={MONTHS_BY_LANG[lang]}
-              canManageTimeline={app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM'}
+              canManageTimeline={canManageTimeline}
               selectedYear={app.selectedYear}
               assignments={app.assignments}
               vacations={app.vacations}
@@ -415,9 +743,10 @@ export function App() {
               timelineStyle={timelineStyle}
               isoToInputDate={isoToInputDate}
             />
-          ) : null}
+              ) : null}
 
-          <ProjectModal
+              {canManageTimeline ? (
+                <ProjectModal
             t={t}
             isOpen={app.isProjectModalOpen}
             projectCode={app.projectCode}
@@ -433,9 +762,11 @@ export function App() {
             setProjectStartDate={app.setProjectStartDate}
             setProjectEndDate={app.setProjectEndDate}
             setProjectTeamTemplateId={app.setProjectTeamTemplateId}
-          />
+                />
+              ) : null}
 
-          <ProjectDatesModal
+              {canManageTimeline ? (
+                <ProjectDatesModal
             t={t}
             isOpen={app.isProjectDatesModalOpen}
             startDate={app.editProjectStartDate}
@@ -444,9 +775,11 @@ export function App() {
             onSubmit={app.handleUpdateProjectDates}
             setStartDate={app.setEditProjectStartDate}
             setEndDate={app.setEditProjectEndDate}
-          />
+                />
+              ) : null}
 
-          <AssignmentModal
+              {canManageTimeline ? (
+                <AssignmentModal
             t={t}
             isOpen={app.isAssignmentModalOpen}
             projects={app.projects}
@@ -463,9 +796,11 @@ export function App() {
             setAssignmentStartDate={app.setAssignmentStartDate}
             setAssignmentEndDate={app.setAssignmentEndDate}
             setAssignmentPercent={app.setAssignmentPercent}
-          />
+                />
+              ) : null}
 
-          <EmployeeModal
+              {isOwner ? (
+                <EmployeeModal
             t={t}
             locale={locale}
             roles={app.roles}
@@ -489,20 +824,76 @@ export function App() {
             onCreateVacation={app.handleCreateVacationFromEmployeeModal}
             onUpdateVacation={app.handleUpdateVacationFromEmployeeModal}
             onDeleteVacation={app.handleDeleteVacationFromEmployeeModal}
-          />
+                />
+              ) : null}
 
-          <EmployeeImportModal
+              {isOwner ? (
+                <EmployeeImportModal
             t={t}
             isOpen={app.isEmployeeImportModalOpen}
             csv={app.employeeCsv}
             onClose={() => app.setIsEmployeeImportModalOpen(false)}
             onSubmit={app.handleImportEmployeesCsv}
             setCsv={app.setEmployeeCsv}
-          />
+                />
+              ) : null}
+            </>
+          ) : null}
 
-          <ToastStack toasts={app.toasts} />
+          {isAccountModalOpen ? (
+            <div className="modal-backdrop">
+              <article className="modal-card auth-modal">
+                <div className="section-header">
+                  <h3>{t.account}</h3>
+                  <div className="lang-toggle">
+                    <button type="button" className="ghost-btn" onClick={() => setIsAccountModalOpen(false)}>
+                      {t.close}
+                    </button>
+                    <button type="button" className="ghost-btn" onClick={() => void handleLogoutClick()}>
+                      {t.logout}
+                    </button>
+                  </div>
+                </div>
+                <div className="timeline-form">
+                  <label>
+                    {t.email}
+                    <input value={app.currentUserEmail} readOnly />
+                  </label>
+                  <label>
+                    {t.workspace}
+                    <input value={app.currentWorkspaceId || '-'} readOnly />
+                  </label>
+                  <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
+                    <label>
+                      {t.fullName}
+                      <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
+                    </label>
+                    <button type="submit">{t.saveProfile}</button>
+                  </form>
+                  <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
+                    <label>
+                      {t.currentPassword}
+                      <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                    </label>
+                    <label>
+                      {t.newPassword}
+                      <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                    </label>
+                    <label>
+                      {t.confirmPassword}
+                      <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
+                    </label>
+                    <button type="submit">{t.changePassword}</button>
+                  </form>
+                </div>
+              </article>
+            </div>
+          ) : null}
+
         </>
       )}
+
+      <ToastStack toasts={app.toasts} />
     </main>
   );
 }

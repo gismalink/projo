@@ -36,13 +36,13 @@ export class SkillsController {
   }
 
   @Post(':id/employees/:employeeId')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   assignToEmployee(@Param('id') id: string, @Param('employeeId') employeeId: string) {
     return this.skillsService.assignToEmployee(id, employeeId);
   }
 
   @Delete(':id/employees/:employeeId')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   unassignFromEmployee(@Param('id') id: string, @Param('employeeId') employeeId: string) {
     return this.skillsService.unassignFromEmployee(id, employeeId);
   }

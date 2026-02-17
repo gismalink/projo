@@ -18,7 +18,9 @@ type IconName =
   | 'users'
   | 'clock'
   | 'coins'
-  | 'alert';
+  | 'alert'
+  | 'door'
+  | 'grid';
 
 type IconProps = {
   name: IconName;
@@ -155,6 +157,23 @@ export function Icon({ name, size = 16, className }: IconProps) {
           <path {...common} d="M12 4 3.8 18h16.4L12 4z" />
           <path {...common} d="M12 9v4" />
           <path {...common} d="M12 16h.01" />
+        </>
+      ) : null}
+
+      {name === 'door' ? (
+        <>
+          <path {...common} d="M6 20V5.5c0-.8.6-1.5 1.4-1.6L16 3v17" />
+          <path {...common} d="M10.5 12h.01" />
+          <path {...common} d="M3 20h18" />
+        </>
+      ) : null}
+
+      {name === 'grid' ? (
+        <>
+          <rect {...common} x="4" y="4" width="7" height="7" rx="1.4" />
+          <rect {...common} x="13" y="4" width="7" height="7" rx="1.4" />
+          <rect {...common} x="4" y="13" width="7" height="7" rx="1.4" />
+          <rect {...common} x="13" y="13" width="7" height="7" rx="1.4" />
         </>
       ) : null}
     </svg>

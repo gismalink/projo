@@ -119,6 +119,20 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.16);
 }
 
+input[readonly],
+textarea[readonly] {
+  background: rgba(120, 120, 128, 0.14);
+  color: rgba(60, 60, 67, 0.92);
+  border-color: rgba(60, 60, 67, 0.24);
+  cursor: not-allowed;
+}
+
+input[readonly]:focus,
+textarea[readonly]:focus {
+  box-shadow: none;
+  border-color: rgba(60, 60, 67, 0.24);
+}
+
 textarea {
   resize: vertical;
   font-family: "IBM Plex Mono", "Consolas", monospace;
@@ -164,11 +178,95 @@ button:active {
   gap: 0.35rem;
 }
 
+.header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.project-top-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.project-top-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.project-top-main h3 {
+  margin: 0;
+}
+
+.project-top-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .ghost-btn {
   background: var(--ios-surface-strong);
   color: var(--ios-text-secondary);
   border: 1px solid var(--ios-border);
   box-shadow: none;
+}
+
+.icon-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: rgba(10, 132, 255, 0.12);
+}
+
+.project-space-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.55rem;
+}
+
+.project-space-card {
+  border: 1px solid var(--ios-border);
+  border-radius: 12px;
+  background: var(--ios-surface-strong);
+  padding: 0.65rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.project-space-card:hover {
+  background: rgba(10, 132, 255, 0.08);
+}
+
+.project-space-card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-member-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.project-member-actions select {
+  min-width: 180px;
 }
 
 
@@ -219,11 +317,13 @@ li:last-child {
 
 .toast-stack {
   position: fixed;
-  left: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 1rem;
-  z-index: 50;
+  z-index: 120;
   display: grid;
   gap: 0.4rem;
+  justify-items: center;
 }
 
 .toast-item {

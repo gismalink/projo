@@ -20,9 +20,9 @@ export class CostRatesService {
     }
   }
 
-  private async ensureTargetsExist(dto: { employeeId?: string; roleId?: string }) {
+  private async ensureTargetsExist(workspaceId: string, dto: { employeeId?: string; roleId?: string }) {
     if (dto.employeeId) {
-      const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId }, select: { id: true } });
+      const employee = await this.prisma.employee.findFirst({ where: { id: dto.employeeId, workspaceId }, select: { id: true } });
       if (!employee) throw new NotFoundException(ErrorCode.EMPLOYEE_NOT_FOUND);
     }
     if (dto.roleId) {
@@ -31,15 +31,16 @@ export class CostRatesService {
     }
   }
 
-  async create(dto: CreateCostRateDto) {
+  async create(workspaceId: string, dto: CreateCostRateDto) {
     this.ensureScope(dto);
     const validFrom = new Date(dto.validFrom);
     const validTo = dto.validTo ? new Date(dto.validTo) : undefined;
     this.ensureDateRange(validFrom, validTo);
-    await this.ensureTargetsExist(dto);
+    await this.ensureTargetsExist(workspaceId, dto);
 
     return this.prisma.costRate.create({
       data: {
+        workspaceId,
         employeeId: dto.employeeId,
         roleId: dto.roleId,
         amountPerHour: dto.amountPerHour,
@@ -54,8 +55,9 @@ export class CostRatesService {
     });
   }
 
-  findAll() {
+  findAll(workspaceId: string) {
     return this.prisma.costRate.findMany({
+      where: { workspaceId },
       include: {
         employee: { select: { id: true, fullName: true } },
         role: { select: { id: true, name: true } },
@@ -64,9 +66,9 @@ export class CostRatesService {
     });
   }
 
-  async findOne(id: string) {
-    const row = await this.prisma.costRate.findUnique({
-      where: { id },
+  async findOne(workspaceId: string, id: string) {
+    const row = await this.prisma.costRate.findFirst({
+      where: { id, workspaceId },
       include: {
         employee: { select: { id: true, fullName: true } },
         role: { select: { id: true, name: true } },
@@ -76,14 +78,14 @@ export class CostRatesService {
     return row;
   }
 
-  async update(id: string, dto: UpdateCostRateDto) {
-    const existing = await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateCostRateDto) {
+    const existing = await this.findOne(workspaceId, id);
     const next = {
       employeeId: dto.employeeId ?? existing.employeeId ?? undefined,
       roleId: dto.roleId ?? existing.roleId ?? undefined,
     };
     this.ensureScope(next);
-    await this.ensureTargetsExist(next);
+    await this.ensureTargetsExist(workspaceId, next);
 
     const nextValidFrom = dto.validFrom ? new Date(dto.validFrom) : existing.validFrom;
     const nextValidTo =
@@ -107,8 +109,8 @@ export class CostRatesService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    await this.findOne(workspaceId, id);
     return this.prisma.costRate.delete({ where: { id } });
   }
 }

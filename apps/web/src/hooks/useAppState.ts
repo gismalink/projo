@@ -4,6 +4,7 @@ import {
   CalendarDayItem,
   CalendarHealthResponse,
   DepartmentItem,
+  ProjectSpaceItem,
   ProjectDetail,
   ProjectListItem,
   ProjectTimelineRow,
@@ -33,6 +34,10 @@ export function useAppState() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
   const [currentUserFullName, setCurrentUserFullName] = useState<string>('');
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string>('');
+  const [myProjectSpaces, setMyProjectSpaces] = useState<ProjectSpaceItem[]>([]);
+  const [sharedProjectSpaces, setSharedProjectSpaces] = useState<ProjectSpaceItem[]>([]);
+  const [activeProjectSpaceId, setActiveProjectSpaceId] = useState<string>('');
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -124,6 +129,10 @@ export function useAppState() {
     currentUserId,
     currentUserEmail,
     currentUserFullName,
+    currentWorkspaceId,
+    myProjectSpaces,
+    sharedProjectSpaces,
+    activeProjectSpaceId,
     activeTab,
     selectedYear,
     toasts,
@@ -203,6 +212,10 @@ export function useAppState() {
     setCurrentUserId,
     setCurrentUserEmail,
     setCurrentUserFullName,
+    setCurrentWorkspaceId,
+    setMyProjectSpaces,
+    setSharedProjectSpaces,
+    setActiveProjectSpaceId,
     setActiveTab,
     setSelectedYear,
     setToasts,

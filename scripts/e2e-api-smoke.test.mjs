@@ -24,6 +24,35 @@ function shiftIsoByDays(iso, days) {
   return date.toISOString();
 }
 
+async function ensureEmployee(authHeaders) {
+  const employees = await request('/employees', { headers: authHeaders });
+  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
+  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
+
+  if (employees.payload.length > 0) {
+    return employees.payload[0];
+  }
+
+  const roles = await request('/roles', { headers: authHeaders });
+  assert.equal(roles.response.status, 200, 'roles endpoint should return 200');
+  assert.ok(Array.isArray(roles.payload), 'roles payload should be an array');
+  assert.ok(roles.payload.length > 0, 'roles payload should not be empty');
+
+  const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const createdEmployee = await request('/employees', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      fullName: `Smoke Employee ${seed}`,
+      email: `smoke-employee-${seed}@projo.local`,
+      roleId: roles.payload[0].id,
+    }),
+  });
+
+  assert.equal(createdEmployee.response.status, 201, 'employee create endpoint should return 201');
+  return createdEmployee.payload;
+}
+
 test('API e2e smoke: auth + timeline + calendar', async () => {
   const health = await request('/health');
   assert.equal(health.response.status, 200, 'health endpoint should return 200');
@@ -68,12 +97,7 @@ test('API e2e smoke: project member + assignment consistency', async () => {
     'Content-Type': 'application/json',
   };
 
-  const employees = await request('/employees', { headers: authHeaders });
-  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
-  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
-  assert.ok(employees.payload.length > 0, 'employees payload should not be empty');
-
-  const employee = employees.payload[0];
+  const employee = await ensureEmployee(authHeaders);
   assert.equal(typeof employee?.id, 'string', 'employee id should be available');
 
   const startDate = `${year}-02-01T00:00:00.000Z`;
@@ -222,12 +246,7 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
     'Content-Type': 'application/json',
   };
 
-  const employees = await request('/employees', { headers: authHeaders });
-  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
-  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
-  assert.ok(employees.payload.length > 0, 'employees payload should not be empty');
-
-  const employee = employees.payload[0];
+  const employee = await ensureEmployee(authHeaders);
   const projectCode = `E2E-SHIFT-${Date.now()}`;
 
   const projectStart = `${year}-04-01T00:00:00.000Z`;
@@ -327,6 +346,90 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
       });
     }
   }
+});
+
+test('API e2e smoke: auth project member role update and removal', async () => {
+  const loginOwner = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  assert.equal(loginOwner.response.status, 201, 'owner login endpoint should return 201');
+  assert.equal(typeof loginOwner.payload?.accessToken, 'string', 'owner login should return accessToken');
+
+  const ownerHeaders = {
+    Authorization: `Bearer ${loginOwner.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const invitedEmail = `e2e-member-${seed}@projo.local`;
+  const invitedPassword = `E2eMember!${seed}`;
+
+  const invitedRegister = await request('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: invitedEmail,
+      fullName: `E2E Member ${seed}`,
+      password: invitedPassword,
+    }),
+  });
+  assert.equal(invitedRegister.response.status, 201, 'invited user register should return 201');
+  assert.equal(typeof invitedRegister.payload?.user?.id, 'string', 'invited user id should be available');
+
+  const createProjectSpace = await request('/auth/projects', {
+    method: 'POST',
+    headers: ownerHeaders,
+    body: JSON.stringify({ name: `E2E Project Space ${seed}` }),
+  });
+  assert.equal(createProjectSpace.response.status, 201, 'project-space create should return 201');
+
+  const ownerProjectToken = createProjectSpace.payload?.accessToken;
+  assert.equal(typeof ownerProjectToken, 'string', 'project-space create should return updated access token');
+
+  const ownerProjectHeaders = {
+    Authorization: `Bearer ${ownerProjectToken}`,
+    'Content-Type': 'application/json',
+  };
+  const projectId = createProjectSpace.payload?.user?.workspaceId;
+  assert.equal(typeof projectId, 'string', 'created project-space id should be available via workspaceId');
+
+  const invite = await request(`/auth/projects/${projectId}/invite`, {
+    method: 'POST',
+    headers: ownerProjectHeaders,
+    body: JSON.stringify({ email: invitedEmail, permission: 'editor' }),
+  });
+  assert.equal(invite.response.status, 201, 'invite should return 201');
+  assert.ok(
+    Array.isArray(invite.payload?.members) && invite.payload.members.some((item) => item.email === invitedEmail.toLowerCase() && item.role === 'PM'),
+    'invite response should include invited member with PM role',
+  );
+
+  const invitedUserId = invite.payload.members.find((item) => item.email === invitedEmail.toLowerCase())?.userId;
+  assert.equal(typeof invitedUserId, 'string', 'invited member userId should be present');
+
+  const updateRole = await request(`/auth/projects/${projectId}/members/${invitedUserId}`, {
+    method: 'PATCH',
+    headers: ownerProjectHeaders,
+    body: JSON.stringify({ permission: 'viewer' }),
+  });
+  assert.equal(updateRole.response.status, 200, 'member permission update should return 200');
+  assert.ok(
+    Array.isArray(updateRole.payload?.members) && updateRole.payload.members.some((item) => item.userId === invitedUserId && item.role === 'VIEWER'),
+    'updated member should have VIEWER role',
+  );
+
+  const removeMember = await request(`/auth/projects/${projectId}/members/${invitedUserId}`, {
+    method: 'DELETE',
+    headers: ownerProjectHeaders,
+  });
+  assert.equal(removeMember.response.status, 200, 'member removal should return 200');
+  assert.ok(
+    Array.isArray(removeMember.payload?.members) && !removeMember.payload.members.some((item) => item.userId === invitedUserId),
+    'removed member should not be present in members response',
+  );
 });
 
 test('API e2e smoke: account register + me + password change', async () => {
