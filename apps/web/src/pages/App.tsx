@@ -5,6 +5,7 @@ import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { AccountModal } from '../components/modals/AccountModal';
+import { AuthGate } from '../components/modals/AuthGate';
 import { EmployeeCreateModal } from '../components/modals/EmployeeCreateModal';
 import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
@@ -396,70 +397,26 @@ export function App() {
       </div>
 
       {!app.token ? (
-        <div className="modal-backdrop">
-          <article className="modal-card auth-modal">
-            <div className="tabs auth-tabs" style={{ marginBottom: 12 }}>
-            <button type="button" className={authMode === 'login' ? 'tab active' : 'tab'} onClick={() => setAuthMode('login')}>
-              {t.login}
-            </button>
-            <button type="button" className={authMode === 'register' ? 'tab active' : 'tab'} onClick={() => setAuthMode('register')}>
-              {t.register}
-            </button>
-            </div>
-
-          {authMode === 'login' ? (
-            <form onSubmit={app.handleLogin} className="timeline-form">
-              <h2>{t.login}</h2>
-              <label>
-                <span className="field-label required">{t.email}</span>
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={app.email}
-                  required
-                  onChange={(e) => app.setEmail(e.target.value)}
-                />
-              </label>
-              <label>
-                <span className="field-label required">{t.password}</span>
-                <input type="password" placeholder="••••••••" value={app.password} required onChange={(e) => app.setPassword(e.target.value)} />
-              </label>
-              <button type="submit">{t.signIn}</button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegisterSubmit} className="timeline-form">
-              <h2>{t.register}</h2>
-              <label>
-                <span className="field-label required">{t.fullName}</span>
-                <input value={registerFullName} placeholder={t.fullName} required onChange={(e) => setRegisterFullName(e.target.value)} />
-              </label>
-              <label>
-                <span className="field-label required">{t.email}</span>
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={registerEmail}
-                  required
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                />
-              </label>
-              <label>
-                <span className="field-label required">{t.password}</span>
-                <input type="password" placeholder="••••••••" value={registerPassword} required onChange={(e) => setRegisterPassword(e.target.value)} />
-              </label>
-              <label>
-                <span className="field-label required">{t.confirmPassword}</span>
-                <input type="password" placeholder="••••••••" value={registerPasswordConfirm} required onChange={(e) => setRegisterPasswordConfirm(e.target.value)} />
-              </label>
-              <button type="submit">{t.createAccount}</button>
-            </form>
-          )}
-          </article>
-        </div>
+        <AuthGate
+          isOpen={!app.token}
+          t={t}
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          email={app.email}
+          setEmail={app.setEmail}
+          password={app.password}
+          setPassword={app.setPassword}
+          registerEmail={registerEmail}
+          setRegisterEmail={setRegisterEmail}
+          registerFullName={registerFullName}
+          setRegisterFullName={setRegisterFullName}
+          registerPassword={registerPassword}
+          setRegisterPassword={setRegisterPassword}
+          registerPasswordConfirm={registerPasswordConfirm}
+          setRegisterPasswordConfirm={setRegisterPasswordConfirm}
+          onLoginSubmit={app.handleLogin}
+          onRegisterSubmit={handleRegisterSubmit}
+        />
       ) : (
         <>
 
