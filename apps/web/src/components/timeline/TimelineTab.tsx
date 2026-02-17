@@ -1,6 +1,6 @@
 import { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AssignmentItem, CalendarDayItem, CalendarHealthResponse, GradeItem, ProjectDetail, ProjectTimelineRow } from '../../api/client';
-import { STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
+import { createAssignmentLoadPercentResolver, STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
 import { BenchColumn } from './BenchColumn';
 import { CompanyLoadCard } from './CompanyLoadCard';
 import { ProjectAssignmentsCard } from './ProjectAssignmentsCard';
@@ -223,8 +223,7 @@ export function TimelineTab(props: TimelineTabProps) {
     };
 
     for (const assignment of assignments) {
-      const allocation = Number(assignment.allocationPercent);
-      if (!Number.isFinite(allocation) || allocation <= 0) continue;
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const start = new Date(assignment.assignmentStartDate);
       const end = new Date(assignment.assignmentEndDate);
@@ -238,7 +237,9 @@ export function TimelineTab(props: TimelineTabProps) {
         const currentDate = new Date(yearStart);
         currentDate.setUTCDate(currentDate.getUTCDate() + i);
         if (!isLoadBearingDay(currentDate)) continue;
-        rawTotals[i] += allocation;
+        const loadPercent = resolveLoadPercent(currentDate);
+        if (!Number.isFinite(loadPercent) || loadPercent <= 0) continue;
+        rawTotals[i] += loadPercent;
       }
     }
 
@@ -607,8 +608,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const benchGroups = useMemo(() => {
     const annualUtilizationByEmployeeId = new Map<string, number>();
     for (const assignment of assignments) {
-      const allocation = Number(assignment.allocationPercent);
-      if (!Number.isFinite(allocation) || allocation <= 0) continue;
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const start = toUtcDay(new Date(assignment.assignmentStartDate));
       const end = toUtcDay(new Date(assignment.assignmentEndDate));
@@ -616,8 +616,12 @@ export function TimelineTab(props: TimelineTabProps) {
       const effectiveEnd = end > yearEndDay ? yearEndDay : end;
       if (effectiveEnd < effectiveStart) continue;
 
-      const overlapDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / MS_PER_DAY) + 1;
-      const weightedUtilization = (allocation * overlapDays) / totalDays;
+      let weightedUtilization = 0;
+      const cursor = new Date(effectiveStart);
+      while (cursor <= effectiveEnd) {
+        weightedUtilization += resolveLoadPercent(cursor) / totalDays;
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
       annualUtilizationByEmployeeId.set(
         assignment.employeeId,
         (annualUtilizationByEmployeeId.get(assignment.employeeId) ?? 0) + weightedUtilization,
@@ -704,12 +708,10 @@ export function TimelineTab(props: TimelineTabProps) {
         const assignmentStart = toUtcDay(new Date(assignment.assignmentStartDate));
         const assignmentEnd = toUtcDay(new Date(assignment.assignmentEndDate));
         if (assignmentEnd < assignmentStart) continue;
+        const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
-        const dailyHours =
-          assignment.plannedHoursPerDay !== null
-            ? Number(assignment.plannedHoursPerDay)
-            : (STANDARD_DAY_HOURS * Number(assignment.allocationPercent)) / 100;
-        if (!Number.isFinite(dailyHours) || dailyHours <= 0) continue;
+        const fixedDailyHours = assignment.plannedHoursPerDay !== null ? Number(assignment.plannedHoursPerDay) : null;
+        if (fixedDailyHours !== null && (!Number.isFinite(fixedDailyHours) || fixedDailyHours <= 0)) continue;
 
         const vacations = vacationsByEmployeeId.get(assignment.employeeId) ?? [];
         const vacationRanges = vacations.map((vacation) => ({
@@ -727,6 +729,12 @@ export function TimelineTab(props: TimelineTabProps) {
           const isWorkingDay = calendarDay ? calendarDay.isWorkingDay : !isWeekendByDate(cursor);
 
           if (isWorkingDay) {
+            const dailyHours =
+              fixedDailyHours !== null ? fixedDailyHours : (STANDARD_DAY_HOURS * resolveLoadPercent(cursor)) / 100;
+            if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
+              cursor.setUTCDate(cursor.getUTCDate() + 1);
+              continue;
+            }
             assignmentPlannedHours += dailyHours;
             const onVacation = vacationRanges.some((range) => cursor >= range.start && cursor <= range.end);
             if (!onVacation) {

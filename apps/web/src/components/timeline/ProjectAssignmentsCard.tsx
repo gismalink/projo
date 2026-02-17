@@ -1,6 +1,6 @@
 import { MouseEvent as ReactMouseEvent, MutableRefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDayItem, ProjectDetail } from '../../api/client';
-import { STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
+import { createAssignmentLoadPercentResolver, STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
 import { Icon } from '../Icon';
 
 type AssignmentDragState = {
@@ -427,13 +427,10 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
         result.set(assignment.id, { actualHours: 0, lostHours: 0 });
         continue;
       }
+      const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
-      const dailyHours =
-        assignment.plannedHoursPerDay !== null
-          ? Number(assignment.plannedHoursPerDay)
-          : (STANDARD_DAY_HOURS * Number(assignment.allocationPercent)) / 100;
-
-      if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
+      const fixedDailyHours = assignment.plannedHoursPerDay !== null ? Number(assignment.plannedHoursPerDay) : null;
+      if (fixedDailyHours !== null && (!Number.isFinite(fixedDailyHours) || fixedDailyHours <= 0)) {
         result.set(assignment.id, { actualHours: 0, lostHours: 0 });
         continue;
       }
@@ -453,6 +450,11 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
         const isWorkingDay = calendarDay ? calendarDay.isWorkingDay : !isWeekendByDate(cursor);
 
         if (isWorkingDay) {
+          const dailyHours = fixedDailyHours !== null ? fixedDailyHours : (STANDARD_DAY_HOURS * resolveLoadPercent(cursor)) / 100;
+          if (!Number.isFinite(dailyHours) || dailyHours <= 0) {
+            cursor.setUTCDate(cursor.getUTCDate() + 1);
+            continue;
+          }
           plannedHours += dailyHours;
           const onVacation = vacationRanges.some((range) => cursor >= range.start && cursor <= range.end);
           if (!onVacation) {

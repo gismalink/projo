@@ -6,6 +6,75 @@ export const STANDARD_DAY_HOURS = Number.isFinite(parsedStandardDayHours) && par
   ? parsedStandardDayHours
   : 8;
 
+type AssignmentLoadProfilePoint = {
+  date: string;
+  value: number;
+};
+
+type AssignmentLoadProfile = {
+  mode: 'flat' | 'curve';
+  points?: AssignmentLoadProfilePoint[];
+};
+
+type AssignmentLoadLike = {
+  assignmentStartDate: string;
+  assignmentEndDate: string;
+  allocationPercent: string | number;
+  loadProfile?: AssignmentLoadProfile | null;
+};
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
+function toUtcDayStart(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+function toUtcDayMs(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  return toUtcDayStart(date).getTime();
+}
+
+export function createAssignmentLoadPercentResolver(assignment: AssignmentLoadLike) {
+  const fallback = clampPercent(Number(assignment.allocationPercent));
+  const profile = assignment.loadProfile;
+
+  if (!profile || profile.mode !== 'curve' || !Array.isArray(profile.points) || profile.points.length < 2) {
+    return () => fallback;
+  }
+
+  const points = profile.points
+    .map((point) => ({
+      dateMs: toUtcDayMs(point.date),
+      value: clampPercent(Number(point.value)),
+    }))
+    .filter((point) => Number.isFinite(point.dateMs) && Number.isFinite(point.value))
+    .sort((left, right) => left.dateMs - right.dateMs);
+
+  if (points.length < 2) {
+    return () => fallback;
+  }
+
+  return (date: Date) => {
+    const dateMs = toUtcDayMs(date);
+    if (dateMs <= points[0].dateMs) return points[0].value;
+    if (dateMs >= points[points.length - 1].dateMs) return points[points.length - 1].value;
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const start = points[index];
+      const end = points[index + 1];
+      if (dateMs < start.dateMs || dateMs > end.dateMs) continue;
+      const span = end.dateMs - start.dateMs;
+      if (span <= 0) return start.value;
+      const ratio = (dateMs - start.dateMs) / span;
+      return start.value + (end.value - start.value) * ratio;
+    }
+
+    return fallback;
+  };
+}
+
 function dayOfYear(date: Date) {
   const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 0));
   const diff = date.getTime() - start.getTime();
