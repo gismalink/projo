@@ -28,6 +28,7 @@ export function App() {
   const [projectSettingsNameDraft, setProjectSettingsNameDraft] = useState('');
   const [newProjectSpaceName, setNewProjectSpaceName] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMemberItem[]>([]);
+  const [projectMemberSearch, setProjectMemberSearch] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePermission, setInvitePermission] = useState<'viewer' | 'editor'>('viewer');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -108,6 +109,14 @@ export function App() {
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
+  const projectMemberSearchValue = projectMemberSearch.trim().toLowerCase();
+  const filteredProjectMembers = projectMembers.filter((member) => {
+    if (!projectMemberSearchValue) return true;
+    return (
+      member.fullName.toLowerCase().includes(projectMemberSearchValue) ||
+      member.email.toLowerCase().includes(projectMemberSearchValue)
+    );
+  });
 
   useEffect(() => {
     if (!isOwner && app.activeTab !== 'timeline') {
@@ -198,6 +207,7 @@ export function App() {
       setProjectSettingsProjectId(projectId);
       setProjectSettingsNameDraft(projectAccess.name);
       setProjectMembers(members);
+      setProjectMemberSearch('');
       setIsProjectSettingsOpen(true);
     }
   };
@@ -213,6 +223,7 @@ export function App() {
       setProjectSettingsProjectId(projectId);
       setProjectSettingsNameDraft(projectAccess.name);
       setProjectMembers(members);
+      setProjectMemberSearch('');
       setIsProjectSettingsOpen(true);
     }
   };
@@ -247,7 +258,37 @@ export function App() {
     <main className="container">
       <div className="section-header">
         <div>
-          <h1>{t.appTitle}</h1>
+          {app.token && !isProjectHomeOpen ? (
+            <div className="project-top-panel">
+              <div className="project-top-main">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setIsProjectHomeOpen(true)}
+                  aria-label={t.home}
+                  title={t.home}
+                >
+                  <Icon name="grid" />
+                </button>
+                <h3>{currentProjectName}</h3>
+              </div>
+              <div className="project-top-actions">
+                {canViewParticipants ? (
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => void handleOpenProjectSettings()}
+                    aria-label={isOwner ? t.projectSettings : t.participants}
+                    title={isOwner ? t.projectSettings : t.participants}
+                  >
+                    <Icon name="edit" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <h1>{t.appTitle}</h1>
+          )}
         </div>
         <div className="header-controls">
           {app.token ? (
@@ -391,38 +432,12 @@ export function App() {
                   </div>
                 </article>
               ) : (
-                <article className="card" style={{ marginBottom: 12 }}>
-                  <div className="section-header">
-                    <h3>{currentProjectName}</h3>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {canViewParticipants ? (
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          onClick={() => void handleOpenProjectSettings()}
-                          aria-label={isOwner ? t.projectSettings : t.participants}
-                          title={isOwner ? t.projectSettings : t.participants}
-                        >
-                          <Icon name="users" />
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => setIsProjectHomeOpen(true)}
-                        aria-label={t.home}
-                        title={t.home}
-                      >
-                        <Icon name="building" />
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                <></>
               )}
 
           {isProjectSettingsOpen ? (
             <div className="modal-backdrop">
-              <article className="modal-card auth-modal">
+              <article className="modal-card auth-modal project-settings-modal">
                 <div className="section-header" style={{ marginBottom: 12 }}>
                   <h3>{t.projectSettings}</h3>
                   <button
@@ -432,27 +447,32 @@ export function App() {
                       setIsProjectSettingsOpen(false);
                       setProjectSettingsProjectId('');
                       setProjectSettingsNameDraft('');
+                      setProjectMemberSearch('');
                     }}
                   >
                     {t.close}
                   </button>
                 </div>
-                <div className="timeline-form" style={{ gap: 8 }}>
+                <div className="project-settings-body">
                   {isOwner ? (
-                    <form onSubmit={handleUpdateProjectNameSubmit} className="timeline-form" style={{ padding: 0 }}>
-                      <label>
-                        {t.projectName}
+                    <form onSubmit={handleUpdateProjectNameSubmit} className="project-settings-form" style={{ padding: 0 }}>
+                      <label>{t.projectName}</label>
+                      <div className="project-settings-inline project-settings-inline-name">
                         <input value={projectSettingsNameDraft} onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
-                      </label>
-                      <button type="submit">{t.save}</button>
+                        <button type="submit">{t.save}</button>
+                      </div>
                     </form>
                   ) : null}
 
                   <h4>{t.participants}</h4>
+                  <label>
+                    {t.searchParticipants}
+                    <input value={projectMemberSearch} onChange={(e) => setProjectMemberSearch(e.target.value)} />
+                  </label>
                   <ul>
-                    {projectMembers.map((member) => (
-                      <li key={member.userId}>
-                        <div>
+                    {filteredProjectMembers.map((member) => (
+                      <li key={member.userId} className="project-member-item">
+                        <div className="project-member-meta">
                           <strong>{member.fullName}</strong>
                           <div>{member.email}</div>
                         </div>
@@ -477,22 +497,20 @@ export function App() {
                         )}
                       </li>
                     ))}
+                    {filteredProjectMembers.length === 0 ? <li>{t.noParticipantsFound}</li> : null}
                   </ul>
 
                   {canInviteParticipants ? (
-                    <form onSubmit={handleInviteSubmit} className="timeline-form" style={{ padding: 0 }}>
-                      <label>
-                        {t.inviteByEmail}
+                    <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
+                      <label>{t.inviteByEmail}</label>
+                      <div className="project-settings-inline project-settings-inline-invite">
                         <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
-                      </label>
-                      <label>
-                        {t.permission}
                         <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
                           <option value="viewer">{t.permissionViewer}</option>
                           <option value="editor">{t.permissionEditor}</option>
                         </select>
-                      </label>
-                      <button type="submit">{t.invite}</button>
+                        <button type="submit">{t.invite}</button>
+                      </div>
                     </form>
                   ) : null}
                 </div>

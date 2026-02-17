@@ -184,6 +184,28 @@ button:active {
   gap: 0.45rem;
 }
 
+.project-top-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.project-top-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.project-top-main h3 {
+  margin: 0;
+}
+
+.project-top-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .ghost-btn {
   background: var(--ios-surface-strong);
   color: var(--ios-text-secondary);
