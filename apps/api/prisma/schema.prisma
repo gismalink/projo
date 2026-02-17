@@ -39,6 +39,8 @@ model Workspace {
   activeUsers User[]  @relation("UserActiveWorkspace")
   employees  Employee[]
   projects   Project[]
+  vacations  Vacation[]
+  costRates  CostRate[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -119,6 +121,8 @@ model Employee {
 
 model CostRate {
   id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId    String?
   roleId        String?
   amountPerHour Decimal   @db.Decimal(10, 2)
@@ -131,8 +135,8 @@ model CostRate {
   employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   role     Role?     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@index([employeeId, validFrom])
-  @@index([roleId, validFrom])
+  @@index([workspaceId, employeeId, validFrom])
+  @@index([workspaceId, roleId, validFrom])
 }
 
 model Skill {
@@ -243,6 +247,8 @@ model ProjectAssignment {
 
 model Vacation {
   id        String   @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId String
   startDate DateTime
   endDate   DateTime
@@ -253,6 +259,7 @@ model Vacation {
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId, startDate, endDate])
   @@index([employeeId, startDate, endDate])
 }
 

@@ -139,6 +139,8 @@
 
 ## Vacations
 
+- Все endpoints раздела работают в рамках активного `workspaceId` из JWT.
+
 ### `POST /api/vacations`
 - Roles: `ADMIN | PM`
 - Body: `CreateVacationDto`
@@ -157,6 +159,8 @@
 - Roles: `ADMIN`
 
 ## Cost Rates
+
+- Все endpoints раздела работают в рамках активного `workspaceId` из JWT.
 
 ### `POST /api/cost-rates`
 - Roles: `ADMIN | FINANCE`

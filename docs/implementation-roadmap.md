@@ -175,7 +175,9 @@
 - [x] Backend: добавлены endpoints для списка доступных проектов пользователя, создания проекта-контейнера и переключения active проекта (через `auth` API).
 - [x] Frontend: реализован базовый стартовый экран выбора проекта и переключение контекста через новые `auth/projects` endpoints.
 - [x] Backend: добавить приглашение по email существующего пользователя с назначением `viewer/editor`.
-- [ ] Backend: довести полное scoping-покрытие модулей `timeline/assignments/vacations/cost-rates`.
+- [~] Backend: довести полное scoping-покрытие модулей `timeline/assignments/vacations/cost-rates`.
+   - [x] vacations: workspace-scoping внедрен (API + service + DB).
+   - [x] cost-rates: workspace-scoping внедрен (API + service + DB).
 - [x] Frontend: добавить owner-only pop-up настроек проекта (участники, роли доступа, приглашения).
 - [x] Frontend: добавлен role-gating вкладок/модалок по модели owner/editor/viewer.
 - [x] Backend: editor ограничен от мутаций вне timeline (employees/vacations/skills assignment).
