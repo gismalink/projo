@@ -4,7 +4,7 @@ type AccountModalProps = {
   isOpen: boolean;
   t: Record<string, string>;
   currentUserEmail: string;
-  currentWorkspaceId: string | null;
+  currentCompanyName: string;
   accountFullNameDraft: string;
   setAccountFullNameDraft: (value: string) => void;
   currentPassword: string;
@@ -24,7 +24,7 @@ export function AccountModal(props: AccountModalProps) {
     isOpen,
     t,
     currentUserEmail,
-    currentWorkspaceId,
+    currentCompanyName,
     accountFullNameDraft,
     setAccountFullNameDraft,
     currentPassword,
@@ -61,8 +61,8 @@ export function AccountModal(props: AccountModalProps) {
             <input value={currentUserEmail} readOnly />
           </label>
           <label>
-            <span className="field-label">{t.workspace}</span>
-            <input value={currentWorkspaceId || '-'} readOnly />
+            <span className="field-label">{t.companyName}</span>
+            <input value={currentCompanyName || '-'} readOnly />
           </label>
           <form onSubmit={onUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
             <label>

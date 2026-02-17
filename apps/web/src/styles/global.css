@@ -33,7 +33,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  margin: .3rem 0;
+  margin: .3rem .9rem;
   color: var(--ios-text);
 }
 
@@ -339,7 +339,7 @@ button[data-tooltip]:focus-visible::after {
   display: grid;
   grid-template-columns: repeat(auto-fill, 260px);
   justify-content: flex-start;
-  gap: 0.55rem;
+  gap: 0.35rem;
 }
 
 .project-space-card {

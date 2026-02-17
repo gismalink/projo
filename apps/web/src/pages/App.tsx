@@ -96,6 +96,7 @@ export function App() {
 
   const currentCompany = app.companies.find((item) => item.id === app.activeCompanyId) || null;
   const currentCompanyName = currentCompany?.name || '-';
+  const isCompanyOwner = Boolean(currentCompany?.isOwner);
   const canRenameCompany = Boolean(currentCompany?.isOwner);
 
   const currentProjectName =
@@ -114,6 +115,7 @@ export function App() {
   const editingProjectId = projectSettingsProjectId || app.activeProjectSpaceId;
   const isOwner = Boolean(currentProjectAccess?.isOwner);
   const isEditor = app.currentUserRole === 'PM';
+  const canUseCompanyAdminTabs = isCompanyOwner;
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
@@ -127,10 +129,10 @@ export function App() {
   });
 
   useEffect(() => {
-    if (!isOwner && app.activeTab !== 'timeline') {
+    if (!canUseCompanyAdminTabs && app.activeTab !== 'timeline') {
       app.setActiveTab('timeline');
     }
-  }, [app.activeTab, app.setActiveTab, isOwner]);
+  }, [app.activeTab, app.setActiveTab, canUseCompanyAdminTabs]);
 
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
@@ -428,7 +430,7 @@ export function App() {
           )}
         </div>
         <div className="header-controls">
-          {app.token && isOwner ? (
+          {app.token && canUseCompanyAdminTabs ? (
             <>
               <button
                 type="button"
@@ -621,7 +623,7 @@ export function App() {
 
           {!isProjectHomeOpen ? (
             <>
-              {isOwner && app.activeTab === 'personnel' ? (
+              {canUseCompanyAdminTabs && app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
               locale={locale}
@@ -673,7 +675,7 @@ export function App() {
             />
               ) : null}
 
-              {isOwner ? (
+              {canUseCompanyAdminTabs ? (
                 <EmployeeCreateModal
             t={t}
             roles={app.roles}
@@ -699,7 +701,7 @@ export function App() {
                 />
               ) : null}
 
-              {isOwner && app.activeTab === 'roles' ? (
+              {canUseCompanyAdminTabs && app.activeTab === 'roles' ? (
             <RolesTab
               t={t}
               roles={app.roles}
@@ -786,7 +788,7 @@ export function App() {
             />
               ) : null}
 
-              {isOwner && app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
+              {canUseCompanyAdminTabs && app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
 
               {app.activeTab === 'timeline' ? (
             <TimelineTab
@@ -926,7 +928,7 @@ export function App() {
             isOpen={isAccountModalOpen}
             t={t}
             currentUserEmail={app.currentUserEmail}
-            currentWorkspaceId={app.currentWorkspaceId}
+            currentCompanyName={currentCompanyName}
             accountFullNameDraft={accountFullNameDraft}
             setAccountFullNameDraft={setAccountFullNameDraft}
             currentPassword={currentPassword}
