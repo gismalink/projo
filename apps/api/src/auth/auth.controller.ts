@@ -73,6 +73,12 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Delete('projects/:projectId')
+  deleteProject(@Req() req: AuthenticatedRequest, @Param('projectId') projectId: string) {
+    return this.authService.deleteProjectSpace(req.user.userId, projectId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('projects/:projectId/members')
   getProjectMembers(@Req() req: AuthenticatedRequest, @Param('projectId') projectId: string) {
     return this.authService.getProjectMembers(req.user.userId, projectId);

@@ -51,8 +51,8 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
           type="button"
           className="timeline-toolbar-icon-btn"
           onClick={onOpenProjectModal}
-          title={t.createProject}
           aria-label={t.createProject}
+          data-tooltip={t.createProject}
         >
           <Icon name="plus" />
         </button>
@@ -60,8 +60,8 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
           type="button"
           className="timeline-toolbar-icon-btn"
           onClick={() => onYearChange(selectedYear - 1)}
-          title={t.prev}
           aria-label={t.prev}
+          data-tooltip={t.prev}
         >
           <Icon name="chevron-left" />
         </button>
@@ -70,8 +70,8 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
           type="button"
           className="timeline-toolbar-icon-btn"
           onClick={() => onYearChange(selectedYear + 1)}
-          title={t.next}
           aria-label={t.next}
+          data-tooltip={t.next}
         >
           <Icon name="chevron-right" />
         </button>

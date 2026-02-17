@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { STANDARD_DAY_HOURS } from '../common/planning-config';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
@@ -18,6 +18,51 @@ type CsvEmployeeRow = {
 @Injectable()
 export class EmployeesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+  }
+
+  private async ensureRoleExists(roleId: string) {
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      select: { id: true },
+    });
+
+    if (!role) {
+      throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
+    }
+  }
+
+  private async ensureDepartmentExists(departmentId?: string) {
+    if (!departmentId) return;
+
+    const department = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+      select: { id: true },
+    });
+
+    if (!department) {
+      throw new NotFoundException(ErrorCode.DEPARTMENT_NOT_FOUND);
+    }
+  }
+
+  private async ensureEmployeeEmailAvailable(workspaceId: string, email: string, excludeEmployeeId?: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+    const existing = await this.prisma.employee.findUnique({
+      where: {
+        workspaceId_email: {
+          workspaceId,
+          email: normalizedEmail,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing && existing.id !== excludeEmployeeId) {
+      throw new ConflictException(ErrorCode.EMPLOYEE_EMAIL_ALREADY_EXISTS);
+    }
+  }
 
   private parseCsvLine(line: string): string[] {
     const out: string[] = [];
@@ -100,11 +145,16 @@ export class EmployeesService {
     return rows;
   }
 
-  create(workspaceId: string, dto: CreateEmployeeDto) {
+  async create(workspaceId: string, dto: CreateEmployeeDto) {
+    await this.ensureRoleExists(dto.roleId);
+    await this.ensureDepartmentExists(dto.departmentId);
+    await this.ensureEmployeeEmailAvailable(workspaceId, dto.email);
+
     return this.prisma.employee.create({
       data: {
         workspaceId,
         ...dto,
+        email: this.normalizeEmail(dto.email),
         defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay ?? STANDARD_DAY_HOURS,
       },
       include: { role: true, department: true },
@@ -137,9 +187,25 @@ export class EmployeesService {
 
   async update(workspaceId: string, id: string, dto: UpdateEmployeeDto) {
     await this.findOne(workspaceId, id);
+
+    if (dto.roleId) {
+      await this.ensureRoleExists(dto.roleId);
+    }
+
+    await this.ensureDepartmentExists(dto.departmentId);
+
+    if (dto.email) {
+      await this.ensureEmployeeEmailAvailable(workspaceId, dto.email, id);
+    }
+
+    const normalizedDto: UpdateEmployeeDto = {
+      ...dto,
+      email: dto.email ? this.normalizeEmail(dto.email) : undefined,
+    };
+
     return this.prisma.employee.update({
       where: { id },
-      data: dto,
+      data: normalizedDto,
       include: { role: true, department: true },
     });
   }

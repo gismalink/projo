@@ -270,6 +270,26 @@ export class UsersService {
     });
   }
 
+  async deleteProjectSpace(ownerUserId: string, workspaceId: string): Promise<boolean> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!workspace || workspace.ownerUserId !== ownerUserId) {
+      return false;
+    }
+
+    await this.prisma.workspace.delete({
+      where: { id: workspaceId },
+    });
+
+    return true;
+  }
+
   async listProjectMembersForUser(userId: string, workspaceId: string): Promise<ProjectMemberItem[] | null> {
     const membership = await this.prisma.workspaceMember.findUnique({
       where: {

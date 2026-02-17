@@ -54,6 +54,11 @@
 - Body: `{ name: string }`
 - Назначение: owner-only переименование project-space.
 
+### `DELETE /api/auth/projects/:projectId`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Назначение: owner-only удаление project-space.
+- Response: JWT payload (token + user) с новым активным project-context.
+
 ### `GET /api/auth/projects/:projectId/members`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 - Назначение: получить список участников project-space (доступно только участникам).
@@ -268,6 +273,25 @@
 
 ### `DELETE /api/assignments/:id`
 - Roles: `ADMIN`
+
+## Project member vs assignment lifecycle
+- `ProjectMember` и `ProjectAssignment` ведутся раздельно и имеют разные бизнес-цели.
+- При `POST /api/assignments` и `PATCH /api/assignments/:id` backend автоматически обеспечивает существование membership для пары `projectId + employeeId`.
+- Текущее ограничение модели: только один assignment на сотрудника в проекте (`projectId + employeeId` уникальны).
+- `DELETE /api/assignments/:id` не удаляет membership автоматически.
+- `DELETE /api/projects/:id/members/:employeeId` не удаляет assignment автоматически.
+- Если assignment существует без membership и выполняется update/create assignment — membership будет восстановлен автоматически.
+
+### Ключевые error-коды модели
+- `ERR_PROJECT_MEMBER_ALREADY_EXISTS` — повторное добавление member в проект.
+- `ERR_PROJECT_MEMBER_NOT_FOUND` — попытка удалить несуществующий member.
+- `ERR_ASSIGNMENT_EMPLOYEE_ALREADY_IN_PROJECT` — попытка создать второй assignment той же пары `project + employee`.
+- `ERR_ASSIGNMENT_DATE_RANGE_INVALID` — конец assignment раньше начала.
+- `ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE` — assignment выходит за границы дат проекта.
+- `ERR_PROJECT_DATE_RANGE_INVALID` — конец проекта раньше начала.
+
+### Текущие ограничения (open gaps)
+- Коды `ERR_ASSIGNMENT_OVERLAPS_VACATION`, `ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED` зарезервированы в `error-codes`, но не задействованы как единое правило во всех assignment-flow.
 
 ## Timeline
 

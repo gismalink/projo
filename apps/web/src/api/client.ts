@@ -398,7 +398,9 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
       message = await response.text();
     }
 
-    if (message) code = message;
+    if (message && /^ERR_[A-Z0-9_]+$/.test(message)) {
+      code = message;
+    }
     throw new ApiError(code, response.status, message || code);
   }
 
@@ -437,6 +439,10 @@ export const api = {
     request<ProjectSpaceNameResponse>(`/auth/projects/${projectId}`, {
       method: 'PATCH',
       body: JSON.stringify({ name }),
+    }, token),
+  deleteProjectSpace: (projectId: string, token: string) =>
+    request<LoginResponse>(`/auth/projects/${projectId}`, {
+      method: 'DELETE',
     }, token),
   getProjectMembers: (projectId: string, token: string) =>
     request<ProjectMembersResponse>(`/auth/projects/${projectId}/members`, {}, token),

@@ -34,12 +34,12 @@ export function ProjectDatesModal({
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
           <label>
-            {t.start}
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <span className="field-label required">{t.start}</span>
+            <input type="date" value={startDate} required onChange={(e) => setStartDate(e.target.value)} />
           </label>
           <label>
-            {t.end}
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <span className="field-label required">{t.end}</span>
+            <input type="date" value={endDate} required onChange={(e) => setEndDate(e.target.value)} />
           </label>
           <button type="submit">{t.saveProjectDates}</button>
         </form>

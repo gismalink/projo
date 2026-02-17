@@ -238,6 +238,7 @@ export function useAppHandlers({ state, t, errorText }: Params) {
   };
 
   return {
+    pushToast,
     ...createAuthHandlers(deps),
     ...createPersonnelHandlers(deps),
     ...createProjectsHandlers(deps),

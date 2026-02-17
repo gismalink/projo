@@ -563,6 +563,8 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignments]);
 
+  const visibleTimelineRows = sortedTimeline;
+
   const projectFactByProjectId = useMemo(() => {
     const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
 
@@ -874,6 +876,12 @@ export function TimelineTab(props: TimelineTabProps) {
   }, [dragState, assignmentDragState]);
 
   useEffect(() => {
+    if (!selectedBenchEmployeeId) return;
+    if (employees.some((employee) => employee.id === selectedBenchEmployeeId)) return;
+    setSelectedBenchEmployeeId('');
+  }, [employees, selectedBenchEmployeeId]);
+
+  useEffect(() => {
     if (!assignmentDragState) return;
 
     const handleWindowMouseMove = (event: MouseEvent) => {
@@ -933,24 +941,26 @@ export function TimelineTab(props: TimelineTabProps) {
 
         <div className="timeline-board">
           <div className="timeline-main">
-            <CompanyLoadCard
-              t={t}
-              companyLoad={companyLoad}
-              companyLoadScaleMax={companyLoadScaleMax}
-              todayPosition={todayPosition}
-              dragStepDays={dragStepDays}
-              dayStep={dayStep}
-              dayMarkers={companyDayMarkers}
-              calendarSegments={calendarSegments}
-              months={months}
-              selectedYear={selectedYear}
-            />
-
             <div className="timeline-rows">
-              {sortedTimeline.length === 0 ? (
+              <div className="timeline-year-row">
+                <CompanyLoadCard
+                  t={t}
+                  companyLoad={companyLoad}
+                  companyLoadScaleMax={companyLoadScaleMax}
+                  todayPosition={todayPosition}
+                  dragStepDays={dragStepDays}
+                  dayStep={dayStep}
+                  dayMarkers={companyDayMarkers}
+                  calendarSegments={calendarSegments}
+                  months={months}
+                  selectedYear={selectedYear}
+                />
+              </div>
+
+              {visibleTimelineRows.length === 0 ? (
                 <p className="muted">{t.noProjectsForYear}</p>
               ) : (
-                sortedTimeline.map((row, rowIndex) => {
+                visibleTimelineRows.map((row, rowIndex) => {
                   const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
                   const selectedEmployeeAssigned = selectedBenchEmployeeId
                     ? projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId)
@@ -960,7 +970,7 @@ export function TimelineTab(props: TimelineTabProps) {
                     : false;
                   const isDimmedBySelection = Boolean(selectedBenchEmployeeId) && !selectedEmployeeAssigned;
                   const isDimmedByDrag = Boolean(draggedBenchEmployeeId) && draggedEmployeeAssigned;
-                  const isRowDimmed = isDimmedBySelection || isDimmedByDrag;
+                  const isRowDimmed = draggedBenchEmployeeId ? isDimmedByDrag : isDimmedBySelection;
 
                   const dragPreview = dragState && dragState.projectId === row.id ? resolveDragDates(dragState) : null;
                   const pendingPreview = pendingPlanPreview && pendingPlanPreview.projectId === row.id ? pendingPlanPreview : null;
@@ -1009,7 +1019,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       t={t}
                       row={row}
                       rowIndex={rowIndex}
-                      rowCount={sortedTimeline.length}
+                      rowCount={visibleTimelineRows.length}
                       isExpanded={isExpanded}
                       detail={detail}
                       isDimmed={isRowDimmed}

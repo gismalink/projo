@@ -5,6 +5,7 @@ import { Employee } from '../../pages/app-types';
 import { STANDARD_DAY_HOURS, resolveErrorMessage } from '../app-helpers';
 import { monthlyToHourly, parseSalaryInput } from '../salary.utils';
 import { HandlerDeps } from './handler-deps';
+import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
 
 export function createPersonnelHandlers({ state, t, errorText, pushToast, refreshData }: HandlerDeps) {
   const VACATION_OVERLAP_MESSAGE = t.uiVacationOverlap;
@@ -69,22 +70,28 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     event.preventDefault();
     if (!state.token) return;
 
-    try {
-      await api.createRole(
-        {
-          name: state.roleName,
-          shortName: state.roleShortName || undefined,
-          description: state.roleDescription,
-          level: state.roleLevel,
-          colorHex: '#6E7B8A',
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
+    const created = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.createRole(
+          {
+            name: state.roleName,
+            shortName: state.roleShortName || undefined,
+            description: state.roleDescription,
+            level: state.roleLevel,
+            colorHex: '#6E7B8A',
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateRoleFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (created) {
       state.setRoleName((prev) => `${prev}-2`);
       state.setRoleShortName('');
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateRoleFailed, errorText));
     }
   }
 
@@ -99,23 +106,32 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     },
   ) {
     if (!state.token) return;
-    try {
-      await api.updateRole(roleId, payload, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateRoleColorFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateRole(roleId, payload, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiUpdateRoleColorFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleCreateSkill(event: FormEvent) {
     event.preventDefault();
     if (!state.token) return;
-    try {
-      await api.createSkill({ name: state.skillName, description: state.skillDescription }, state.token);
-      await refreshData(state.token, state.selectedYear);
+    const created = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.createSkill({ name: state.skillName, description: state.skillDescription }, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateSkillFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (created) {
       state.setSkillName((prev) => `${prev}-2`);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateSkillFailed, errorText));
     }
   }
 
@@ -124,9 +140,11 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     if (!state.token || !state.employeeRoleId) return;
 
     const salaryMonthly = parseSalaryInput(state.employeeSalary);
+    const isEditMode = Boolean(state.editEmployeeId);
+    let savedEmployeeId = state.editEmployeeId;
 
     try {
-      if (state.editEmployeeId) {
+      if (isEditMode && state.editEmployeeId) {
         await api.updateEmployee(
           state.editEmployeeId,
           {
@@ -139,10 +157,6 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
           },
           state.token,
         );
-
-        if (salaryMonthly !== null) {
-          await upsertEmployeeCostRate(state.editEmployeeId, salaryMonthly);
-        }
       } else {
         const createdEmployee = (await api.createEmployee(
           {
@@ -157,12 +171,18 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
           state.token,
         )) as { id: string };
 
-        if (salaryMonthly !== null && createdEmployee?.id) {
-          await upsertEmployeeCostRate(createdEmployee.id, salaryMonthly);
+        savedEmployeeId = createdEmployee?.id ?? '';
+      }
+
+      if (salaryMonthly !== null && savedEmployeeId) {
+        try {
+          await upsertEmployeeCostRate(savedEmployeeId, salaryMonthly);
+        } catch (error) {
+          pushToast(resolveErrorMessage(error, t.uiCreateEmployeeFailed, errorText));
         }
       }
-      await refreshData(state.token, state.selectedYear);
-      if (state.editEmployeeId) {
+
+      if (isEditMode) {
         state.setIsEmployeeModalOpen(false);
       } else {
         state.setIsEmployeeCreateModalOpen(false);
@@ -173,6 +193,12 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
       }
       state.setEditEmployeeId('');
       state.setEmployeeSalary('');
+
+      try {
+        await refreshData(state.token, state.selectedYear);
+      } catch (error) {
+        pushToast(resolveErrorMessage(error, t.uiLoadTimelineFailed, errorText));
+      }
     } catch (error) {
       pushToast(resolveErrorMessage(error, t.uiCreateEmployeeFailed, errorText));
     }
@@ -249,17 +275,20 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
       pushToast(VACATION_OVERLAP_MESSAGE);
       return;
     }
-    try {
-      await saveVacation({
-        employeeId: state.editEmployeeId,
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        type: payload.type,
-      });
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateVacationFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await saveVacation({
+          employeeId: state.editEmployeeId as string,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          type: payload.type,
+        });
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateVacationFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleUpdateVacationFromEmployeeModal(
@@ -271,45 +300,54 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
       pushToast(VACATION_OVERLAP_MESSAGE);
       return;
     }
-    try {
-      await saveVacation(
-        {
-          employeeId: state.editEmployeeId,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          type: payload.type,
-        },
-        vacationId,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateVacationFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await saveVacation(
+          {
+            employeeId: state.editEmployeeId as string,
+            startDate: payload.startDate,
+            endDate: payload.endDate,
+            type: payload.type,
+          },
+          vacationId,
+        );
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateVacationFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleDeleteVacationFromEmployeeModal(vacationId: string) {
     if (!state.token) return;
-    try {
-      await api.deleteVacation(vacationId, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateVacationFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.deleteVacation(vacationId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateVacationFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleAssignVacationFromEmployeeModal() {
     if (!state.token || !state.editEmployeeId) return;
-    try {
-      await saveVacation({
-        employeeId: state.editEmployeeId,
-        startDate: state.vacationStartDate,
-        endDate: state.vacationEndDate,
-        type: state.vacationType,
-      });
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateVacationFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await saveVacation({
+          employeeId: state.editEmployeeId as string,
+          startDate: state.vacationStartDate,
+          endDate: state.vacationEndDate,
+          type: state.vacationType,
+        });
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateVacationFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   function openEmployeeDepartmentModal(employee: Employee) {
@@ -324,65 +362,83 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     event.preventDefault();
     if (!state.token || !state.editEmployeeId || !state.editEmployeeDepartmentId) return;
 
-    try {
-      await api.updateEmployee(
-        state.editEmployeeId,
-        {
-          departmentId: state.editEmployeeDepartmentId,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
+    const updated = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.updateEmployee(
+          state.editEmployeeId as string,
+          {
+            departmentId: state.editEmployeeDepartmentId,
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateEmployeeFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (updated) {
       state.setIsEmployeeDepartmentModalOpen(false);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateEmployeeFailed, errorText));
     }
   }
 
   async function handleCreateDepartment(name: string, colorHex?: string) {
     if (!state.token || !name.trim()) return;
-    try {
-      await api.createDepartment({ name: name.trim(), colorHex }, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateDepartmentFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.createDepartment({ name: name.trim(), colorHex }, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateDepartmentFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleUpdateDepartment(departmentId: string, name: string, colorHex?: string) {
     if (!state.token || !name.trim()) return;
-    try {
-      await api.updateDepartment(departmentId, { name: name.trim(), colorHex }, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateDepartmentFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateDepartment(departmentId, { name: name.trim(), colorHex }, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiUpdateDepartmentFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleDeleteDepartment(departmentId: string) {
     if (!state.token) return;
-    try {
-      await api.deleteDepartment(departmentId, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiDeleteDepartmentFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.deleteDepartment(departmentId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiDeleteDepartmentFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleCreateTeamTemplate(name: string, roleIds: string[]) {
     if (!state.token || !name.trim() || roleIds.length === 0) return;
-    try {
-      await api.createTeamTemplate(
-        {
-          name: name.trim(),
-          roleIds,
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateTeamTemplateFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.createTeamTemplate(
+          {
+            name: name.trim(),
+            roleIds,
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateTeamTemplateFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleUpdateTeamTemplate(templateId: string, payload: { name?: string; roleIds?: string[] }) {
@@ -391,61 +447,80 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     if (payload.name !== undefined && !trimmedName) return;
     if (payload.roleIds !== undefined && payload.roleIds.length === 0) return;
 
-    try {
-      await api.updateTeamTemplate(
-        templateId,
-        {
-          ...(trimmedName !== undefined ? { name: trimmedName } : {}),
-          ...(payload.roleIds !== undefined ? { roleIds: payload.roleIds } : {}),
-        },
-        state.token,
-      );
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiUpdateTeamTemplateFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateTeamTemplate(
+          templateId,
+          {
+            ...(trimmedName !== undefined ? { name: trimmedName } : {}),
+            ...(payload.roleIds !== undefined ? { roleIds: payload.roleIds } : {}),
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiUpdateTeamTemplateFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleDeleteTeamTemplate(templateId: string) {
     if (!state.token) return;
-    try {
-      await api.deleteTeamTemplate(templateId, state.token);
-      await refreshData(state.token, state.selectedYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiDeleteTeamTemplateFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: async () => {
+        await api.deleteTeamTemplate(templateId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiDeleteTeamTemplateFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleImportEmployeesCsv(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.employeeCsv.trim()) return;
-    try {
-      const result = await api.importEmployeesCsv({ csv: state.employeeCsv }, state.token);
-      await refreshData(state.token, state.selectedYear);
+    const result = await runWithErrorToast({
+      operation: async () => {
+        const response = await api.importEmployeesCsv({ csv: state.employeeCsv }, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+        return response;
+      },
+      fallbackMessage: t.uiImportEmployeesFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (result) {
       state.setIsEmployeeImportModalOpen(false);
       pushToast(`CSV: +${result.created} / ~${result.updated} / !${result.errors.length}`);
       if (result.errors.length > 0) {
         pushToast(result.errors.slice(0, 2).join(' | '));
       }
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiImportEmployeesFailed, errorText));
     }
   }
 
   async function handleCreateVacation(event: FormEvent) {
     event.preventDefault();
     if (!state.token || !state.vacationEmployeeId) return;
-    try {
-      await saveVacation({
-        employeeId: state.vacationEmployeeId,
-        startDate: state.vacationStartDate,
-        endDate: state.vacationEndDate,
-        type: state.vacationType,
-      });
-      await refreshData(state.token, state.selectedYear);
+    const created = await runWithErrorToastVoid({
+      operation: async () => {
+        await saveVacation({
+          employeeId: state.vacationEmployeeId as string,
+          startDate: state.vacationStartDate,
+          endDate: state.vacationEndDate,
+          type: state.vacationType,
+        });
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateVacationFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (created) {
       state.setIsVacationModalOpen(false);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateVacationFailed, errorText));
     }
   }
 

@@ -44,15 +44,15 @@ export function VacationModal(props: VacationModalProps) {
         <p className="muted">{vacationEmployeeName}</p>
         <form className="timeline-form" onSubmit={onSubmit}>
           <label>
-            {t.start}
-            <input type="date" value={vacationStartDate} onChange={(e) => setVacationStartDate(e.target.value)} />
+            <span className="field-label required">{t.start}</span>
+            <input type="date" value={vacationStartDate} required onChange={(e) => setVacationStartDate(e.target.value)} />
           </label>
           <label>
-            {t.end}
-            <input type="date" value={vacationEndDate} onChange={(e) => setVacationEndDate(e.target.value)} />
+            <span className="field-label required">{t.end}</span>
+            <input type="date" value={vacationEndDate} required onChange={(e) => setVacationEndDate(e.target.value)} />
           </label>
           <label>
-            {t.type}
+            <span className="field-label required">{t.type}</span>
             <VacationTypeSelect t={t} value={vacationType} onChange={setVacationType} />
           </label>
           <button type="submit">{t.saveVacation}</button>

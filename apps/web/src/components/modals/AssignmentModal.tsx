@@ -54,8 +54,8 @@ export function AssignmentModal(props: AssignmentModalProps) {
         </div>
         <form className="timeline-form" onSubmit={onSubmit}>
           <label>
-            {t.role}
-            <select value={assignmentProjectId} onChange={(e) => setAssignmentProjectId(e.target.value)}>
+            <span className="field-label required">{t.selectProject}</span>
+            <select value={assignmentProjectId} required onChange={(e) => setAssignmentProjectId(e.target.value)}>
               <option value="">{t.selectProject}</option>
               {projects.map((project) => (
                 <option value={project.id} key={project.id}>
@@ -65,8 +65,8 @@ export function AssignmentModal(props: AssignmentModalProps) {
             </select>
           </label>
           <label>
-            {t.tabPersonnel}
-            <select value={assignmentEmployeeId} onChange={(e) => setAssignmentEmployeeId(e.target.value)}>
+            <span className="field-label required">{t.selectEmployee}</span>
+            <select value={assignmentEmployeeId} required onChange={(e) => setAssignmentEmployeeId(e.target.value)}>
               <option value="">{t.selectEmployee}</option>
               {employees.map((employee) => (
                 <option value={employee.id} key={employee.id}>
@@ -76,19 +76,20 @@ export function AssignmentModal(props: AssignmentModalProps) {
             </select>
           </label>
           <label>
-            {t.start}
-            <input type="date" value={assignmentStartDate} onChange={(e) => setAssignmentStartDate(e.target.value)} />
+            <span className="field-label required">{t.start}</span>
+            <input type="date" value={assignmentStartDate} required onChange={(e) => setAssignmentStartDate(e.target.value)} />
           </label>
           <label>
-            {t.end}
-            <input type="date" value={assignmentEndDate} onChange={(e) => setAssignmentEndDate(e.target.value)} />
+            <span className="field-label required">{t.end}</span>
+            <input type="date" value={assignmentEndDate} required onChange={(e) => setAssignmentEndDate(e.target.value)} />
           </label>
           <label>
-            {t.allocationPercent}
+            <span className="field-label optional">{t.allocationPercent}</span>
             <input
               type="number"
               min={0}
               max={100}
+              placeholder="0"
               value={assignmentPercent}
               onChange={(e) => setAssignmentPercent(Number(e.target.value))}
             />

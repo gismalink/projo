@@ -1,4 +1,4 @@
-import { MouseEvent, useEffect, useMemo, useState } from 'react';
+import { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { DepartmentItem, VacationItem } from '../../api/client';
 import { DEFAULT_VACATION_TYPE, PROFILE_AUTOSAVE_DEBOUNCE_MS } from '../../constants/app.constants';
 import { Role } from '../../pages/app-types';
@@ -71,6 +71,27 @@ export function EmployeeModal(props: EmployeeModalProps) {
   const [newVacationStart, setNewVacationStart] = useState(`${new Date().getFullYear()}-07-01`);
   const [newVacationEnd, setNewVacationEnd] = useState(`${new Date().getFullYear()}-07-14`);
   const [newVacationType, setNewVacationType] = useState(DEFAULT_VACATION_TYPE);
+  const initialProfileKeyRef = useRef('');
+  const lastAutosavedProfileKeyRef = useRef('');
+
+  const toProfileKey = (payload: {
+    fullName: string;
+    email: string;
+    roleId: string;
+    departmentId?: string;
+    grade?: string;
+    status: string;
+    salaryMonthly?: number;
+  }) =>
+    [
+      payload.fullName.trim(),
+      payload.email.trim().toLowerCase(),
+      payload.roleId,
+      payload.departmentId ?? '',
+      payload.grade ?? '',
+      payload.status,
+      payload.salaryMonthly !== undefined ? String(Math.round(payload.salaryMonthly)) : '',
+    ].join('|');
 
   const shiftDate = (dateValue: string, days: number) => {
     const date = new Date(dateValue);
@@ -233,20 +254,56 @@ export function EmployeeModal(props: EmployeeModalProps) {
     setGrade(employeeGrade);
     setStatus(employeeStatus);
     setSalary(employeeSalary);
+    const initialSalary = employeeSalary.trim() ? Number(employeeSalary) : undefined;
+    const initialPayloadKey = toProfileKey({
+      fullName: employeeFullName,
+      email: employeeEmail,
+      roleId: employeeRoleId,
+      departmentId: employeeDepartmentId || undefined,
+      grade: employeeGrade || undefined,
+      status: employeeStatus,
+      salaryMonthly: Number.isFinite(initialSalary) ? initialSalary : undefined,
+    });
+    initialProfileKeyRef.current = initialPayloadKey;
+    lastAutosavedProfileKeyRef.current = initialPayloadKey;
   }, [isOpen, employeeFullName, employeeEmail, employeeRoleId, employeeDepartmentId, employeeGrade, employeeStatus, employeeSalary]);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedFullName = fullName.trim();
+    const normalizedStatus = status.trim();
+    const normalizedSalary = salary.trim();
+    const salaryMonthly = normalizedSalary ? Number(normalizedSalary) : undefined;
+
+    const hasRequiredFields = Boolean(normalizedFullName) && Boolean(normalizedEmail) && Boolean(roleId) && Boolean(normalizedStatus);
+    if (!hasRequiredFields) return;
+
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+    if (!isValidEmail) return;
+
+    if (normalizedSalary && (!Number.isFinite(salaryMonthly) || (salaryMonthly as number) < 0)) {
+      return;
+    }
+
+    const payload = {
+      fullName: normalizedFullName,
+      email: normalizedEmail,
+      roleId,
+      departmentId: departmentId || undefined,
+      grade: grade || undefined,
+      status,
+      salaryMonthly: salaryMonthly !== undefined && Number.isFinite(salaryMonthly) ? salaryMonthly : undefined,
+    };
+    const payloadKey = toProfileKey(payload);
+    if (payloadKey === initialProfileKeyRef.current || payloadKey === lastAutosavedProfileKeyRef.current) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
-      void onProfileAutoSave({
-        fullName,
-        email,
-        roleId,
-        departmentId: departmentId || undefined,
-        grade: grade || undefined,
-        status,
-        salaryMonthly: salary.trim() ? Number(salary) : undefined,
-      });
+      lastAutosavedProfileKeyRef.current = payloadKey;
+      void onProfileAutoSave(payload);
     }, PROFILE_AUTOSAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [isOpen, fullName, email, roleId, departmentId, grade, status, salary, onProfileAutoSave]);

@@ -1,6 +1,6 @@
 .timeline-form {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.25rem;
 }
 
 .department-manage-list {
@@ -122,6 +122,27 @@
   box-shadow: var(--ios-shadow);
 }
 
+.modal-card label {
+  font-size: 0.84rem;
+  color: var(--ios-text-secondary);
+}
+
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.field-label.required::after {
+  content: '*';
+  color: var(--ios-danger);
+  font-weight: 700;
+}
+
+.field-label.optional {
+  opacity: 0.88;
+}
+
 .auth-modal {
   width: min(420px, 100%);
 }
@@ -138,6 +159,12 @@
 .project-settings-form {
   display: grid;
   gap: 0.32rem;
+}
+
+.project-delete-form {
+  margin-top: 0.2rem;
+  padding-top: 0.5rem !important;
+  border-top: 1px solid var(--ios-border);
 }
 
 .project-settings-inline {

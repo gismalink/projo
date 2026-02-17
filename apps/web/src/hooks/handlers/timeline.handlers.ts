@@ -1,6 +1,6 @@
 import { api } from '../../api/client';
-import { resolveErrorMessage } from '../app-helpers';
 import { HandlerDeps } from './handler-deps';
+import { runWithErrorToast } from './handler-utils';
 
 function shiftIsoDateByDays(value: string, days: number) {
   const date = new Date(value);
@@ -19,11 +19,12 @@ export function createTimelineHandlers({
   async function handleYearChange(nextYear: number) {
     state.setSelectedYear(nextYear);
     if (!state.token) return;
-    try {
-      await refreshTimelineYearData(state.token, nextYear);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiLoadTimelineFailed, errorText));
-    }
+    await runWithErrorToast({
+      operation: () => refreshTimelineYearData(state.token as string, nextYear),
+      fallbackMessage: t.uiLoadTimelineFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   async function handleAdjustProjectPlan(
@@ -35,36 +36,39 @@ export function createTimelineHandlers({
   ) {
     if (!state.token) return;
 
-    try {
-      await api.updateProject(
-        projectId,
-        {
-          startDate: nextStartIso,
-          endDate: nextEndIso,
-        },
-        state.token,
-      );
-
-      if (mode !== 'resize-end' && shiftDays !== 0) {
-        const projectAssignments = state.assignments.filter((assignment) => assignment.projectId === projectId);
-        await Promise.all(
-          projectAssignments.map((assignment) =>
-            api.updateAssignment(
-              assignment.id,
-              {
-                assignmentStartDate: shiftIsoDateByDays(assignment.assignmentStartDate, shiftDays),
-                assignmentEndDate: shiftIsoDateByDays(assignment.assignmentEndDate, shiftDays),
-              },
-              state.token as string,
-            ),
-          ),
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateProject(
+          projectId,
+          {
+            startDate: nextStartIso,
+            endDate: nextEndIso,
+          },
+          state.token as string,
         );
-      }
 
-      await refreshData(state.token, state.selectedYear, projectId);
-    } catch (error) {
-      pushToast(resolveErrorMessage(error, t.uiCreateProjectFailed, errorText));
-    }
+        if (mode !== 'resize-end' && shiftDays !== 0) {
+          const projectAssignments = state.assignments.filter((assignment) => assignment.projectId === projectId);
+          await Promise.all(
+            projectAssignments.map((assignment) =>
+              api.updateAssignment(
+                assignment.id,
+                {
+                  assignmentStartDate: shiftIsoDateByDays(assignment.assignmentStartDate, shiftDays),
+                  assignmentEndDate: shiftIsoDateByDays(assignment.assignmentEndDate, shiftDays),
+                },
+                state.token as string,
+              ),
+            ),
+          );
+        }
+
+        await refreshData(state.token as string, state.selectedYear, projectId);
+      },
+      fallbackMessage: t.uiCreateProjectFailed,
+      errorText,
+      pushToast,
+    });
   }
 
   return {
