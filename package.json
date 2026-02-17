@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run dev -w @projo/api",
     "dev:all": "npm run dev --workspaces --if-present --parallel",
+    "predev:api": "node ./scripts/kill-port-4000.mjs",
     "dev:api": "npm run dev -w @projo/api",
     "dev:web": "npm run dev -w @projo/web",
     "build": "npm run build -ws",
