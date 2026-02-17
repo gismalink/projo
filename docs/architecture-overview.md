@@ -67,3 +67,12 @@
 - Run/start instructions: `README.md`.
 - Delivery workflow and checks: `docs/workflow-checklist.md`.
 - Stabilization/technical audits: `docs/stabilization-audit-2026-02-15.md`, `docs/technical-audit-2026-02-16.md`.
+
+## 7) Domain invariants: ProjectMember vs ProjectAssignment
+- `ProjectAssignment` хранит фактическое планирование сотрудника в проекте (даты/нагрузка) и является источником данных для Timeline.
+- `ProjectMember` хранит membership-пул сотрудников проекта и используется для операций управления составом.
+- При создании/обновлении assignment backend гарантирует наличие пары `projectId + employeeId` в `ProjectMember` (auto-upsert member).
+- На текущем этапе действует ограничение: в одном проекте на одного сотрудника допускается только один assignment (уникальность `@@unique([projectId, employeeId])`).
+- Удаление assignment не удаляет member автоматически.
+- Удаление member не удаляет assignment автоматически; при следующем create/update assignment member будет восстановлен backend-логикой.
+- Смещение дат проекта не триггерит принудительный cascade в API-слое; сдвиг assignment дат выполняется отдельными операциями Timeline flow.

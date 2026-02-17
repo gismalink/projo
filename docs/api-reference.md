@@ -274,6 +274,21 @@
 ### `DELETE /api/assignments/:id`
 - Roles: `ADMIN`
 
+## Project member vs assignment lifecycle
+- `ProjectMember` и `ProjectAssignment` ведутся раздельно и имеют разные бизнес-цели.
+- При `POST /api/assignments` и `PATCH /api/assignments/:id` backend автоматически обеспечивает существование membership для пары `projectId + employeeId`.
+- Текущее ограничение модели: только один assignment на сотрудника в проекте (`projectId + employeeId` уникальны).
+- `DELETE /api/assignments/:id` не удаляет membership автоматически.
+- `DELETE /api/projects/:id/members/:employeeId` не удаляет assignment автоматически.
+- Если assignment существует без membership и выполняется update/create assignment — membership будет восстановлен автоматически.
+
+### Ключевые error-коды модели
+- `ERR_PROJECT_MEMBER_ALREADY_EXISTS` — повторное добавление member в проект.
+- `ERR_PROJECT_MEMBER_NOT_FOUND` — попытка удалить несуществующий member.
+- `ERR_ASSIGNMENT_EMPLOYEE_ALREADY_IN_PROJECT` — попытка создать второй assignment той же пары `project + employee`.
+- `ERR_ASSIGNMENT_DATE_RANGE_INVALID` — конец assignment раньше начала.
+- `ERR_PROJECT_DATE_RANGE_INVALID` — конец проекта раньше начала.
+
 ## Timeline
 
 ### `GET /api/timeline/year?year=YYYY`
