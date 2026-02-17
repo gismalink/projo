@@ -54,15 +54,15 @@ export class AssignmentsService {
     }
   }
 
-  async create(dto: CreateAssignmentDto) {
+  async create(workspaceId: string, dto: CreateAssignmentDto) {
     const startDate = new Date(dto.assignmentStartDate);
     const endDate = new Date(dto.assignmentEndDate);
     const allocationPercent = dto.allocationPercent ?? 100;
     this.ensureDateRange(startDate, endDate);
 
     const [project, employee] = await Promise.all([
-      this.prisma.project.findUnique({ where: { id: dto.projectId } }),
-      this.prisma.employee.findUnique({ where: { id: dto.employeeId } }),
+      this.prisma.project.findFirst({ where: { id: dto.projectId, workspaceId } }),
+      this.prisma.employee.findFirst({ where: { id: dto.employeeId, workspaceId } }),
     ]);
 
     if (!project) {
@@ -99,8 +99,13 @@ export class AssignmentsService {
     });
   }
 
-  findAll() {
+  findAll(workspaceId: string) {
     return this.prisma.projectAssignment.findMany({
+      where: {
+        project: {
+          workspaceId,
+        },
+      },
       include: {
         employee: {
           include: { role: true },
@@ -111,9 +116,14 @@ export class AssignmentsService {
     });
   }
 
-  async findOne(id: string) {
-    const assignment = await this.prisma.projectAssignment.findUnique({
-      where: { id },
+  async findOne(workspaceId: string, id: string) {
+    const assignment = await this.prisma.projectAssignment.findFirst({
+      where: {
+        id,
+        project: {
+          workspaceId,
+        },
+      },
       include: {
         employee: {
           include: { role: true },
@@ -129,8 +139,8 @@ export class AssignmentsService {
     return assignment;
   }
 
-  async update(id: string, dto: UpdateAssignmentDto) {
-    const existing = await this.findOne(id);
+  async update(workspaceId: string, id: string, dto: UpdateAssignmentDto) {
+    const existing = await this.findOne(workspaceId, id);
 
     const nextStart = dto.assignmentStartDate ? new Date(dto.assignmentStartDate) : existing.assignmentStartDate;
     const nextEnd = dto.assignmentEndDate ? new Date(dto.assignmentEndDate) : existing.assignmentEndDate;
@@ -139,8 +149,8 @@ export class AssignmentsService {
     const projectId = dto.projectId ?? existing.projectId;
     const employeeId = dto.employeeId ?? existing.employeeId;
     const [project, employee] = await Promise.all([
-      this.prisma.project.findUnique({ where: { id: projectId } }),
-      this.prisma.employee.findUnique({ where: { id: employeeId } }),
+      this.prisma.project.findFirst({ where: { id: projectId, workspaceId } }),
+      this.prisma.employee.findFirst({ where: { id: employeeId, workspaceId } }),
     ]);
 
     if (!project) {
@@ -179,8 +189,8 @@ export class AssignmentsService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(workspaceId: string, id: string) {
+    await this.findOne(workspaceId, id);
     return this.prisma.projectAssignment.delete({ where: { id } });
   }
 }
