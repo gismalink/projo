@@ -138,15 +138,15 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
   }
 
   async function handleCreateCompany(name: string) {
-    if (!state.token) return;
+    if (!state.token) return false;
 
     const trimmedName = name.trim();
     if (!trimmedName) {
       pushToast(t.uiCompanyNameRequired);
-      return;
+      return false;
     }
 
-    await runWithErrorToast({
+    const created = await runWithErrorToastVoid({
       operation: async () => {
         const result = await api.createCompany(trimmedName, state.token as string);
         applyAuthSession(result);
@@ -158,6 +158,8 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       errorText,
       pushToast,
     });
+
+    return created;
   }
 
   async function handleSwitchCompany(companyId: string) {

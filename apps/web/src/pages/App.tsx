@@ -12,6 +12,7 @@ import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { ProjectSettingsModal } from '../components/modals/ProjectSettingsModal';
+import { CompanyModal } from '../components/modals/CompanyModal';
 import { Icon } from '../components/Icon';
 import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
@@ -29,6 +30,9 @@ export function App() {
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [projectSettingsProjectId, setProjectSettingsProjectId] = useState('');
   const [projectSettingsNameDraft, setProjectSettingsNameDraft] = useState('');
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [companyModalMode, setCompanyModalMode] = useState<'create' | 'rename'>('create');
+  const [companyNameDraft, setCompanyNameDraft] = useState('');
   const [deleteProjectConfirmText, setDeleteProjectConfirmText] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMemberItem[]>([]);
   const [projectMemberSearch, setProjectMemberSearch] = useState('');
@@ -84,6 +88,7 @@ export function App() {
       setIsAccountModalOpen(false);
       setIsProjectHomeOpen(false);
       setIsProjectSettingsOpen(false);
+      setIsCompanyModalOpen(false);
       setProjectSettingsProjectId('');
       setProjectSettingsNameDraft('');
       return;
@@ -264,16 +269,34 @@ export function App() {
   };
 
   const handleCreateCompany = async () => {
-    const draft = window.prompt(t.companyName, buildUnnamedCompanyName());
-    if (draft === null) return;
-    await app.handleCreateCompany(draft);
+    setCompanyModalMode('create');
+    setCompanyNameDraft(buildUnnamedCompanyName());
+    setIsCompanyModalOpen(true);
   };
 
   const handleRenameCompany = async () => {
     if (!app.activeCompanyId) return;
-    const draft = window.prompt(t.companyName, currentCompanyName);
-    if (draft === null) return;
-    await app.handleUpdateCompanyName(app.activeCompanyId, draft);
+    setCompanyModalMode('rename');
+    setCompanyNameDraft(currentCompanyName);
+    setIsCompanyModalOpen(true);
+  };
+
+  const handleSubmitCompanyModal = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (companyModalMode === 'create') {
+      const created = await app.handleCreateCompany(companyNameDraft);
+      if (created) {
+        setIsCompanyModalOpen(false);
+      }
+      return;
+    }
+
+    if (!app.activeCompanyId) return;
+    const updated = await app.handleUpdateCompanyName(app.activeCompanyId, companyNameDraft);
+    if (updated) {
+      setIsCompanyModalOpen(false);
+    }
   };
 
   const handleOpenProjectSettings = async () => {
@@ -619,6 +642,16 @@ export function App() {
             onRemoveMember={handleRemoveMember}
             onInviteSubmit={handleInviteSubmit}
             onDeleteProjectSubmit={handleDeleteProjectSubmit}
+          />
+
+          <CompanyModal
+            isOpen={isCompanyModalOpen}
+            t={t}
+            mode={companyModalMode}
+            companyNameDraft={companyNameDraft}
+            setCompanyNameDraft={setCompanyNameDraft}
+            onClose={() => setIsCompanyModalOpen(false)}
+            onSubmit={handleSubmitCompanyModal}
           />
 
           {!isProjectHomeOpen ? (
