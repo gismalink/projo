@@ -97,12 +97,17 @@ export function App() {
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
     app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
     null;
+  const settingsProjectAccess =
+    (projectSettingsProjectId
+      ? app.myProjectSpaces.find((item) => item.id === projectSettingsProjectId) ||
+        app.sharedProjectSpaces.find((item) => item.id === projectSettingsProjectId)
+      : null) || currentProjectAccess;
   const editingProjectId = projectSettingsProjectId || app.activeProjectSpaceId;
   const isOwner = Boolean(currentProjectAccess?.isOwner);
   const isEditor = app.currentUserRole === 'PM';
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
   const canViewParticipants = isOwner || isEditor;
-  const canInviteParticipants = isOwner;
+  const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
 
   useEffect(() => {
     if (!isOwner && app.activeTab !== 'timeline') {
@@ -122,6 +127,22 @@ export function App() {
       fullName: registerFullName,
       password: registerPassword,
     });
+  };
+
+  const handleUpdateMemberPermission = async (targetUserId: string, permission: 'viewer' | 'editor') => {
+    if (!editingProjectId) return;
+    const members = await app.handleUpdateProjectMemberPermission(editingProjectId, targetUserId, permission);
+    if (members) {
+      setProjectMembers(members);
+    }
+  };
+
+  const handleRemoveMember = async (targetUserId: string) => {
+    if (!editingProjectId) return;
+    const members = await app.handleRemoveProjectMember(editingProjectId, targetUserId);
+    if (members) {
+      setProjectMembers(members);
+    }
   };
 
   const handleUpdateProfileSubmit = async (event: FormEvent) => {
@@ -433,7 +454,25 @@ export function App() {
                           <strong>{member.fullName}</strong>
                           <div>{member.email}</div>
                         </div>
-                        <span>{member.isOwner ? t.owner : member.role}</span>
+                        {member.isOwner ? (
+                          <span>{t.owner}</span>
+                        ) : canInviteParticipants ? (
+                          <div className="project-member-actions">
+                            <select
+                              value={member.role === 'PM' ? 'editor' : 'viewer'}
+                              onChange={(e) => void handleUpdateMemberPermission(member.userId, e.target.value as 'viewer' | 'editor')}
+                              aria-label={t.permission}
+                            >
+                              <option value="viewer">{t.permissionViewer}</option>
+                              <option value="editor">{t.permissionEditor}</option>
+                            </select>
+                            <button type="button" className="icon-btn" onClick={() => void handleRemoveMember(member.userId)} aria-label={t.remove}>
+                              <Icon name="x" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span>{member.role}</span>
+                        )}
                       </li>
                     ))}
                   </ul>

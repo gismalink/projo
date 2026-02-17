@@ -66,6 +66,15 @@
   - `ERR_AUTH_PROJECT_ACCESS_DENIED` — проект недоступен или вызывающий не owner,
   - `ERR_AUTH_PROJECT_INVITE_USER_NOT_FOUND` — пользователь с таким email не найден.
 
+### `PATCH /api/auth/projects/:projectId/members/:targetUserId`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ permission: 'viewer' | 'editor' }`
+- Назначение: owner-only смена роли участника.
+
+### `DELETE /api/auth/projects/:projectId/members/:targetUserId`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Назначение: owner-only удаление участника из project-space.
+
 ## Roles
 
 ### `POST /api/roles`

@@ -351,6 +351,118 @@ export class UsersService {
     return this.listProjectMembers(workspaceId);
   }
 
+  async updateProjectMemberPermission(
+    ownerUserId: string,
+    workspaceId: string,
+    targetUserId: string,
+    role: AppRole,
+  ): Promise<ProjectMemberItem[] | 'FORBIDDEN' | 'TARGET_NOT_FOUND' | 'OWNER_IMMUTABLE'> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!workspace || workspace.ownerUserId !== ownerUserId) {
+      return 'FORBIDDEN';
+    }
+
+    if (targetUserId === workspace.ownerUserId) {
+      return 'OWNER_IMMUTABLE';
+    }
+
+    const targetMembership = await this.prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: targetUserId,
+        },
+      },
+      select: {
+        workspaceId: true,
+      },
+    });
+
+    if (!targetMembership) {
+      return 'TARGET_NOT_FOUND';
+    }
+
+    await this.prisma.workspaceMember.update({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: targetUserId,
+        },
+      },
+      data: {
+        role,
+      },
+    });
+
+    return this.listProjectMembers(workspaceId);
+  }
+
+  async removeProjectMember(
+    ownerUserId: string,
+    workspaceId: string,
+    targetUserId: string,
+  ): Promise<ProjectMemberItem[] | 'FORBIDDEN' | 'TARGET_NOT_FOUND' | 'OWNER_IMMUTABLE'> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!workspace || workspace.ownerUserId !== ownerUserId) {
+      return 'FORBIDDEN';
+    }
+
+    if (targetUserId === workspace.ownerUserId) {
+      return 'OWNER_IMMUTABLE';
+    }
+
+    const targetMembership = await this.prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: targetUserId,
+        },
+      },
+      select: {
+        workspaceId: true,
+      },
+    });
+
+    if (!targetMembership) {
+      return 'TARGET_NOT_FOUND';
+    }
+
+    await this.prisma.workspaceMember.delete({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: targetUserId,
+        },
+      },
+    });
+
+    await this.prisma.user.updateMany({
+      where: {
+        id: targetUserId,
+        activeWorkspaceId: workspaceId,
+      },
+      data: {
+        activeWorkspaceId: null,
+      },
+    });
+
+    return this.listProjectMembers(workspaceId);
+  }
+
   async switchActiveProjectSpace(userId: string, workspaceId: string) {
     const membership = await this.prisma.workspaceMember.findUnique({
       where: {

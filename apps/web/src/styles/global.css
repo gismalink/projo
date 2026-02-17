@@ -237,6 +237,16 @@ button:active {
   gap: 0.5rem;
 }
 
+.project-member-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.project-member-actions select {
+  min-width: 180px;
+}
+
 
 ul {
   list-style: none;

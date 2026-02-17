@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateProjectSpaceDto } from './dto/create-project-space.dto';
@@ -7,6 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SwitchProjectSpaceDto } from './dto/switch-project-space.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { UpdateProjectMemberPermissionDto } from './dto/update-project-member-permission.dto';
 import { UpdateProjectSpaceDto } from './dto/update-project-space.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -85,6 +86,27 @@ export class AuthController {
     @Body() dto: InviteProjectMemberDto,
   ) {
     return this.authService.inviteProjectMember(req.user.userId, projectId, dto.email, dto.permission);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('projects/:projectId/members/:targetUserId')
+  updateProjectMemberPermission(
+    @Req() req: AuthenticatedRequest,
+    @Param('projectId') projectId: string,
+    @Param('targetUserId') targetUserId: string,
+    @Body() dto: UpdateProjectMemberPermissionDto,
+  ) {
+    return this.authService.updateProjectMemberPermission(req.user.userId, projectId, targetUserId, dto.permission);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('projects/:projectId/members/:targetUserId')
+  removeProjectMember(
+    @Req() req: AuthenticatedRequest,
+    @Param('projectId') projectId: string,
+    @Param('targetUserId') targetUserId: string,
+  ) {
+    return this.authService.removeProjectMember(req.user.userId, projectId, targetUserId);
   }
 
   @UseGuards(JwtAuthGuard)

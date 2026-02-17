@@ -158,6 +158,38 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     }
   }
 
+  async function handleUpdateProjectMemberPermission(
+    projectId: string,
+    targetUserId: string,
+    permission: 'viewer' | 'editor',
+  ) {
+    if (!state.token) return null;
+
+    try {
+      const result = await api.updateProjectMemberPermission(projectId, targetUserId, permission, state.token);
+      pushToast(t.uiMemberRoleUpdated);
+      await loadMyProjects(state.token);
+      return result.members;
+    } catch (error) {
+      pushToast(resolveErrorMessage(error, t.uiMemberRoleUpdateFailed, errorText));
+      return null;
+    }
+  }
+
+  async function handleRemoveProjectMember(projectId: string, targetUserId: string) {
+    if (!state.token) return null;
+
+    try {
+      const result = await api.removeProjectMember(projectId, targetUserId, state.token);
+      pushToast(t.uiMemberRemoved);
+      await loadMyProjects(state.token);
+      return result.members;
+    } catch (error) {
+      pushToast(resolveErrorMessage(error, t.uiMemberRemoveFailed, errorText));
+      return null;
+    }
+  }
+
   async function handleUpdateMyProfile(fullName: string) {
     if (!state.token) return;
     try {
@@ -207,6 +239,8 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     handleUpdateProjectSpaceName,
     loadProjectMembers,
     handleInviteProjectMember,
+    handleUpdateProjectMemberPermission,
+    handleRemoveProjectMember,
     handleUpdateMyProfile,
     handleChangeMyPassword,
     handleLogout,

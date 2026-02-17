@@ -176,6 +176,7 @@
 - [x] Frontend: реализован базовый стартовый экран выбора проекта и переключение контекста через новые `auth/projects` endpoints.
 - [x] Frontend: список проектов на стартовом экране переведен на карточки с переходом по клику.
 - [x] Frontend: единый project pop-up (участники + редактирование названия owner-only) вызывается и со стартового экрана, и из шапки рабочего экрана.
+- [x] Frontend/Backend: owner-only управление участниками в project pop-up (смена роли viewer/editor, удаление участника).
 - [x] Backend: добавить приглашение по email существующего пользователя с назначением `viewer/editor`.
 - [x] Backend: довести полное scoping-покрытие модулей `timeline/assignments/vacations/cost-rates`.
    - [x] assignments: workspace-scoping внедрен (API + service).

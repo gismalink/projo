@@ -445,6 +445,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, permission }),
     }, token),
+  updateProjectMemberPermission: (projectId: string, targetUserId: string, permission: ProjectPermission, token: string) =>
+    request<ProjectMembersResponse>(`/auth/projects/${projectId}/members/${targetUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ permission }),
+    }, token),
+  removeProjectMember: (projectId: string, targetUserId: string, token: string) =>
+    request<ProjectMembersResponse>(`/auth/projects/${projectId}/members/${targetUserId}`, {
+      method: 'DELETE',
+    }, token),
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
   getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),

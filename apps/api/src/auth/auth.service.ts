@@ -330,6 +330,66 @@ export class AuthService {
     };
   }
 
+  async updateProjectMemberPermission(
+    userId: string,
+    projectId: string,
+    targetUserId: string,
+    permission: 'viewer' | 'editor',
+  ): Promise<ProjectMembersResponse> {
+    const role = permission === 'editor' ? AppRole.PM : AppRole.VIEWER;
+    const updated = await this.usersService.updateProjectMemberPermission(userId, projectId, targetUserId, role);
+
+    if (updated === 'FORBIDDEN') {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    if (updated === 'TARGET_NOT_FOUND') {
+      throw new NotFoundException(ErrorCode.AUTH_PROJECT_MEMBER_NOT_FOUND);
+    }
+
+    if (updated === 'OWNER_IMMUTABLE') {
+      throw new BadRequestException(ErrorCode.AUTH_PROJECT_OWNER_IMMUTABLE);
+    }
+
+    return {
+      projectId,
+      members: updated.map((member) => ({
+        userId: member.userId,
+        email: member.email,
+        fullName: member.fullName,
+        role: member.role,
+        isOwner: member.isOwner,
+      })),
+    };
+  }
+
+  async removeProjectMember(userId: string, projectId: string, targetUserId: string): Promise<ProjectMembersResponse> {
+    const updated = await this.usersService.removeProjectMember(userId, projectId, targetUserId);
+
+    if (updated === 'FORBIDDEN') {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    if (updated === 'TARGET_NOT_FOUND') {
+      throw new NotFoundException(ErrorCode.AUTH_PROJECT_MEMBER_NOT_FOUND);
+    }
+
+    if (updated === 'OWNER_IMMUTABLE') {
+      throw new BadRequestException(ErrorCode.AUTH_PROJECT_OWNER_IMMUTABLE);
+    }
+
+    return {
+      projectId,
+      members: updated.map((member) => ({
+        userId: member.userId,
+        email: member.email,
+        fullName: member.fullName,
+        role: member.role,
+        isOwner: member.isOwner,
+      })),
+    };
+  }
+
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.usersService.findById(userId);
     if (!user) {
