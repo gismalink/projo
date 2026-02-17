@@ -20,8 +20,19 @@ const PROJECT_PERSON_SELECT = {
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async ensureTeamTemplateExists(templateId: string) {
-    const template = await this.prisma.projectTeamTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
+  private async ensureTeamTemplateExists(workspaceId: string, templateId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
+    const template = await this.prisma.projectTeamTemplate.findFirst({
+      where: {
+        id: templateId,
+        ...(scope.companyId
+          ? {
+              OR: [{ companyId: scope.companyId }, { companyId: null }],
+            }
+          : { companyId: null }),
+      },
+      select: { id: true },
+    });
     if (!template) {
       throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
     }
@@ -65,7 +76,7 @@ export class ProjectsService {
     this.ensureDateRange(startDate, endDate);
 
     if (dto.teamTemplateId) {
-      await this.ensureTeamTemplateExists(dto.teamTemplateId);
+      await this.ensureTeamTemplateExists(workspaceId, dto.teamTemplateId);
     }
 
     return this.prisma.project
@@ -93,26 +104,29 @@ export class ProjectsService {
     }
   }
 
-  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { ownerUserId: true },
+      select: { ownerUserId: true, companyId: true },
     });
 
     if (!workspace) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    return workspace.ownerUserId;
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
   }
 
   private async ensureEmployeeExists(workspaceId: string, employeeId: string) {
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const scope = await this.getWorkspaceScope(workspaceId);
     const employee = await this.prisma.employee.findFirst({
       where: {
         id: employeeId,
         workspace: {
-          ownerUserId,
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
       },
       select: { id: true },
@@ -429,7 +443,7 @@ export class ProjectsService {
     await this.findOne(workspaceId, id);
 
     if (dto.teamTemplateId) {
-      await this.ensureTeamTemplateExists(dto.teamTemplateId);
+      await this.ensureTeamTemplateExists(workspaceId, dto.teamTemplateId);
     }
 
     if (dto.startDate && dto.endDate) {

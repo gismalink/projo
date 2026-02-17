@@ -43,6 +43,38 @@ export class UsersService {
     return trimmed ? `${trimmed} workspace` : 'Personal workspace';
   }
 
+  private companyNameForUser(fullName: string) {
+    const trimmed = fullName.trim();
+    return trimmed ? `${trimmed} company` : 'Default company';
+  }
+
+  private async ensureOwnerCompanyId(ownerUserId: string, ownerFullName?: string): Promise<string> {
+    const existing = await this.prisma.company.findFirst({
+      where: { ownerUserId },
+      select: { id: true },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    if (existing) return existing.id;
+
+    const user = ownerFullName
+      ? { fullName: ownerFullName }
+      : await this.prisma.user.findUnique({
+          where: { id: ownerUserId },
+          select: { fullName: true },
+        });
+
+    const company = await this.prisma.company.create({
+      data: {
+        ownerUserId,
+        name: this.companyNameForUser(user?.fullName ?? ''),
+      },
+      select: { id: true },
+    });
+
+    return company.id;
+  }
+
   private async listProjectMembers(workspaceId: string): Promise<ProjectMemberItem[]> {
     const members = await this.prisma.workspaceMember.findMany({
       where: { workspaceId },
@@ -87,10 +119,12 @@ export class UsersService {
     }
 
     if (!userWithMemberships.workspaceMemberships.length) {
+      const companyId = await this.ensureOwnerCompanyId(userWithMemberships.id, userWithMemberships.fullName);
       const workspace = await this.prisma.workspace.create({
         data: {
           name: this.workspaceNameForUser(userWithMemberships.fullName),
           ownerUserId: userWithMemberships.id,
+          companyId,
         },
       });
 
@@ -220,10 +254,12 @@ export class UsersService {
 
   async createProjectSpace(userId: string, name: string) {
     const trimmedName = name.trim();
+    const companyId = await this.ensureOwnerCompanyId(userId);
     const workspace = await this.prisma.workspace.create({
       data: {
         name: trimmedName,
         ownerUserId: userId,
+        companyId,
       },
     });
 
@@ -248,7 +284,7 @@ export class UsersService {
   async copyProjectSpace(ownerUserId: string, sourceWorkspaceId: string, name: string) {
     const sourceWorkspace = await this.prisma.workspace.findUnique({
       where: { id: sourceWorkspaceId },
-      select: { id: true, ownerUserId: true },
+      select: { id: true, ownerUserId: true, companyId: true },
     });
 
     if (!sourceWorkspace || sourceWorkspace.ownerUserId !== ownerUserId) {
@@ -256,10 +292,30 @@ export class UsersService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const sourceCompanyId =
+        sourceWorkspace.companyId ??
+        (
+          await tx.company.findFirst({
+            where: { ownerUserId },
+            select: { id: true },
+            orderBy: [{ createdAt: 'asc' }],
+          })
+        )?.id ??
+        (
+          await tx.company.create({
+            data: {
+              ownerUserId,
+              name: 'Default company',
+            },
+            select: { id: true },
+          })
+        ).id;
+
       const copiedWorkspace = await tx.workspace.create({
         data: {
           name: name.trim(),
           ownerUserId,
+          companyId: sourceCompanyId,
         },
         select: {
           id: true,
@@ -437,8 +493,43 @@ export class UsersService {
       return false;
     }
 
-    await this.prisma.workspace.delete({
-      where: { id: workspaceId },
+    await this.prisma.$transaction(async (tx) => {
+      const fallbackWorkspace = await tx.workspace.findFirst({
+        where: {
+          ownerUserId,
+          id: {
+            not: workspaceId,
+          },
+        },
+        select: {
+          id: true,
+        },
+        orderBy: [{ createdAt: 'asc' }],
+      });
+
+      if (fallbackWorkspace) {
+        await tx.employee.updateMany({
+          where: {
+            workspaceId,
+          },
+          data: {
+            workspaceId: fallbackWorkspace.id,
+          },
+        });
+      }
+
+      await tx.user.updateMany({
+        where: {
+          activeWorkspaceId: workspaceId,
+        },
+        data: {
+          activeWorkspaceId: fallbackWorkspace?.id ?? null,
+        },
+      });
+
+      await tx.workspace.delete({
+        where: { id: workspaceId },
+      });
     });
 
     return true;

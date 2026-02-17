@@ -23,6 +23,7 @@ model User {
   activeWorkspaceId String?
   activeWorkspace   Workspace? @relation("UserActiveWorkspace", fields: [activeWorkspaceId], references: [id], onDelete: SetNull)
   ownedWorkspaces   Workspace[] @relation("WorkspaceOwner")
+  ownedCompanies    Company[] @relation("CompanyOwner")
   workspaceMemberships WorkspaceMember[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -34,7 +35,9 @@ model Workspace {
   id         String   @id @default(cuid())
   name       String
   ownerUserId String
+  companyId  String?
   owner      User     @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   members    WorkspaceMember[]
   activeUsers User[]  @relation("UserActiveWorkspace")
   employees  Employee[]
@@ -43,6 +46,23 @@ model Workspace {
   costRates  CostRate[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([ownerUserId])
+  @@index([companyId])
+}
+
+model Company {
+  id         String      @id @default(cuid())
+  name       String
+  ownerUserId String
+  owner      User        @relation("CompanyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  workspaces Workspace[]
+  roles      Role[]
+  departments Department[]
+  grades     Grade[]
+  teamTemplates ProjectTeamTemplate[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@index([ownerUserId])
 }
@@ -64,7 +84,9 @@ model WorkspaceMember {
 
 model Role {
   id          String   @id @default(cuid())
-  name        String   @unique
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name        String
   shortName   String?  @db.VarChar(20)
   description String?
   level       Int?
@@ -74,24 +96,37 @@ model Role {
   templateRoles ProjectTeamTemplateRole[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model Department {
   id          String     @id @default(cuid())
-  name        String     @unique
+  companyId   String?
+  company     Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name        String
   description String?
   colorHex    String?    @db.VarChar(7)
   employees   Employee[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model Grade {
   id        String   @id @default(cuid())
-  name      String   @unique
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name      String
   colorHex  String?  @db.VarChar(7)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model Employee {
@@ -187,11 +222,16 @@ model Project {
 
 model ProjectTeamTemplate {
   id        String                    @id @default(cuid())
-  name      String                    @unique
+  companyId String?
+  company   Company?                  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name      String
   roles     ProjectTeamTemplateRole[]
   projects  Project[]
   createdAt DateTime                  @default(now())
   updatedAt DateTime                  @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model ProjectTeamTemplateRole {

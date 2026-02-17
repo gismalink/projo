@@ -8,17 +8,20 @@ import { UpdateCostRateDto } from './dto/update-cost-rate.dto';
 export class CostRatesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { ownerUserId: true },
+      select: { ownerUserId: true, companyId: true },
     });
 
     if (!workspace) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    return workspace.ownerUserId;
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
   }
 
   private ensureScope(dto: { employeeId?: string; roleId?: string }) {
@@ -35,12 +38,12 @@ export class CostRatesService {
 
   private async ensureTargetsExist(workspaceId: string, dto: { employeeId?: string; roleId?: string }) {
     if (dto.employeeId) {
-      const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+      const scope = await this.getWorkspaceScope(workspaceId);
       const employee = await this.prisma.employee.findFirst({
         where: {
           id: dto.employeeId,
           workspace: {
-            ownerUserId,
+            ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
           },
         },
         select: { id: true },

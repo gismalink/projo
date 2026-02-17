@@ -8,26 +8,29 @@ import { UpdateVacationDto } from './dto/update-vacation.dto';
 export class VacationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { ownerUserId: true },
+      select: { ownerUserId: true, companyId: true },
     });
 
     if (!workspace) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    return workspace.ownerUserId;
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
   }
 
-  private async ensureEmployeeExistsForWorkspaceOwner(workspaceId: string, employeeId: string) {
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+  private async ensureEmployeeExistsForWorkspaceScope(workspaceId: string, employeeId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
     const employee = await this.prisma.employee.findFirst({
       where: {
         id: employeeId,
         workspace: {
-          ownerUserId,
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
       },
       select: { id: true },
@@ -66,7 +69,7 @@ export class VacationsService {
     const endDate = new Date(dto.endDate);
     this.ensureDateRange(startDate, endDate);
 
-    await this.ensureEmployeeExistsForWorkspaceOwner(workspaceId, dto.employeeId);
+    await this.ensureEmployeeExistsForWorkspaceScope(workspaceId, dto.employeeId);
 
     await this.ensureNoOverlap(workspaceId, dto.employeeId, startDate, endDate);
 
@@ -122,7 +125,7 @@ export class VacationsService {
     const nextEnd = dto.endDate ? new Date(dto.endDate) : existing.endDate;
     const nextEmployeeId = dto.employeeId ?? existing.employeeId;
 
-    await this.ensureEmployeeExistsForWorkspaceOwner(workspaceId, nextEmployeeId);
+    await this.ensureEmployeeExistsForWorkspaceScope(workspaceId, nextEmployeeId);
 
     this.ensureDateRange(nextStart, nextEnd);
     await this.ensureNoOverlap(workspaceId, nextEmployeeId, nextStart, nextEnd, id);

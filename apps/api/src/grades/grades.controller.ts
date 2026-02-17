@@ -1,10 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AppRoleValue, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
 import { GradesService } from './grades.service';
+
+type AuthenticatedRequest = {
+  user: {
+    workspaceId: string;
+  };
+};
 
 @Controller('grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,25 +19,25 @@ export class GradesController {
 
   @Post()
   @Roles(AppRoleValue.ADMIN)
-  create(@Body() dto: CreateGradeDto) {
-    return this.gradesService.create(dto);
+  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateGradeDto) {
+    return this.gradesService.create(req.user.workspaceId, dto);
   }
 
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
-  findAll() {
-    return this.gradesService.findAll();
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.gradesService.findAll(req.user.workspaceId);
   }
 
   @Patch(':id')
   @Roles(AppRoleValue.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateGradeDto) {
-    return this.gradesService.update(id, dto);
+  update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateGradeDto) {
+    return this.gradesService.update(req.user.workspaceId, id, dto);
   }
 
   @Delete(':id')
   @Roles(AppRoleValue.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.gradesService.remove(id);
+  remove(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.gradesService.remove(req.user.workspaceId, id);
   }
 }

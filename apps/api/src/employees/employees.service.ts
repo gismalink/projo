@@ -19,24 +19,28 @@ type CsvEmployeeRow = {
 export class EmployeesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { ownerUserId: true },
+      select: { ownerUserId: true, companyId: true },
     });
 
     if (!workspace) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    return workspace.ownerUserId;
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
   }
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
   }
 
-  private async ensureRoleExists(roleId: string) {
+  private async ensureRoleExists(workspaceId: string, roleId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
       select: { id: true },
@@ -45,13 +49,35 @@ export class EmployeesService {
     if (!role) {
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
+
+    if (scope.companyId) {
+      const scoped = await this.prisma.role.findFirst({
+        where: {
+          id: roleId,
+          OR: [{ companyId: scope.companyId }, { companyId: null }],
+        },
+        select: { id: true },
+      });
+      if (!scoped) {
+        throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
+      }
+    }
   }
 
-  private async ensureDepartmentExists(departmentId?: string) {
+  private async ensureDepartmentExists(workspaceId: string, departmentId?: string) {
     if (!departmentId) return;
 
-    const department = await this.prisma.department.findUnique({
-      where: { id: departmentId },
+    const scope = await this.getWorkspaceScope(workspaceId);
+
+    const department = await this.prisma.department.findFirst({
+      where: {
+        id: departmentId,
+        ...(scope.companyId
+          ? {
+              OR: [{ companyId: scope.companyId }, { companyId: null }],
+            }
+          : { companyId: null }),
+      },
       select: { id: true },
     });
 
@@ -62,12 +88,12 @@ export class EmployeesService {
 
   private async ensureEmployeeEmailAvailable(workspaceId: string, email: string, excludeEmployeeId?: string) {
     const normalizedEmail = this.normalizeEmail(email);
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const scope = await this.getWorkspaceScope(workspaceId);
     const existing = await this.prisma.employee.findFirst({
       where: {
         email: normalizedEmail,
         workspace: {
-          ownerUserId,
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
       },
       select: { id: true },
@@ -160,8 +186,8 @@ export class EmployeesService {
   }
 
   async create(workspaceId: string, dto: CreateEmployeeDto) {
-    await this.ensureRoleExists(dto.roleId);
-    await this.ensureDepartmentExists(dto.departmentId);
+    await this.ensureRoleExists(workspaceId, dto.roleId);
+    await this.ensureDepartmentExists(workspaceId, dto.departmentId);
     await this.ensureEmployeeEmailAvailable(workspaceId, dto.email);
 
     return this.prisma.employee.create({
@@ -176,11 +202,11 @@ export class EmployeesService {
   }
 
   async findAll(workspaceId: string) {
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const scope = await this.getWorkspaceScope(workspaceId);
     return this.prisma.employee.findMany({
       where: {
         workspace: {
-          ownerUserId,
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
       },
       include: { role: true, department: true },
@@ -189,12 +215,12 @@ export class EmployeesService {
   }
 
   async findOne(workspaceId: string, id: string) {
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const scope = await this.getWorkspaceScope(workspaceId);
     const employee = await this.prisma.employee.findFirst({
       where: {
         id,
         workspace: {
-          ownerUserId,
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
       },
       include: { role: true, department: true },
@@ -211,10 +237,10 @@ export class EmployeesService {
     await this.findOne(workspaceId, id);
 
     if (dto.roleId) {
-      await this.ensureRoleExists(dto.roleId);
+      await this.ensureRoleExists(workspaceId, dto.roleId);
     }
 
-    await this.ensureDepartmentExists(dto.departmentId);
+    await this.ensureDepartmentExists(workspaceId, dto.departmentId);
 
     if (dto.email) {
       await this.ensureEmployeeEmailAvailable(workspaceId, dto.email, id);
@@ -243,11 +269,25 @@ export class EmployeesService {
       return { total: 0, created: 0, updated: 0, errors: ['Invalid CSV or missing required columns'] };
     }
 
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+    const scope = await this.getWorkspaceScope(workspaceId);
 
     const [roles, departments] = await Promise.all([
-      this.prisma.role.findMany({ select: { id: true, name: true } }),
-      this.prisma.department.findMany({ select: { id: true, name: true } }),
+      this.prisma.role.findMany({
+        where: scope.companyId
+          ? {
+              OR: [{ companyId: scope.companyId }, { companyId: null }],
+            }
+          : { companyId: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.department.findMany({
+        where: scope.companyId
+          ? {
+              OR: [{ companyId: scope.companyId }, { companyId: null }],
+            }
+          : { companyId: null },
+        select: { id: true, name: true },
+      }),
     ]);
 
     const roleByKey = new Map<string, string>();
@@ -283,7 +323,7 @@ export class EmployeesService {
         where: {
           email: row.email,
           workspace: {
-            ownerUserId,
+            ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
           },
         },
         select: { id: true },

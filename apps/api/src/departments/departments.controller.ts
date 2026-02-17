@@ -1,10 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AppRoleValue, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { DepartmentsService } from './departments.service';
+
+type AuthenticatedRequest = {
+  user: {
+    workspaceId: string;
+  };
+};
 
 @Controller('departments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,25 +19,25 @@ export class DepartmentsController {
 
   @Post()
   @Roles(AppRoleValue.ADMIN)
-  create(@Body() dto: CreateDepartmentDto) {
-    return this.departmentsService.create(dto);
+  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateDepartmentDto) {
+    return this.departmentsService.create(req.user.workspaceId, dto);
   }
 
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
-  findAll() {
-    return this.departmentsService.findAll();
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.departmentsService.findAll(req.user.workspaceId);
   }
 
   @Patch(':id')
   @Roles(AppRoleValue.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateDepartmentDto) {
-    return this.departmentsService.update(id, dto);
+  update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateDepartmentDto) {
+    return this.departmentsService.update(req.user.workspaceId, id, dto);
   }
 
   @Delete(':id')
   @Roles(AppRoleValue.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.departmentsService.remove(id);
+  remove(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.departmentsService.remove(req.user.workspaceId, id);
   }
 }

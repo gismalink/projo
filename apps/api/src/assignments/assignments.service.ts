@@ -19,26 +19,29 @@ type AssignmentLoadProfile = {
 export class AssignmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getWorkspaceOwnerUserId(workspaceId: string): Promise<string> {
+  private async getWorkspaceScope(workspaceId: string): Promise<{ ownerUserId: string; companyId: string | null }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { ownerUserId: true },
+      select: { ownerUserId: true, companyId: true },
     });
 
     if (!workspace) {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    return workspace.ownerUserId;
+    return {
+      ownerUserId: workspace.ownerUserId,
+      companyId: workspace.companyId,
+    };
   }
 
-  private async ensureEmployeeBelongsToWorkspaceOwner(workspaceId: string, employeeId: string) {
-    const ownerUserId = await this.getWorkspaceOwnerUserId(workspaceId);
+  private async ensureEmployeeInWorkspaceScope(workspaceId: string, employeeId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
     const employee = await this.prisma.employee.findFirst({
       where: {
         id: employeeId,
         workspace: {
-          ownerUserId,
+          ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
       },
       select: { id: true },
@@ -313,7 +316,7 @@ export class AssignmentsService {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    await this.ensureEmployeeBelongsToWorkspaceOwner(workspaceId, dto.employeeId);
+    await this.ensureEmployeeInWorkspaceScope(workspaceId, dto.employeeId);
 
     this.ensureWithinProjectRange(startDate, endDate, project.startDate, project.endDate);
 
@@ -401,7 +404,7 @@ export class AssignmentsService {
       throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
     }
 
-    await this.ensureEmployeeBelongsToWorkspaceOwner(workspaceId, employeeId);
+    await this.ensureEmployeeInWorkspaceScope(workspaceId, employeeId);
 
     this.ensureWithinProjectRange(nextStart, nextEnd, project.startDate, project.endDate);
 
