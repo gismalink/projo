@@ -12,7 +12,7 @@ export class VacationsController {
   constructor(private readonly vacationsService: VacationsService) {}
 
   @Post()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   create(@Body() dto: CreateVacationDto) {
     return this.vacationsService.create(dto);
   }
@@ -30,7 +30,7 @@ export class VacationsController {
   }
 
   @Patch(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateVacationDto) {
     return this.vacationsService.update(id, dto);
   }

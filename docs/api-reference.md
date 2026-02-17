@@ -26,6 +26,41 @@
 - Body: `{ email: string, password: string }`
 - Response: JWT payload (token + user)
 
+### `POST /api/auth/register`
+- Auth: public
+- Body: `{ email: string, fullName: string, password: string }`
+- Response: JWT payload (token + user)
+
+### `GET /api/auth/me`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Response: текущий пользователь + активный project-context (`workspaceId`, `workspaceRole`)
+
+### `GET /api/auth/projects`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Response: `{ activeProjectId, myProjects[], sharedProjects[] }`
+
+### `POST /api/auth/projects`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ name: string }`
+- Назначение: создать новый project-space и сделать его активным.
+
+### `POST /api/auth/projects/switch`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ projectId: string }`
+- Назначение: переключить активный project-space пользователя.
+
+### `GET /api/auth/projects/:projectId/members`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Назначение: получить список участников project-space (доступно только участникам).
+
+### `POST /api/auth/projects/:projectId/invite`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ email: string, permission: 'viewer' | 'editor' }`
+- Назначение: owner-only приглашение существующего пользователя в project-space.
+- Ошибки:
+  - `ERR_AUTH_PROJECT_ACCESS_DENIED` — проект недоступен или вызывающий не owner,
+  - `ERR_AUTH_PROJECT_INVITE_USER_NOT_FOUND` — пользователь с таким email не найден.
+
 ## Roles
 
 ### `POST /api/roles`

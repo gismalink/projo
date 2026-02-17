@@ -19,13 +19,13 @@ export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Post()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateEmployeeDto) {
     return this.employeesService.create(req.user.workspaceId, dto);
   }
 
   @Post('import-csv')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   importCsv(@Req() req: AuthenticatedRequest, @Body() dto: ImportEmployeesCsvDto) {
     return this.employeesService.importCsv(req.user.workspaceId, dto.csv);
   }
@@ -37,7 +37,7 @@ export class EmployeesController {
   }
 
   @Patch(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN)
   update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateEmployeeDto) {
     return this.employeesService.update(req.user.workspaceId, id, dto);
   }

@@ -119,6 +119,20 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.16);
 }
 
+input[readonly],
+textarea[readonly] {
+  background: rgba(120, 120, 128, 0.14);
+  color: rgba(60, 60, 67, 0.92);
+  border-color: rgba(60, 60, 67, 0.24);
+  cursor: not-allowed;
+}
+
+input[readonly]:focus,
+textarea[readonly]:focus {
+  box-shadow: none;
+  border-color: rgba(60, 60, 67, 0.24);
+}
+
 textarea {
   resize: vertical;
   font-family: "IBM Plex Mono", "Consolas", monospace;
@@ -162,6 +176,12 @@ button:active {
 .lang-toggle {
   display: inline-flex;
   gap: 0.35rem;
+}
+
+.header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .ghost-btn {
@@ -219,11 +239,13 @@ li:last-child {
 
 .toast-stack {
   position: fixed;
-  left: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 1rem;
-  z-index: 50;
+  z-index: 120;
   display: grid;
   gap: 0.4rem;
+  justify-items: center;
 }
 
 .toast-item {

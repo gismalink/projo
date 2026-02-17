@@ -24,6 +24,35 @@ function shiftIsoByDays(iso, days) {
   return date.toISOString();
 }
 
+async function ensureEmployee(authHeaders) {
+  const employees = await request('/employees', { headers: authHeaders });
+  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
+  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
+
+  if (employees.payload.length > 0) {
+    return employees.payload[0];
+  }
+
+  const roles = await request('/roles', { headers: authHeaders });
+  assert.equal(roles.response.status, 200, 'roles endpoint should return 200');
+  assert.ok(Array.isArray(roles.payload), 'roles payload should be an array');
+  assert.ok(roles.payload.length > 0, 'roles payload should not be empty');
+
+  const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const createdEmployee = await request('/employees', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      fullName: `Smoke Employee ${seed}`,
+      email: `smoke-employee-${seed}@projo.local`,
+      roleId: roles.payload[0].id,
+    }),
+  });
+
+  assert.equal(createdEmployee.response.status, 201, 'employee create endpoint should return 201');
+  return createdEmployee.payload;
+}
+
 test('API e2e smoke: auth + timeline + calendar', async () => {
   const health = await request('/health');
   assert.equal(health.response.status, 200, 'health endpoint should return 200');
@@ -68,12 +97,7 @@ test('API e2e smoke: project member + assignment consistency', async () => {
     'Content-Type': 'application/json',
   };
 
-  const employees = await request('/employees', { headers: authHeaders });
-  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
-  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
-  assert.ok(employees.payload.length > 0, 'employees payload should not be empty');
-
-  const employee = employees.payload[0];
+  const employee = await ensureEmployee(authHeaders);
   assert.equal(typeof employee?.id, 'string', 'employee id should be available');
 
   const startDate = `${year}-02-01T00:00:00.000Z`;
@@ -222,12 +246,7 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
     'Content-Type': 'application/json',
   };
 
-  const employees = await request('/employees', { headers: authHeaders });
-  assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
-  assert.ok(Array.isArray(employees.payload), 'employees payload should be an array');
-  assert.ok(employees.payload.length > 0, 'employees payload should not be empty');
-
-  const employee = employees.payload[0];
+  const employee = await ensureEmployee(authHeaders);
   const projectCode = `E2E-SHIFT-${Date.now()}`;
 
   const projectStart = `${year}-04-01T00:00:00.000Z`;

@@ -21,6 +21,8 @@ export type AuthUser = {
   email: string;
   fullName: string;
   role: string;
+  workspaceId?: string;
+  workspaceRole?: string;
 };
 
 export type RegisterPayload = {
@@ -36,6 +38,34 @@ export type UpdateMePayload = {
 export type ChangePasswordPayload = {
   currentPassword: string;
   newPassword: string;
+};
+
+export type ProjectSpaceItem = {
+  id: string;
+  name: string;
+  role: string;
+  isOwner: boolean;
+};
+
+export type MyProjectsResponse = {
+  activeProjectId: string;
+  myProjects: ProjectSpaceItem[];
+  sharedProjects: ProjectSpaceItem[];
+};
+
+export type ProjectPermission = 'viewer' | 'editor';
+
+export type ProjectMemberItem = {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: string;
+  isOwner: boolean;
+};
+
+export type ProjectMembersResponse = {
+  projectId: string;
+  members: ProjectMemberItem[];
 };
 
 export type ProjectTimelineRow = {
@@ -387,6 +417,24 @@ export const api = {
   changePassword: (payload: ChangePasswordPayload, token: string) =>
     request<{ success: true }>('/auth/change-password', { method: 'POST', body: JSON.stringify(payload) }, token),
   logout: (token: string) => request<{ success: true }>('/auth/logout', { method: 'POST' }, token),
+  getMyProjects: (token: string) => request<MyProjectsResponse>('/auth/projects', {}, token),
+  createProjectSpace: (name: string, token: string) =>
+    request<LoginResponse>('/auth/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }, token),
+  switchProjectSpace: (projectId: string, token: string) =>
+    request<LoginResponse>('/auth/projects/switch', {
+      method: 'POST',
+      body: JSON.stringify({ projectId }),
+    }, token),
+  getProjectMembers: (projectId: string, token: string) =>
+    request<ProjectMembersResponse>(`/auth/projects/${projectId}/members`, {}, token),
+  inviteProjectMember: (projectId: string, email: string, permission: ProjectPermission, token: string) =>
+    request<ProjectMembersResponse>(`/auth/projects/${projectId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ email, permission }),
+    }, token),
   getRoles: (token: string) => request('/roles', {}, token),
   getEmployees: (token: string) => request('/employees', {}, token),
   getDepartments: (token: string) => request<DepartmentItem[]>('/departments', {}, token),

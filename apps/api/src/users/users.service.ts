@@ -15,6 +15,21 @@ type UserAuthContext = {
   workspaceRole: AppRole;
 };
 
+type ProjectMembershipItem = {
+  workspaceId: string;
+  workspaceName: string;
+  ownerUserId: string;
+  role: AppRole;
+};
+
+type ProjectMemberItem = {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: AppRole;
+  isOwner: boolean;
+};
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,6 +41,35 @@ export class UsersService {
   private workspaceNameForUser(fullName: string) {
     const trimmed = fullName.trim();
     return trimmed ? `${trimmed} workspace` : 'Personal workspace';
+  }
+
+  private async listProjectMembers(workspaceId: string): Promise<ProjectMemberItem[]> {
+    const members = await this.prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      include: {
+        workspace: {
+          select: {
+            ownerUserId: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    return members.map((member) => ({
+      userId: member.user.id,
+      email: member.user.email,
+      fullName: member.user.fullName,
+      role: member.role,
+      isOwner: member.workspace.ownerUserId === member.user.id,
+    }));
   }
 
   private async ensureActiveWorkspaceForUser(userId: string): Promise<{ workspaceId: string; workspaceRole: AppRole }> {
@@ -149,6 +193,162 @@ export class UsersService {
 
     await this.ensureActiveWorkspaceForUser(created.id);
     return created;
+  }
+
+  async listProjectMemberships(userId: string): Promise<ProjectMembershipItem[]> {
+    const memberships = await this.prisma.workspaceMember.findMany({
+      where: { userId },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            ownerUserId: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    return memberships.map((membership) => ({
+      workspaceId: membership.workspace.id,
+      workspaceName: membership.workspace.name,
+      ownerUserId: membership.workspace.ownerUserId,
+      role: membership.role,
+    }));
+  }
+
+  async createProjectSpace(userId: string, name: string) {
+    const trimmedName = name.trim();
+    const workspace = await this.prisma.workspace.create({
+      data: {
+        name: trimmedName,
+        ownerUserId: userId,
+      },
+    });
+
+    await this.prisma.workspaceMember.create({
+      data: {
+        workspaceId: workspace.id,
+        userId,
+        role: AppRole.ADMIN,
+      },
+    });
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        activeWorkspaceId: workspace.id,
+      },
+    });
+
+    return workspace;
+  }
+
+  async listProjectMembersForUser(userId: string, workspaceId: string): Promise<ProjectMemberItem[] | null> {
+    const membership = await this.prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId,
+        },
+      },
+      select: {
+        workspaceId: true,
+      },
+    });
+
+    if (!membership) {
+      return null;
+    }
+
+    return this.listProjectMembers(workspaceId);
+  }
+
+  async inviteProjectMemberByEmail(
+    ownerUserId: string,
+    workspaceId: string,
+    email: string,
+    role: AppRole,
+  ): Promise<ProjectMemberItem[] | 'FORBIDDEN' | 'USER_NOT_FOUND'> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!workspace || workspace.ownerUserId !== ownerUserId) {
+      return 'FORBIDDEN';
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: this.normalizeEmail(email) },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!user) {
+      return 'USER_NOT_FOUND';
+    }
+
+    if (user.id !== workspace.ownerUserId) {
+      await this.prisma.workspaceMember.upsert({
+        where: {
+          workspaceId_userId: {
+            workspaceId,
+            userId: user.id,
+          },
+        },
+        create: {
+          workspaceId,
+          userId: user.id,
+          role,
+        },
+        update: {
+          role,
+        },
+      });
+    }
+
+    await this.prisma.user.updateMany({
+      where: {
+        id: user.id,
+        activeWorkspaceId: null,
+      },
+      data: {
+        activeWorkspaceId: workspaceId,
+      },
+    });
+
+    return this.listProjectMembers(workspaceId);
+  }
+
+  async switchActiveProjectSpace(userId: string, workspaceId: string) {
+    const membership = await this.prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId,
+        },
+      },
+      select: {
+        workspaceId: true,
+      },
+    });
+
+    if (!membership) {
+      return null;
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { activeWorkspaceId: workspaceId },
+    });
+
+    return membership;
   }
 
   async resolveAuthContextByUserId(userId: string): Promise<UserAuthContext | null> {

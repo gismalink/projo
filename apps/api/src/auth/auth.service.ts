@@ -27,6 +27,32 @@ type AccountUser = {
   workspaceRole: string;
 };
 
+type ProjectAccessItem = {
+  id: string;
+  name: string;
+  role: string;
+  isOwner: boolean;
+};
+
+type ProjectsResponse = {
+  activeProjectId: string;
+  myProjects: ProjectAccessItem[];
+  sharedProjects: ProjectAccessItem[];
+};
+
+type ProjectMemberItem = {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: string;
+  isOwner: boolean;
+};
+
+type ProjectMembersResponse = {
+  projectId: string;
+  members: ProjectMemberItem[];
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -160,6 +186,126 @@ export class AuthService {
       workspaceId: context.workspaceId,
       workspaceRole: context.workspaceRole,
     });
+  }
+
+  async getMyProjects(userId: string, activeProjectId: string): Promise<ProjectsResponse> {
+    const items = await this.usersService.listProjectMemberships(userId);
+
+    const projectItems = items.map((item) => ({
+      id: item.workspaceId,
+      name: item.workspaceName,
+      role: item.role,
+      isOwner: item.ownerUserId === userId,
+    }));
+
+    return {
+      activeProjectId,
+      myProjects: projectItems.filter((item) => item.isOwner),
+      sharedProjects: projectItems.filter((item) => !item.isOwner),
+    };
+  }
+
+  async createProjectSpace(userId: string, name: string): Promise<LoginResponse> {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException(ErrorCode.AUTH_PROJECT_NAME_REQUIRED);
+    }
+
+    await this.usersService.createProjectSpace(userId, trimmedName);
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
+
+    return {
+      accessToken,
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
+    };
+  }
+
+  async switchProjectSpace(userId: string, projectId: string): Promise<LoginResponse> {
+    const switched = await this.usersService.switchActiveProjectSpace(userId, projectId);
+    if (!switched) {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
+
+    return {
+      accessToken,
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
+    };
+  }
+
+  async getProjectMembers(userId: string, projectId: string): Promise<ProjectMembersResponse> {
+    const members = await this.usersService.listProjectMembersForUser(userId, projectId);
+    if (!members) {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    return {
+      projectId,
+      members: members.map((member) => ({
+        userId: member.userId,
+        email: member.email,
+        fullName: member.fullName,
+        role: member.role,
+        isOwner: member.isOwner,
+      })),
+    };
+  }
+
+  async inviteProjectMember(
+    userId: string,
+    projectId: string,
+    email: string,
+    permission: 'viewer' | 'editor',
+  ): Promise<ProjectMembersResponse> {
+    const role = permission === 'editor' ? AppRole.PM : AppRole.VIEWER;
+    const invited = await this.usersService.inviteProjectMemberByEmail(userId, projectId, this.normalizeEmail(email), role);
+
+    if (invited === 'FORBIDDEN') {
+      throw new UnauthorizedException(ErrorCode.AUTH_PROJECT_ACCESS_DENIED);
+    }
+
+    if (invited === 'USER_NOT_FOUND') {
+      throw new NotFoundException(ErrorCode.AUTH_PROJECT_INVITE_USER_NOT_FOUND);
+    }
+
+    return {
+      projectId,
+      members: invited.map((member) => ({
+        userId: member.userId,
+        email: member.email,
+        fullName: member.fullName,
+        role: member.role,
+        isOwner: member.isOwner,
+      })),
+    };
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {

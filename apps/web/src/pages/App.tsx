@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { api, GradeItem } from '../api/client';
+import { api, GradeItem, ProjectMemberItem } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
@@ -20,7 +20,13 @@ import { Lang } from './app-types';
 export function App() {
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
-  const [isAccountPageOpen, setIsAccountPageOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isProjectHomeOpen, setIsProjectHomeOpen] = useState(false);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [newProjectSpaceName, setNewProjectSpaceName] = useState('');
+  const [projectMembers, setProjectMembers] = useState<ProjectMemberItem[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePermission, setInvitePermission] = useState<'viewer' | 'editor'>('viewer');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerFullName, setRegisterFullName] = useState('');
@@ -68,9 +74,35 @@ export function App() {
 
   useEffect(() => {
     if (!app.token) {
-      setIsAccountPageOpen(false);
+      setIsAccountModalOpen(false);
+      setIsProjectHomeOpen(false);
+      setIsProjectSettingsOpen(false);
+      return;
     }
+
+    setIsProjectHomeOpen(true);
+    void app.loadMyProjects();
   }, [app.token]);
+
+  const currentProjectName =
+    app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
+    app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
+    '-';
+  const currentProjectAccess =
+    app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
+    app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
+    null;
+  const isOwner = Boolean(currentProjectAccess?.isOwner);
+  const isEditor = app.currentUserRole === 'PM';
+  const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
+  const canViewParticipants = isOwner || isEditor;
+  const canInviteParticipants = isOwner;
+
+  useEffect(() => {
+    if (!isOwner && app.activeTab !== 'timeline') {
+      app.setActiveTab('timeline');
+    }
+  }, [app.activeTab, app.setActiveTab, isOwner]);
 
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
@@ -106,7 +138,41 @@ export function App() {
 
   const handleLogoutClick = async () => {
     await app.handleLogout();
-    setIsAccountPageOpen(false);
+    setIsAccountModalOpen(false);
+    setIsProjectHomeOpen(false);
+  };
+
+  const handleCreateProjectSpaceSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    await app.handleCreateProjectSpace(newProjectSpaceName);
+    setNewProjectSpaceName('');
+    setIsProjectHomeOpen(false);
+  };
+
+  const handleOpenProject = async (projectId: string) => {
+    await app.handleSwitchProjectSpace(projectId);
+    setIsProjectHomeOpen(false);
+    setIsProjectSettingsOpen(false);
+  };
+
+  const handleOpenProjectSettings = async () => {
+    if (!app.activeProjectSpaceId) return;
+    const members = await app.loadProjectMembers(app.activeProjectSpaceId);
+    if (members) {
+      setProjectMembers(members);
+      setIsProjectSettingsOpen(true);
+    }
+  };
+
+  const handleInviteSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!app.activeProjectSpaceId) return;
+
+    const members = await app.handleInviteProjectMember(app.activeProjectSpaceId, inviteEmail, invitePermission);
+    if (members) {
+      setProjectMembers(members);
+      setInviteEmail('');
+    }
   };
 
   return (
@@ -115,22 +181,24 @@ export function App() {
         <div>
           <h1>{t.appTitle}</h1>
         </div>
-        <div className="lang-toggle">
-          <button type="button" className={lang === 'ru' ? 'tab active' : 'tab'} onClick={() => setLang('ru')}>
-            RU
-          </button>
-          <button type="button" className={lang === 'en' ? 'tab active' : 'tab'} onClick={() => setLang('en')}>
-            EN
-          </button>
+        <div className="header-controls">
           {app.token ? (
             <button
               type="button"
-              className={isAccountPageOpen ? 'tab active' : 'tab'}
-              onClick={() => setIsAccountPageOpen((prev) => !prev)}
+              className={isAccountModalOpen ? 'tab active' : 'tab'}
+              onClick={() => setIsAccountModalOpen((prev) => !prev)}
             >
-              {t.account}
+              {app.currentUserFullName || t.account}
             </button>
           ) : null}
+          <div className="lang-toggle">
+            <button type="button" className={lang === 'ru' ? 'tab active' : 'tab'} onClick={() => setLang('ru')}>
+              RU
+            </button>
+            <button type="button" className={lang === 'en' ? 'tab active' : 'tab'} onClick={() => setLang('en')}>
+              EN
+            </button>
+          </div>
         </div>
       </div>
 
@@ -185,66 +253,138 @@ export function App() {
         </div>
       ) : (
         <>
-          {isAccountPageOpen ? (
-            <article className="card" style={{ marginBottom: 12 }}>
-              <div className="section-header">
-                <h3>{t.account}</h3>
-                <div className="lang-toggle">
-                  <button type="button" className="ghost-btn" onClick={() => setIsAccountPageOpen(false)}>
-                    {t.backToApp}
-                  </button>
-                  <button type="button" className="ghost-btn" onClick={() => void handleLogoutClick()}>
-                    {t.logout}
+
+              {isProjectHomeOpen ? (
+                <article className="card" style={{ marginBottom: 12 }}>
+                  <h3>{t.projectHomeTitle}</h3>
+                  <div className="timeline-form">
+                    <h4>{t.myProjects}</h4>
+                    <ul>
+                      {app.myProjectSpaces.map((item) => (
+                        <li key={item.id}>
+                          <div>
+                            <strong>{item.name}</strong>
+                            <span>{item.role}</span>
+                          </div>
+                          <button type="button" onClick={() => void handleOpenProject(item.id)}>
+                            {t.openProject}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <form onSubmit={handleCreateProjectSpaceSubmit} className="timeline-form" style={{ padding: 0 }}>
+                      <label>
+                        {t.projectName}
+                        <input value={newProjectSpaceName} onChange={(e) => setNewProjectSpaceName(e.target.value)} />
+                      </label>
+                      <button type="submit">{t.createProjectSpace}</button>
+                    </form>
+
+                    <h4>{t.sharedProjects}</h4>
+                    {app.sharedProjectSpaces.length === 0 ? (
+                      <p className="muted">{t.noSharedProjects}</p>
+                    ) : (
+                      <ul>
+                        {app.sharedProjectSpaces.map((item) => (
+                          <li key={item.id}>
+                            <div>
+                              <strong>{item.name}</strong>
+                              <span>{item.role}</span>
+                            </div>
+                            <button type="button" onClick={() => void handleOpenProject(item.id)}>
+                              {t.openProject}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </article>
+              ) : (
+                <article className="card" style={{ marginBottom: 12 }}>
+                  <div className="section-header">
+                    <h3>{currentProjectName}</h3>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {canViewParticipants ? (
+                        <button type="button" className="ghost-btn" onClick={() => void handleOpenProjectSettings()}>
+                          {isOwner ? t.projectSettings : t.participants}
+                        </button>
+                      ) : null}
+                      <button type="button" className="ghost-btn" onClick={() => setIsProjectHomeOpen(true)}>
+                        {t.home}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              )}
+
+          {isProjectSettingsOpen ? (
+            <div className="modal-backdrop">
+              <article className="modal-card auth-modal">
+                <div className="section-header" style={{ marginBottom: 12 }}>
+                  <h3>{t.projectSettings}</h3>
+                  <button type="button" className="ghost-btn" onClick={() => setIsProjectSettingsOpen(false)}>
+                    {t.close}
                   </button>
                 </div>
-              </div>
-              <div className="timeline-form">
-                <label>
-                  {t.email}
-                  <input value={app.currentUserEmail} readOnly />
-                </label>
-                <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
-                  <label>
-                    {t.fullName}
-                    <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
-                  </label>
-                  <button type="submit">{t.saveProfile}</button>
-                </form>
-                <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
-                  <label>
-                    {t.currentPassword}
-                    <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.newPassword}
-                    <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                  </label>
-                  <label>
-                    {t.confirmPassword}
-                    <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
-                  </label>
-                  <button type="submit">{t.changePassword}</button>
-                </form>
-              </div>
-            </article>
-          ) : (
+                <div className="timeline-form" style={{ gap: 8 }}>
+                  <h4>{t.participants}</h4>
+                  <ul>
+                    {projectMembers.map((member) => (
+                      <li key={member.userId}>
+                        <div>
+                          <strong>{member.fullName}</strong>
+                          <div>{member.email}</div>
+                        </div>
+                        <span>{member.isOwner ? t.owner : member.role}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {canInviteParticipants ? (
+                    <form onSubmit={handleInviteSubmit} className="timeline-form" style={{ padding: 0 }}>
+                      <label>
+                        {t.inviteByEmail}
+                        <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+                      </label>
+                      <label>
+                        {t.permission}
+                        <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
+                          <option value="viewer">{t.permissionViewer}</option>
+                          <option value="editor">{t.permissionEditor}</option>
+                        </select>
+                      </label>
+                      <button type="submit">{t.invite}</button>
+                    </form>
+                  ) : null}
+                </div>
+              </article>
+            </div>
+          ) : null}
+
+          {!isProjectHomeOpen ? (
             <>
+
               <div className="tabs">
                 <button type="button" className={app.activeTab === 'timeline' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('timeline')}>
                   {t.tabTimeline}
                 </button>
-                <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
-                  {t.tabPersonnel}
-                </button>
-                <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
-                  {t.tabRoles}
-                </button>
-                <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
-                  {t.tabInstruction}
-                </button>
+                {isOwner ? (
+                  <>
+                    <button type="button" className={app.activeTab === 'personnel' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('personnel')}>
+                      {t.tabPersonnel}
+                    </button>
+                    <button type="button" className={app.activeTab === 'roles' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('roles')}>
+                      {t.tabRoles}
+                    </button>
+                    <button type="button" className={app.activeTab === 'instruction' ? 'tab active' : 'tab'} onClick={() => app.setActiveTab('instruction')}>
+                      {t.tabInstruction}
+                    </button>
+                  </>
+                ) : null}
               </div>
 
-              {app.activeTab === 'personnel' ? (
+              {isOwner && app.activeTab === 'personnel' ? (
             <PersonnelTab
               t={t}
               locale={locale}
@@ -296,7 +436,8 @@ export function App() {
             />
               ) : null}
 
-              <EmployeeCreateModal
+              {isOwner ? (
+                <EmployeeCreateModal
             t={t}
             roles={app.roles}
             departments={app.departments}
@@ -318,9 +459,10 @@ export function App() {
             setEmployeeGrade={app.setEmployeeGrade}
             setEmployeeStatus={app.setEmployeeStatus}
             setEmployeeSalary={app.setEmployeeSalary}
-              />
+                />
+              ) : null}
 
-              {app.activeTab === 'roles' ? (
+              {isOwner && app.activeTab === 'roles' ? (
             <RolesTab
               t={t}
               roles={app.roles}
@@ -407,14 +549,14 @@ export function App() {
             />
               ) : null}
 
-              {app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
+              {isOwner && app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
 
               {app.activeTab === 'timeline' ? (
             <TimelineTab
               t={t}
               locale={locale}
               months={MONTHS_BY_LANG[lang]}
-              canManageTimeline={app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM'}
+              canManageTimeline={canManageTimeline}
               selectedYear={app.selectedYear}
               assignments={app.assignments}
               vacations={app.vacations}
@@ -447,7 +589,8 @@ export function App() {
             />
               ) : null}
 
-              <ProjectModal
+              {canManageTimeline ? (
+                <ProjectModal
             t={t}
             isOpen={app.isProjectModalOpen}
             projectCode={app.projectCode}
@@ -463,9 +606,11 @@ export function App() {
             setProjectStartDate={app.setProjectStartDate}
             setProjectEndDate={app.setProjectEndDate}
             setProjectTeamTemplateId={app.setProjectTeamTemplateId}
-              />
+                />
+              ) : null}
 
-              <ProjectDatesModal
+              {canManageTimeline ? (
+                <ProjectDatesModal
             t={t}
             isOpen={app.isProjectDatesModalOpen}
             startDate={app.editProjectStartDate}
@@ -474,9 +619,11 @@ export function App() {
             onSubmit={app.handleUpdateProjectDates}
             setStartDate={app.setEditProjectStartDate}
             setEndDate={app.setEditProjectEndDate}
-              />
+                />
+              ) : null}
 
-              <AssignmentModal
+              {canManageTimeline ? (
+                <AssignmentModal
             t={t}
             isOpen={app.isAssignmentModalOpen}
             projects={app.projects}
@@ -493,9 +640,11 @@ export function App() {
             setAssignmentStartDate={app.setAssignmentStartDate}
             setAssignmentEndDate={app.setAssignmentEndDate}
             setAssignmentPercent={app.setAssignmentPercent}
-              />
+                />
+              ) : null}
 
-              <EmployeeModal
+              {isOwner ? (
+                <EmployeeModal
             t={t}
             locale={locale}
             roles={app.roles}
@@ -519,22 +668,76 @@ export function App() {
             onCreateVacation={app.handleCreateVacationFromEmployeeModal}
             onUpdateVacation={app.handleUpdateVacationFromEmployeeModal}
             onDeleteVacation={app.handleDeleteVacationFromEmployeeModal}
-              />
+                />
+              ) : null}
 
-              <EmployeeImportModal
+              {isOwner ? (
+                <EmployeeImportModal
             t={t}
             isOpen={app.isEmployeeImportModalOpen}
             csv={app.employeeCsv}
             onClose={() => app.setIsEmployeeImportModalOpen(false)}
             onSubmit={app.handleImportEmployeesCsv}
             setCsv={app.setEmployeeCsv}
-              />
+                />
+              ) : null}
             </>
-          )}
+          ) : null}
 
-          <ToastStack toasts={app.toasts} />
+          {isAccountModalOpen ? (
+            <div className="modal-backdrop">
+              <article className="modal-card auth-modal">
+                <div className="section-header">
+                  <h3>{t.account}</h3>
+                  <div className="lang-toggle">
+                    <button type="button" className="ghost-btn" onClick={() => setIsAccountModalOpen(false)}>
+                      {t.close}
+                    </button>
+                    <button type="button" className="ghost-btn" onClick={() => void handleLogoutClick()}>
+                      {t.logout}
+                    </button>
+                  </div>
+                </div>
+                <div className="timeline-form">
+                  <label>
+                    {t.email}
+                    <input value={app.currentUserEmail} readOnly />
+                  </label>
+                  <label>
+                    {t.workspace}
+                    <input value={app.currentWorkspaceId || '-'} readOnly />
+                  </label>
+                  <form onSubmit={handleUpdateProfileSubmit} className="timeline-form" style={{ padding: 0 }}>
+                    <label>
+                      {t.fullName}
+                      <input value={accountFullNameDraft} onChange={(e) => setAccountFullNameDraft(e.target.value)} />
+                    </label>
+                    <button type="submit">{t.saveProfile}</button>
+                  </form>
+                  <form onSubmit={handleChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
+                    <label>
+                      {t.currentPassword}
+                      <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                    </label>
+                    <label>
+                      {t.newPassword}
+                      <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                    </label>
+                    <label>
+                      {t.confirmPassword}
+                      <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} />
+                    </label>
+                    <button type="submit">{t.changePassword}</button>
+                  </form>
+                </div>
+              </article>
+            </div>
+          ) : null}
+
         </>
       )}
+
+      <ToastStack toasts={app.toasts} />
     </main>
   );
 }

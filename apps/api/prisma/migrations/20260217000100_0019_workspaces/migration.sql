@@ -105,8 +105,8 @@ WHERE p."workspaceId" IS NULL;
 ALTER TABLE "Employee" ALTER COLUMN "workspaceId" SET NOT NULL;
 ALTER TABLE "Project" ALTER COLUMN "workspaceId" SET NOT NULL;
 
-ALTER TABLE "Employee" DROP CONSTRAINT "Employee_email_key";
-ALTER TABLE "Project" DROP CONSTRAINT "Project_code_key";
+DROP INDEX IF EXISTS "Employee_email_key";
+DROP INDEX IF EXISTS "Project_code_key";
 
 CREATE UNIQUE INDEX "Employee_workspaceId_email_key" ON "Employee"("workspaceId", "email");
 CREATE INDEX "Employee_workspaceId_idx" ON "Employee"("workspaceId");
