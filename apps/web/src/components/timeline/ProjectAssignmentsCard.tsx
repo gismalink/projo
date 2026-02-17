@@ -1,4 +1,4 @@
-import { MouseEvent as ReactMouseEvent, MutableRefObject, useMemo } from 'react';
+import { MouseEvent as ReactMouseEvent, MutableRefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDayItem, ProjectDetail } from '../../api/client';
 import { STANDARD_DAY_HOURS } from '../../hooks/app-helpers';
 import { Icon } from '../Icon';
@@ -40,6 +40,14 @@ type ProjectAssignmentsCardProps = {
   employeeRoleLabelById: Map<string, string>;
   employeeGradeColorByName: Map<string, string>;
   onDeleteAssignment: (projectId: string, assignmentId: string) => Promise<void>;
+  onUpdateAssignmentCurve: (
+    projectId: string,
+    assignmentId: string,
+    loadProfile: {
+      mode: 'curve';
+      points: Array<{ date: string; value: number }>;
+    },
+  ) => Promise<void>;
   assignmentDragState: AssignmentDragState | null;
   resolveAssignmentDragDates: (state: AssignmentDragState) => { nextStart: Date; nextEnd: Date };
   pendingAssignmentPreview: PendingAssignmentPreview | null;
@@ -68,6 +76,11 @@ type ProjectAssignmentsCardProps = {
   highlightedEmployeeId?: string;
 };
 
+type CurvePoint = {
+  xRatio: number;
+  value: number;
+};
+
 export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   const {
     t,
@@ -81,6 +94,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     employeeRoleLabelById,
     employeeGradeColorByName,
     onDeleteAssignment,
+    onUpdateAssignmentCurve,
     assignmentDragState,
     resolveAssignmentDragDates,
     pendingAssignmentPreview,
@@ -95,6 +109,17 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     isoToInputDate,
     highlightedEmployeeId,
   } = props;
+
+  const [curveDraftByAssignmentId, setCurveDraftByAssignmentId] = useState<Record<string, CurvePoint[]>>({});
+  const dragStateRef = useRef<{
+    projectId: string;
+    assignmentId: string;
+    pointIndex: number;
+    rect: DOMRect;
+    sourceStartIso: string;
+    sourceEndIso: string;
+  } | null>(null);
+  const isUnmountedRef = useRef(false);
 
   const sortedAssignments = useMemo(
     () =>
@@ -115,15 +140,101 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
 
   const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
+  const DEFAULT_CURVE_POINT_COUNT = 4;
+
+  const buildDefaultCurvePoints = (allocationPercent: number): CurvePoint[] => {
+    const clamped = clampPercent(Number(allocationPercent));
+    const step = 1 / (DEFAULT_CURVE_POINT_COUNT - 1);
+    return Array.from({ length: DEFAULT_CURVE_POINT_COUNT }, (_, index) => ({
+      xRatio: step * index,
+      value: clamped,
+    }));
+  };
+
+  const getSourceCurvePoints = (
+    assignment: ProjectDetail['assignments'][number],
+    sourceStartIso: string,
+    sourceEndIso: string,
+  ): CurvePoint[] => {
+    const sourceStartMs = toUtcDayTimestamp(sourceStartIso);
+    const sourceEndMs = toUtcDayTimestamp(sourceEndIso);
+    const sourceSpanMs = sourceEndMs - sourceStartMs;
+
+    const fromProfile =
+      assignment.loadProfile?.mode === 'curve' && Array.isArray(assignment.loadProfile.points)
+        ? assignment.loadProfile.points
+            .map((point) => ({
+              xRatio: sourceSpanMs <= 0 ? 0 : (toUtcDayTimestamp(point.date) - sourceStartMs) / sourceSpanMs,
+              value: clampPercent(Number(point.value)),
+            }))
+            .filter((point) => Number.isFinite(point.xRatio) && Number.isFinite(point.value))
+        : [];
+
+    if (fromProfile.length >= 2) {
+      return fromProfile.map((point) => ({
+        xRatio: Math.max(0, Math.min(1, point.xRatio)),
+        value: clampPercent(point.value),
+      }));
+    }
+
+    return buildDefaultCurvePoints(Number(assignment.allocationPercent));
+  };
+
+  const convertCurvePointsToLoadProfile = (
+    points: CurvePoint[],
+    sourceStartIso: string,
+    sourceEndIso: string,
+  ): { mode: 'curve'; points: Array<{ date: string; value: number }> } => {
+    const sourceStartMs = toUtcDayTimestamp(sourceStartIso);
+    const sourceEndMs = toUtcDayTimestamp(sourceEndIso);
+    const spanMs = Math.max(1, sourceEndMs - sourceStartMs);
+    const maxDayShift = Math.floor(spanMs / (24 * 60 * 60 * 1000));
+
+    const withDates = points.map((point, index) => {
+      if (index === 0) {
+        return { date: new Date(sourceStartMs).toISOString(), value: clampPercent(point.value), index };
+      }
+      if (index === points.length - 1) {
+        return { date: new Date(sourceEndMs).toISOString(), value: clampPercent(point.value), index };
+      }
+
+      const dayOffset = Math.max(1, Math.min(maxDayShift - 1, Math.round(point.xRatio * maxDayShift)));
+      return {
+        date: new Date(sourceStartMs + dayOffset * 24 * 60 * 60 * 1000).toISOString(),
+        value: clampPercent(point.value),
+        index,
+      };
+    });
+
+    for (let index = 1; index < withDates.length - 1; index += 1) {
+      const previousMs = new Date(withDates[index - 1].date).getTime();
+      const currentMs = new Date(withDates[index].date).getTime();
+      if (currentMs <= previousMs) {
+        withDates[index].date = new Date(previousMs + 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+    for (let index = withDates.length - 2; index >= 1; index -= 1) {
+      const nextMs = new Date(withDates[index + 1].date).getTime();
+      const currentMs = new Date(withDates[index].date).getTime();
+      if (currentMs >= nextMs) {
+        withDates[index].date = new Date(nextMs - 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+
+    return {
+      mode: 'curve',
+      points: withDates.map((point) => ({ date: point.date, value: Number(point.value.toFixed(2)) })),
+    };
+  };
+
   const buildAssignmentCurvePath = (params: {
     sourceStartIso: string;
     sourceEndIso: string;
     targetStartIso: string;
     targetEndIso: string;
-    allocationPercent: number;
-    loadProfile: ProjectDetail['assignments'][number]['loadProfile'];
+    points: CurvePoint[];
   }) => {
-    const { sourceStartIso, sourceEndIso, targetStartIso, targetEndIso, allocationPercent, loadProfile } = params;
+    const { sourceStartIso, sourceEndIso, targetStartIso, targetEndIso, points } = params;
 
     const sourceStartMs = toUtcDayTimestamp(sourceStartIso);
     const sourceEndMs = toUtcDayTimestamp(sourceEndIso);
@@ -133,25 +244,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     const targetEndMs = toUtcDayTimestamp(targetEndIso);
     const targetSpanMs = Math.max(1, targetEndMs - targetStartMs);
 
-    const sourceCurvePoints =
-      loadProfile?.mode === 'curve' && Array.isArray(loadProfile.points) && loadProfile.points.length >= 2
-        ? loadProfile.points
-            .map((point) => ({
-              xRatio: sourceSpanMs <= 0 ? 0 : (toUtcDayTimestamp(point.date) - sourceStartMs) / sourceSpanMs,
-              value: clampPercent(Number(point.value)),
-            }))
-            .filter((point) => Number.isFinite(point.xRatio) && Number.isFinite(point.value))
-        : null;
-
-    const normalizedPoints =
-      sourceCurvePoints && sourceCurvePoints.length >= 2
-        ? sourceCurvePoints
-        : [
-            { xRatio: 0, value: clampPercent(allocationPercent) },
-            { xRatio: 1, value: clampPercent(allocationPercent) },
-          ];
-
-    const points = normalizedPoints
+    const pathPoints = points
       .map((point) => {
         const ratio = Math.max(0, Math.min(1, point.xRatio));
         const mappedMs = targetStartMs + ratio * targetSpanMs;
@@ -161,8 +254,64 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       })
       .join(' ');
 
-    return points;
+    return pathPoints;
   };
+
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const drag = dragStateRef.current;
+      if (!drag) return;
+      const ratioX = (event.clientX - drag.rect.left) / Math.max(1, drag.rect.width);
+      const ratioY = (event.clientY - drag.rect.top) / Math.max(1, drag.rect.height);
+      const nextValue = clampPercent((1 - ratioY) * 100);
+
+      setCurveDraftByAssignmentId((prev) => {
+        const current = prev[drag.assignmentId];
+        if (!current || !current[drag.pointIndex]) return prev;
+        const next = [...current];
+        const nextXRatio =
+          drag.pointIndex === 0
+            ? 0
+            : drag.pointIndex === current.length - 1
+              ? 1
+              : Math.max(
+                  next[drag.pointIndex - 1].xRatio + 0.01,
+                  Math.min(next[drag.pointIndex + 1].xRatio - 0.01, Math.max(0, Math.min(1, ratioX))),
+                );
+        next[drag.pointIndex] = {
+          xRatio: nextXRatio,
+          value: nextValue,
+        };
+        return {
+          ...prev,
+          [drag.assignmentId]: next,
+        };
+      });
+    };
+
+    const handleMouseUp = () => {
+      const drag = dragStateRef.current;
+      if (!drag) return;
+      const draft = curveDraftByAssignmentId[drag.assignmentId];
+      dragStateRef.current = null;
+      if (!draft || draft.length < 2 || isUnmountedRef.current) return;
+      const payload = convertCurvePointsToLoadProfile(draft, drag.sourceStartIso, drag.sourceEndIso);
+      void onUpdateAssignmentCurve(drag.projectId, drag.assignmentId, payload);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [curveDraftByAssignmentId, onUpdateAssignmentCurve]);
 
   const actualHoursByAssignmentId = useMemo(() => {
     const result = new Map<string, { actualHours: number; lostHours: number }>();
@@ -333,13 +482,15 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     : pendingPreview
                       ? pendingPreview.nextEnd.toISOString()
                       : assignment.assignmentEndDate;
+                  const sourceCurvePoints =
+                    curveDraftByAssignmentId[assignment.id] ??
+                    getSourceCurvePoints(assignment, assignment.assignmentStartDate, assignment.assignmentEndDate);
                   const curvePathPoints = buildAssignmentCurvePath({
                     sourceStartIso: assignment.assignmentStartDate,
                     sourceEndIso: assignment.assignmentEndDate,
                     targetStartIso: startIso,
                     targetEndIso: endIso,
-                    allocationPercent: Number(assignment.allocationPercent),
-                    loadProfile: assignment.loadProfile,
+                    points: sourceCurvePoints,
                   });
                   const assignmentTooltipMode =
                     assignmentDragState && assignmentDragState.assignmentId === assignment.id
@@ -385,6 +536,34 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     >
                       <svg className="assignment-curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
                         <polyline className="assignment-curve-line" points={curvePathPoints} />
+                        {sourceCurvePoints.map((point, pointIndex) => (
+                          <circle
+                            key={`${assignment.id}-curve-point-${pointIndex}`}
+                            className="assignment-curve-point"
+                            cx={`${Math.max(0, Math.min(100, point.xRatio * 100))}%`}
+                            cy={`${100 - clampPercent(point.value)}%`}
+                            r="4"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              const rect = (event.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
+                              dragStateRef.current = {
+                                projectId: detail.id,
+                                assignmentId: assignment.id,
+                                pointIndex,
+                                rect,
+                                sourceStartIso: assignment.assignmentStartDate,
+                                sourceEndIso: assignment.assignmentEndDate,
+                              };
+                              if (!curveDraftByAssignmentId[assignment.id]) {
+                                setCurveDraftByAssignmentId((prev) => ({
+                                  ...prev,
+                                  [assignment.id]: sourceCurvePoints,
+                                }));
+                              }
+                            }}
+                          />
+                        ))}
                       </svg>
                       <span
                         className={

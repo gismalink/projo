@@ -120,11 +120,38 @@ export function createAssignmentsHandlers({
     });
   }
 
+  async function handleUpdateAssignmentCurve(
+    projectId: string,
+    assignmentId: string,
+    loadProfile: {
+      mode: 'curve';
+      points: Array<{ date: string; value: number }>;
+    },
+  ) {
+    if (!state.token) return;
+    await runWithErrorToast({
+      operation: async () => {
+        await api.updateAssignment(
+          assignmentId,
+          {
+            loadProfile,
+          },
+          state.token as string,
+        );
+        await refreshData(state.token as string, state.selectedYear, projectId);
+      },
+      fallbackMessage: t.uiUpdateAssignmentFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
   return {
     handleEditorAssignmentChange,
     handleCreateAssignment,
     handleUpdateAssignment,
     handleDeleteAssignment,
     handleAdjustAssignmentPlan,
+    handleUpdateAssignmentCurve,
   };
 }

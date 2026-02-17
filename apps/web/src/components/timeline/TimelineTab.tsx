@@ -55,6 +55,14 @@ type TimelineTabProps = {
     nextStartIso: string,
     nextEndIso: string,
   ) => Promise<void>;
+  onUpdateAssignmentCurve: (
+    projectId: string,
+    assignmentId: string,
+    loadProfile: {
+      mode: 'curve';
+      points: Array<{ date: string; value: number }>;
+    },
+  ) => Promise<void>;
   onMoveProject: (projectId: string, direction: 'up' | 'down') => void;
   onAdjustProjectPlan: (
     projectId: string,
@@ -92,6 +100,7 @@ export function TimelineTab(props: TimelineTabProps) {
     onYearChange,
     onDeleteAssignment,
     onAdjustAssignmentPlan,
+    onUpdateAssignmentCurve,
     onMoveProject,
     onAdjustProjectPlan,
     timelineStyle,
@@ -1063,6 +1072,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           employeeRoleLabelById={employeeRoleLabelById}
                           employeeGradeColorByName={gradeColorByName}
                           onDeleteAssignment={onDeleteAssignment}
+                          onUpdateAssignmentCurve={onUpdateAssignmentCurve}
                           assignmentDragState={assignmentDragState}
                           resolveAssignmentDragDates={resolveAssignmentDragDates}
                           pendingAssignmentPreview={pendingAssignmentPreview}

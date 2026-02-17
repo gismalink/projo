@@ -842,6 +842,7 @@ export function App() {
               onYearChange={app.handleYearChange}
               onDeleteAssignment={app.handleDeleteAssignment}
               onAdjustAssignmentPlan={app.handleAdjustAssignmentPlan}
+              onUpdateAssignmentCurve={app.handleUpdateAssignmentCurve}
               onMoveProject={app.handleMoveProject}
               onAdjustProjectPlan={app.handleAdjustProjectPlan}
               timelineStyle={timelineStyle}
