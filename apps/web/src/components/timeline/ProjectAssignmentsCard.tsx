@@ -108,6 +108,62 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     [detail.assignments],
   );
 
+  const toUtcDayTimestamp = (value: string) => {
+    const parsed = new Date(value);
+    return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+  };
+
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+
+  const buildAssignmentCurvePath = (params: {
+    sourceStartIso: string;
+    sourceEndIso: string;
+    targetStartIso: string;
+    targetEndIso: string;
+    allocationPercent: number;
+    loadProfile: ProjectDetail['assignments'][number]['loadProfile'];
+  }) => {
+    const { sourceStartIso, sourceEndIso, targetStartIso, targetEndIso, allocationPercent, loadProfile } = params;
+
+    const sourceStartMs = toUtcDayTimestamp(sourceStartIso);
+    const sourceEndMs = toUtcDayTimestamp(sourceEndIso);
+    const sourceSpanMs = sourceEndMs - sourceStartMs;
+
+    const targetStartMs = toUtcDayTimestamp(targetStartIso);
+    const targetEndMs = toUtcDayTimestamp(targetEndIso);
+    const targetSpanMs = Math.max(1, targetEndMs - targetStartMs);
+
+    const sourceCurvePoints =
+      loadProfile?.mode === 'curve' && Array.isArray(loadProfile.points) && loadProfile.points.length >= 2
+        ? loadProfile.points
+            .map((point) => ({
+              xRatio: sourceSpanMs <= 0 ? 0 : (toUtcDayTimestamp(point.date) - sourceStartMs) / sourceSpanMs,
+              value: clampPercent(Number(point.value)),
+            }))
+            .filter((point) => Number.isFinite(point.xRatio) && Number.isFinite(point.value))
+        : null;
+
+    const normalizedPoints =
+      sourceCurvePoints && sourceCurvePoints.length >= 2
+        ? sourceCurvePoints
+        : [
+            { xRatio: 0, value: clampPercent(allocationPercent) },
+            { xRatio: 1, value: clampPercent(allocationPercent) },
+          ];
+
+    const points = normalizedPoints
+      .map((point) => {
+        const ratio = Math.max(0, Math.min(1, point.xRatio));
+        const mappedMs = targetStartMs + ratio * targetSpanMs;
+        const x = ((mappedMs - targetStartMs) / targetSpanMs) * 100;
+        const y = 100 - clampPercent(point.value);
+        return `${x.toFixed(3)},${y.toFixed(3)}`;
+      })
+      .join(' ');
+
+    return points;
+  };
+
   const actualHoursByAssignmentId = useMemo(() => {
     const result = new Map<string, { actualHours: number; lostHours: number }>();
 
@@ -277,6 +333,14 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                     : pendingPreview
                       ? pendingPreview.nextEnd.toISOString()
                       : assignment.assignmentEndDate;
+                  const curvePathPoints = buildAssignmentCurvePath({
+                    sourceStartIso: assignment.assignmentStartDate,
+                    sourceEndIso: assignment.assignmentEndDate,
+                    targetStartIso: startIso,
+                    targetEndIso: endIso,
+                    allocationPercent: Number(assignment.allocationPercent),
+                    loadProfile: assignment.loadProfile,
+                  });
                   const assignmentTooltipMode =
                     assignmentDragState && assignmentDragState.assignmentId === assignment.id
                       ? assignmentDragState.mode
@@ -319,6 +383,9 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                       onMouseMove={(event) => handleAssignmentBarHover(event, detail.id, assignment.id)}
                       onMouseLeave={() => clearAssignmentBarHover(detail.id, assignment.id)}
                     >
+                      <svg className="assignment-curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+                        <polyline className="assignment-curve-line" points={curvePathPoints} />
+                      </svg>
                       <span
                         className={
                           displayAssignmentTooltipMode === 'resize-start'
