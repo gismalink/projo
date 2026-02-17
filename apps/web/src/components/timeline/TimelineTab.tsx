@@ -563,6 +563,15 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignments]);
 
+  const visibleTimelineRows = useMemo(() => {
+    if (!selectedBenchEmployeeId) return sortedTimeline;
+
+    return sortedTimeline.filter((row) => {
+      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+      return projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId);
+    });
+  }, [assignmentsByProjectId, selectedBenchEmployeeId, sortedTimeline]);
+
   const projectFactByProjectId = useMemo(() => {
     const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
 
@@ -947,10 +956,10 @@ export function TimelineTab(props: TimelineTabProps) {
             />
 
             <div className="timeline-rows">
-              {sortedTimeline.length === 0 ? (
+              {visibleTimelineRows.length === 0 ? (
                 <p className="muted">{t.noProjectsForYear}</p>
               ) : (
-                sortedTimeline.map((row, rowIndex) => {
+                visibleTimelineRows.map((row, rowIndex) => {
                   const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
                   const selectedEmployeeAssigned = selectedBenchEmployeeId
                     ? projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId)
@@ -1009,7 +1018,7 @@ export function TimelineTab(props: TimelineTabProps) {
                       t={t}
                       row={row}
                       rowIndex={rowIndex}
-                      rowCount={sortedTimeline.length}
+                      rowCount={visibleTimelineRows.length}
                       isExpanded={isExpanded}
                       detail={detail}
                       isDimmed={isRowDimmed}
@@ -1083,6 +1092,7 @@ export function TimelineTab(props: TimelineTabProps) {
             onToggleEmployeeFilter={(employeeId) =>
               setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
             }
+            onClearEmployeeFilter={() => setSelectedBenchEmployeeId('')}
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {
               setDraggedBenchEmployeeId(null);

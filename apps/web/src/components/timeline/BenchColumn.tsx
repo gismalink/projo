@@ -21,6 +21,7 @@ type BenchColumnProps = {
   canDragMembers: boolean;
   selectedEmployeeId: string;
   onToggleEmployeeFilter: (employeeId: string) => void;
+  onClearEmployeeFilter: () => void;
   onMemberDragStart: (employeeId: string) => void;
   onMemberDragEnd: () => void;
 };
@@ -32,6 +33,7 @@ export function BenchColumn(props: BenchColumnProps) {
     canDragMembers,
     selectedEmployeeId,
     onToggleEmployeeFilter,
+    onClearEmployeeFilter,
     onMemberDragStart,
     onMemberDragEnd,
   } = props;
@@ -52,6 +54,17 @@ export function BenchColumn(props: BenchColumnProps) {
     <aside className="bench-column">
       <div className="bench-header-row">
         <div className="bench-header">{t.bench}</div>
+        {selectedEmployeeId ? (
+          <button
+            type="button"
+            className="bench-filter-clear-btn"
+            title={t.clearFilter}
+            aria-label={t.clearFilter}
+            onClick={onClearEmployeeFilter}
+          >
+            ×
+          </button>
+        ) : null}
       </div>
       {benchGroups.length === 0 ? (
         <p className="muted">—</p>
