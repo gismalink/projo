@@ -9,6 +9,7 @@ import { EmployeeImportModal } from '../components/modals/EmployeeImportModal';
 import { EmployeeModal } from '../components/modals/EmployeeModal';
 import { ProjectDatesModal } from '../components/modals/ProjectDatesModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { ProjectSettingsModal } from '../components/modals/ProjectSettingsModal';
 import { Icon } from '../components/Icon';
 import { InstructionTab } from '../components/InstructionTab';
 import { PersonnelTab } from '../components/personnel/PersonnelTab';
@@ -536,111 +537,29 @@ export function App() {
                 <></>
               )}
 
-          {isProjectSettingsOpen ? (
-            <div className="modal-backdrop">
-              <article className="modal-card auth-modal project-settings-modal">
-                <div className="section-header" style={{ marginBottom: 12 }}>
-                  <h3>{t.projectSettings}</h3>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={closeProjectSettings}
-                  >
-                    {t.close}
-                  </button>
-                </div>
-                <div className="project-settings-body">
-                  {isOwner ? (
-                    <form onSubmit={handleUpdateProjectNameSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                      <label>
-                        <span className="field-label required">{t.projectName}</span>
-                      </label>
-                      <div className="project-settings-inline project-settings-inline-name">
-                        <input value={projectSettingsNameDraft} placeholder={t.projectName} required onChange={(e) => setProjectSettingsNameDraft(e.target.value)} />
-                        <button type="submit">{t.save}</button>
-                      </div>
-                    </form>
-                  ) : null}
-
-                  <h4>{t.participants}</h4>
-                  <label>
-                    <span className="field-label optional">{t.searchParticipants}</span>
-                    <input value={projectMemberSearch} placeholder={t.searchParticipants} onChange={(e) => setProjectMemberSearch(e.target.value)} />
-                  </label>
-                  <ul>
-                    {filteredProjectMembers.map((member) => (
-                      <li key={member.userId} className="project-member-item">
-                        <div className="project-member-meta">
-                          <strong>{member.fullName}</strong>
-                          <div>{member.email}</div>
-                        </div>
-                        {member.isOwner ? (
-                          <span>{t.owner}</span>
-                        ) : canInviteParticipants ? (
-                          <div className="project-member-actions">
-                            <select
-                              value={member.role === 'PM' ? 'editor' : 'viewer'}
-                              onChange={(e) => void handleUpdateMemberPermission(member.userId, e.target.value as 'viewer' | 'editor')}
-                              aria-label={t.permission}
-                            >
-                              <option value="viewer">{t.permissionViewer}</option>
-                              <option value="editor">{t.permissionEditor}</option>
-                            </select>
-                            <button
-                              type="button"
-                              className="icon-btn"
-                              onClick={() => void handleRemoveMember(member.userId)}
-                              aria-label={t.remove}
-                              data-tooltip={t.remove}
-                            >
-                              <Icon name="x" />
-                            </button>
-                          </div>
-                        ) : (
-                          <span>{member.role}</span>
-                        )}
-                      </li>
-                    ))}
-                    {filteredProjectMembers.length === 0 ? <li>{t.noParticipantsFound}</li> : null}
-                  </ul>
-
-                  {canInviteParticipants ? (
-                    <>
-                      <form onSubmit={handleInviteSubmit} className="project-settings-form" style={{ padding: 0 }}>
-                        <label>
-                          <span className="field-label required">{t.inviteByEmail}</span>
-                        </label>
-                        <div className="project-settings-inline project-settings-inline-invite">
-                          <input
-                            type="email"
-                            inputMode="email"
-                            autoComplete="email"
-                            placeholder="name@example.com"
-                            value={inviteEmail}
-                            required
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                          />
-                          <select value={invitePermission} onChange={(e) => setInvitePermission(e.target.value as 'viewer' | 'editor')}>
-                            <option value="viewer">{t.permissionViewer}</option>
-                            <option value="editor">{t.permissionEditor}</option>
-                          </select>
-                          <button type="submit">{t.invite}</button>
-                        </div>
-                      </form>
-
-                      <form onSubmit={handleDeleteProjectSubmit} className="project-settings-form project-delete-form" style={{ padding: 0 }}>
-                        <label>
-                          <span className="field-label required">{t.deleteConfirmLabel}</span>
-                          <input value={deleteProjectConfirmText} placeholder="delete" required onChange={(e) => setDeleteProjectConfirmText(e.target.value)} />
-                        </label>
-                        <button type="submit" className="danger-btn">{t.deleteProject}</button>
-                      </form>
-                    </>
-                  ) : null}
-                </div>
-              </article>
-            </div>
-          ) : null}
+          <ProjectSettingsModal
+            isOpen={isProjectSettingsOpen}
+            t={t}
+            isOwner={isOwner}
+            canInviteParticipants={canInviteParticipants}
+            projectSettingsNameDraft={projectSettingsNameDraft}
+            setProjectSettingsNameDraft={setProjectSettingsNameDraft}
+            projectMemberSearch={projectMemberSearch}
+            setProjectMemberSearch={setProjectMemberSearch}
+            filteredProjectMembers={filteredProjectMembers}
+            inviteEmail={inviteEmail}
+            setInviteEmail={setInviteEmail}
+            invitePermission={invitePermission}
+            setInvitePermission={setInvitePermission}
+            deleteProjectConfirmText={deleteProjectConfirmText}
+            setDeleteProjectConfirmText={setDeleteProjectConfirmText}
+            onClose={closeProjectSettings}
+            onUpdateProjectNameSubmit={handleUpdateProjectNameSubmit}
+            onUpdateMemberPermission={handleUpdateMemberPermission}
+            onRemoveMember={handleRemoveMember}
+            onInviteSubmit={handleInviteSubmit}
+            onDeleteProjectSubmit={handleDeleteProjectSubmit}
+          />
 
           {!isProjectHomeOpen ? (
             <>
