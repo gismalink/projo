@@ -64,7 +64,7 @@
    - [x] create/update/delete assignment,
    - [x] чтение project details для timeline.
 - [ ] Добавить/уточнить валидации:
-   - [ ] запрет assignment вне диапазона проекта,
+   - [x] запрет assignment вне диапазона проекта,
    - [x] запрет assignment для сотрудника вне member-пула (или авто-добавление по зафиксированному правилу),
    - [x] запрет конфликтных дублей,
    - [ ] корректная обработка пересечений и граничных дат.
@@ -73,9 +73,8 @@
 - [ ] Проверить, что `ProjectDetail` всегда возвращает полный набор полей, нужных UI (включая role/grade/status, если используются в timeline).
 
   Текущее состояние после audit:
-  - assignment CRUD валидирует базовый диапазон дат (`start <= end`) и уникальность пары `projectId + employeeId`;
+   - assignment CRUD валидирует базовый диапазон дат (`start <= end`), уникальность пары `projectId + employeeId` и границы дат проекта;
   - assignment CRUD автоматически восстанавливает membership (`ProjectMember`) при create/update;
-  - в API пока не реализована отдельная валидация `assignment` в пределах дат проекта;
   - в `ProjectDetail` уже есть `role` и `grade`, поле `status` для assignment-employee в response сейчас не отдается.
 
 ##### 3) База данных и миграции
