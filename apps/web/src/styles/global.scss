@@ -237,7 +237,7 @@ button[data-tooltip]:focus-visible::after,
 }
 
 
-.roles-list,
+.instruction-list,
 .project-settings-body ul {
   list-style: none;
   margin: 0;
@@ -247,7 +247,7 @@ button[data-tooltip]:focus-visible::after,
   gap: 0.6rem;
 }
 
-.roles-list > li:not(.role-row),
+.instruction-list > li,
 .project-settings-body ul > li {
   display: flex;
   justify-content: space-between;
@@ -255,20 +255,20 @@ button[data-tooltip]:focus-visible::after,
   border-bottom: 1px solid var(--ios-border);
 }
 
-.roles-list > li:not(.role-row) span,
+.instruction-list > li span,
 .project-settings-body ul > li span {
   font-size: 0.9rem;
   color: var(--ios-text-secondary);
 }
 
-.roles-list > li:not(.role-row) div,
+.instruction-list > li div,
 .project-settings-body ul > li div {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
 }
 
-.roles-list > li:not(.role-row):last-child,
+.instruction-list > li:last-child,
 .project-settings-body ul > li:last-child {
   border-bottom: 0;
   padding-bottom: 0;

@@ -11,7 +11,7 @@ export function InstructionTab(props: InstructionTabProps) {
         <div className="section-header">
           <h2>{t.instructionTitle}</h2>
         </div>
-        <ul className="roles-list">
+        <ul className="instruction-list">
           <li>{t.instructionStep1}</li>
           <li>{t.instructionStep2}</li>
           <li>{t.instructionStep3}</li>
