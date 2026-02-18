@@ -24,7 +24,7 @@
    - [x] добавить rate-limit (`@nestjs/throttler`) для auth/public endpoints,
    - [x] усилить лимиты для `/auth/login`.
 4. [ ] Встроить security-gate в CI:
-   - [ ] отдельный job `npm audit` с fail threshold,
+   - [x] отдельный job `npm audit` с fail threshold,
    - [x] policy по регулярному обновлению уязвимых зависимостей.
 
 ### P1 — Модель окружений и релизный контур
