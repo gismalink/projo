@@ -1,4 +1,6 @@
 @use './buttons' as button;
+@use './responsive' as responsive;
+@use './variables' as vars;
 
 .timeline-form {
   display: grid;
@@ -17,6 +19,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.62rem;
+
+  @include responsive.down(vars.$bp-md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include responsive.down(vars.$bp-sm) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .settings-column {
@@ -158,10 +168,18 @@
 
 .project-settings-inline-name {
   grid-template-columns: minmax(0, 1fr) auto;
+
+  @include responsive.down(vars.$bp-sm) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .project-settings-inline-invite {
   grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) auto;
+
+  @include responsive.down(vars.$bp-sm) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .project-member-item {
@@ -169,6 +187,10 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.48rem;
+
+  @include responsive.down(vars.$bp-sm) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .project-member-meta {
@@ -182,6 +204,10 @@
 
 .project-member-item .project-member-actions {
   flex-wrap: nowrap;
+
+  @include responsive.down(vars.$bp-sm) {
+    justify-content: flex-start;
+  }
 }
 
 .auth-tabs {
@@ -193,6 +219,10 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
+
+  @include responsive.down(vars.$bp-md) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .vacation-editor-row {
@@ -228,30 +258,4 @@
   height: 32px;
   min-width: 32px;
   min-height: 32px;
-}
-
-@media (max-width: 900px) {
-  .settings-columns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .employee-meta-compact {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 680px) {
-  .settings-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .project-settings-inline-name,
-  .project-settings-inline-invite,
-  .project-member-item {
-    grid-template-columns: 1fr;
-  }
-
-  .project-member-item .project-member-actions {
-    justify-content: flex-start;
-  }
 }

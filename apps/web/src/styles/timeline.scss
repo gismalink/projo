@@ -1,4 +1,6 @@
 @use './buttons' as button;
+@use './responsive' as responsive;
+@use './variables' as vars;
 
 .timeline-layout {
   display: grid;
@@ -242,6 +244,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 250px;
   gap: 1.1rem;
+
+  @include responsive.down(vars.$bp-md) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .timeline-main {
@@ -276,6 +282,11 @@
   max-height: 72vh;
   overflow: auto;
   margin-left: 0.4rem;
+
+  @include responsive.down(vars.$bp-md) {
+    max-height: none;
+    margin-left: 0;
+  }
 }
 
 .bench-header {
@@ -322,6 +333,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.2rem;
+
+  @include responsive.down(vars.$bp-md) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .bench-member {
@@ -450,6 +465,11 @@
   align-items: center;
   gap: 0.75rem;
   font-size: 0.9rem;
+
+  @include responsive.down(vars.$bp-md) {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
 }
 
 .timeline-meta-main {
@@ -616,12 +636,22 @@
   box-shadow: var(--ios-shadow-soft);
   padding: 0.4rem;
   z-index: 10;
+
+  @include responsive.down(vars.$bp-md) {
+    right: 0;
+    min-width: 0;
+    width: min(100vw - 2rem, 520px);
+  }
 }
 
 .project-edit-row {
   display: grid;
   grid-template-columns: 110px minmax(150px, 1fr) 128px 128px minmax(140px, 1fr);
   gap: 0.35rem;
+
+  @include responsive.down(vars.$bp-md) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .project-edit-row input,
@@ -641,6 +671,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  @include responsive.down(vars.$bp-md) {
+    white-space: normal;
+  }
 }
 
 .project-card {
@@ -1077,6 +1111,10 @@
   grid-template-columns: repeat(3, minmax(120px, 1fr)) auto;
   gap: 0.55rem;
   align-items: end;
+
+  @include responsive.down(vars.$bp-md) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .icon-save-btn {
@@ -1187,44 +1225,3 @@
   right: 0;
 }
 
-@media (max-width: 900px) {
-  .timeline-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .timeline-board {
-    grid-template-columns: 1fr;
-  }
-
-  .bench-column {
-    max-height: none;
-    margin-left: 0;
-  }
-
-  .bench-members {
-    grid-template-columns: 1fr;
-  }
-
-  .timeline-meta {
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-
-  .project-edit-popover {
-    right: 0;
-    min-width: 0;
-    width: min(100vw - 2rem, 520px);
-  }
-
-  .project-edit-row {
-    grid-template-columns: 1fr;
-  }
-
-  .timeline-submeta {
-    white-space: normal;
-  }
-
-  .assignment-edit-row {
-    grid-template-columns: 1fr;
-  }
-}
