@@ -143,6 +143,8 @@ export function TimelineTab(props: TimelineTabProps) {
   const [draggedBenchEmployeeId, setDraggedBenchEmployeeId] = useState<string | null>(null);
   const [hoverProjectDropId, setHoverProjectDropId] = useState<string | null>(null);
   const [selectedBenchEmployeeId, setSelectedBenchEmployeeId] = useState<string>('');
+  const [hoveredBenchEmployeeId, setHoveredBenchEmployeeId] = useState<string>('');
+  const highlightedBenchEmployeeId = hoveredBenchEmployeeId || selectedBenchEmployeeId;
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -899,6 +901,12 @@ export function TimelineTab(props: TimelineTabProps) {
   }, [employees, selectedBenchEmployeeId]);
 
   useEffect(() => {
+    if (!hoveredBenchEmployeeId) return;
+    if (employees.some((employee) => employee.id === hoveredBenchEmployeeId)) return;
+    setHoveredBenchEmployeeId('');
+  }, [employees, hoveredBenchEmployeeId]);
+
+  useEffect(() => {
     if (!assignmentDragState) return;
 
     const handleWindowMouseMove = (event: MouseEvent) => {
@@ -979,13 +987,13 @@ export function TimelineTab(props: TimelineTabProps) {
               ) : (
                 visibleTimelineRows.map((row, rowIndex) => {
                   const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
-                  const selectedEmployeeAssigned = selectedBenchEmployeeId
-                    ? projectAssignments.some((assignment) => assignment.employeeId === selectedBenchEmployeeId)
+                  const selectedEmployeeAssigned = highlightedBenchEmployeeId
+                    ? projectAssignments.some((assignment) => assignment.employeeId === highlightedBenchEmployeeId)
                     : true;
                   const draggedEmployeeAssigned = draggedBenchEmployeeId
                     ? projectAssignments.some((assignment) => assignment.employeeId === draggedBenchEmployeeId)
                     : false;
-                  const isDimmedBySelection = Boolean(selectedBenchEmployeeId) && !selectedEmployeeAssigned;
+                  const isDimmedBySelection = Boolean(highlightedBenchEmployeeId) && !selectedEmployeeAssigned;
                   const isDimmedByDrag = Boolean(draggedBenchEmployeeId) && draggedEmployeeAssigned;
                   const isRowDimmed = draggedBenchEmployeeId ? isDimmedByDrag : isDimmedBySelection;
 
@@ -1093,7 +1101,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           beginAssignmentDrag={beginAssignmentDrag}
                           vacationsByEmployeeId={vacationsByEmployeeId}
                           isoToInputDate={isoToInputDate}
-                          highlightedEmployeeId={selectedBenchEmployeeId || undefined}
+                          highlightedEmployeeId={highlightedBenchEmployeeId || undefined}
                         />
                       ) : null}
                     </ProjectTimelineItem>
@@ -1108,13 +1116,16 @@ export function TimelineTab(props: TimelineTabProps) {
             benchGroups={benchGroups}
             canDragMembers={canManageTimeline}
             selectedEmployeeId={selectedBenchEmployeeId}
+            hoveredEmployeeId={hoveredBenchEmployeeId}
             onToggleEmployeeFilter={(employeeId) =>
               setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
             }
+            onHoverEmployee={setHoveredBenchEmployeeId}
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {
               setDraggedBenchEmployeeId(null);
               setHoverProjectDropId(null);
+              setHoveredBenchEmployeeId('');
             }}
           />
         </div>

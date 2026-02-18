@@ -17,6 +17,17 @@ textarea {
   color: var(--ios-text);
 }
 
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2360666F' d='M1.41.59 6 5.17 10.59.59 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 12px 8px;
+}
+
 input:focus,
 select:focus,
 textarea:focus {
@@ -52,8 +63,8 @@ button {
   color: #fff;
   cursor: pointer;
   font-weight: 600;
-  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.22);
-  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: none;
+  transition: background-color 0.18s ease, transform 0.18s ease;
 }
 
 button:hover {

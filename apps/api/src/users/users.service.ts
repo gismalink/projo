@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppRole, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { getAverageAssignmentLoadPercent } from '../common/load-profile.utils';
 import { PrismaService } from '../common/prisma.service';
 
 type UserAuthContext = {
@@ -34,6 +35,12 @@ type CompanyMembershipItem = {
   companyId: string;
   companyName: string;
   ownerUserId: string;
+};
+
+type WorkspaceProjectStatsItem = {
+  workspaceId: string;
+  projectsCount: number;
+  totalAllocationPercent: number;
 };
 
 @Injectable()
@@ -329,6 +336,54 @@ export class UsersService {
     }
 
     return Array.from(unique.values());
+  }
+
+  async listWorkspaceProjectStats(workspaceIds: string[]): Promise<WorkspaceProjectStatsItem[]> {
+    if (workspaceIds.length === 0) return [];
+
+    const uniqueWorkspaceIds = Array.from(new Set(workspaceIds));
+    const projects = await this.prisma.project.findMany({
+      where: {
+        workspaceId: {
+          in: uniqueWorkspaceIds,
+        },
+      },
+      select: {
+        workspaceId: true,
+        assignments: {
+          select: {
+            allocationPercent: true,
+            loadProfile: true,
+            assignmentStartDate: true,
+            assignmentEndDate: true,
+          },
+        },
+      },
+    });
+
+    const statsByWorkspaceId = new Map<string, WorkspaceProjectStatsItem>();
+    for (const workspaceId of uniqueWorkspaceIds) {
+      statsByWorkspaceId.set(workspaceId, {
+        workspaceId,
+        projectsCount: 0,
+        totalAllocationPercent: 0,
+      });
+    }
+
+    for (const project of projects) {
+      const bucket = statsByWorkspaceId.get(project.workspaceId);
+      if (!bucket) continue;
+
+      bucket.projectsCount += 1;
+      bucket.totalAllocationPercent += project.assignments.reduce((sum, assignment) => {
+        return sum + getAverageAssignmentLoadPercent(assignment);
+      }, 0);
+    }
+
+    return Array.from(statsByWorkspaceId.values()).map((item) => ({
+      ...item,
+      totalAllocationPercent: Number(item.totalAllocationPercent.toFixed(1)),
+    }));
   }
 
   async listCompaniesForUser(userId: string): Promise<{ activeCompanyId: string; companies: CompanyMembershipItem[] }> {

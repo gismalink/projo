@@ -454,6 +454,28 @@
   border-color: rgba(10, 132, 255, 0.35);
 }
 
+.timeline-row-toggle-expand {
+  min-width: 20px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ios-text-secondary);
+}
+
+.timeline-row-toggle-expand:hover:not(:disabled) {
+  background: transparent;
+  color: var(--ios-text);
+}
+
+.timeline-row-toggle-expand.active {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ios-text);
+}
+
 .timeline-row-toggle:disabled {
   opacity: 0.45;
   cursor: default;

@@ -32,6 +32,8 @@ type ProjectAccessItem = {
   name: string;
   role: string;
   isOwner: boolean;
+  projectsCount: number;
+  totalAllocationPercent: number;
 };
 
 type ProjectsResponse = {
@@ -211,12 +213,18 @@ export class AuthService {
 
   async getMyProjects(userId: string, activeProjectId: string): Promise<ProjectsResponse> {
     const items = await this.usersService.listProjectMembershipsInActiveCompany(userId, activeProjectId);
+    const stats = await this.usersService.listWorkspaceProjectStats(items.map((item) => item.workspaceId));
+    const statsByWorkspaceId = new Map(
+      stats.map((item) => [item.workspaceId, { projectsCount: item.projectsCount, totalAllocationPercent: item.totalAllocationPercent }]),
+    );
 
     const projectItems = items.map((item) => ({
       id: item.workspaceId,
       name: item.workspaceName,
       role: item.role,
       isOwner: item.ownerUserId === userId,
+      projectsCount: statsByWorkspaceId.get(item.workspaceId)?.projectsCount ?? 0,
+      totalAllocationPercent: statsByWorkspaceId.get(item.workspaceId)?.totalAllocationPercent ?? 0,
     }));
 
     return {

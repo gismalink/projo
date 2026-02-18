@@ -103,6 +103,8 @@ export function App() {
   const currentCompanyName = currentCompany?.name || '-';
   const isCompanyOwner = Boolean(currentCompany?.isOwner);
   const canRenameCompany = Boolean(currentCompany?.isOwner);
+  const myCompanies = app.companies.filter((item) => item.isOwner);
+  const otherCompanies = app.companies.filter((item) => !item.isOwner);
 
   const currentProjectName =
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
@@ -389,6 +391,19 @@ export function App() {
     setIsProjectHomeOpen(true);
   };
 
+  const renderPlanStats = (projectsCount: number, totalAllocationPercent: number) => (
+    <div className="project-space-card-stats">
+      <span className="project-space-card-stat" data-tooltip={t.planProjectsStat}>
+        <Icon name="grid" size={12} />
+        <span>{projectsCount}</span>
+      </span>
+      <span className="project-space-card-stat" data-tooltip={t.planLoadStat}>
+        <Icon name="users" size={12} />
+        <span>{`${totalAllocationPercent.toFixed(1)}%`}</span>
+      </span>
+    </div>
+  );
+
   return (
     <main className="container">
       <div className="section-header">
@@ -439,11 +454,24 @@ export function App() {
                   value={app.activeCompanyId}
                   onChange={(event) => void handleSwitchCompany(event.target.value)}
                 >
-                  {app.companies.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
+                  {myCompanies.length > 0 ? (
+                    <optgroup label={t.myCompanies}>
+                      {myCompanies.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {otherCompanies.length > 0 ? (
+                    <optgroup label={t.otherCompanies}>
+                      {otherCompanies.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
                 </select>
                 {canRenameCompany ? (
                   <button
@@ -588,6 +616,7 @@ export function App() {
                               ) : null}
                             </div>
                           </div>
+                          {renderPlanStats(item.projectsCount, item.totalAllocationPercent)}
                           <span>{item.role}</span>
                         </div>
                       ))}
@@ -628,6 +657,7 @@ export function App() {
                                 </button>
                               ) : null}
                             </div>
+                            {renderPlanStats(item.projectsCount, item.totalAllocationPercent)}
                             <span>{item.role}</span>
                           </div>
                         ))}

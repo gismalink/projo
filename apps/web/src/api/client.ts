@@ -45,6 +45,8 @@ export type ProjectSpaceItem = {
   name: string;
   role: string;
   isOwner: boolean;
+  projectsCount: number;
+  totalAllocationPercent: number;
 };
 
 export type MyProjectsResponse = {

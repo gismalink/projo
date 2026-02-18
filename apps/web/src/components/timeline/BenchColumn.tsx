@@ -20,7 +20,9 @@ type BenchColumnProps = {
   benchGroups: BenchGroup[];
   canDragMembers: boolean;
   selectedEmployeeId: string;
+  hoveredEmployeeId: string;
   onToggleEmployeeFilter: (employeeId: string) => void;
+  onHoverEmployee: (employeeId: string) => void;
   onMemberDragStart: (employeeId: string) => void;
   onMemberDragEnd: () => void;
 };
@@ -31,7 +33,9 @@ export function BenchColumn(props: BenchColumnProps) {
     benchGroups,
     canDragMembers,
     selectedEmployeeId,
+    hoveredEmployeeId,
     onToggleEmployeeFilter,
+    onHoverEmployee,
     onMemberDragStart,
     onMemberDragEnd,
   } = props;
@@ -64,10 +68,12 @@ export function BenchColumn(props: BenchColumnProps) {
                 <button
                   type="button"
                   key={member.id}
-                  className={selectedEmployeeId === member.id ? 'bench-member active' : 'bench-member'}
+                  className={selectedEmployeeId === member.id || hoveredEmployeeId === member.id ? 'bench-member active' : 'bench-member'}
                   draggable={canDragMembers}
                   title={`${member.fullName}${member.grade ? ` · ${member.grade}` : ''} · ${member.roleName} · ${member.annualLoadPercent}%`}
                   onClick={() => onToggleEmployeeFilter(member.id)}
+                  onMouseEnter={() => onHoverEmployee(member.id)}
+                  onMouseLeave={() => onHoverEmployee('')}
                   onDragStart={() => {
                     if (!canDragMembers) return;
                     onMemberDragStart(member.id);

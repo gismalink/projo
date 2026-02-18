@@ -163,6 +163,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     return () => window.clearTimeout(timer);
   }, [detail?.teamTemplate?.id, draftCode, draftEndDate, draftName, draftStartDate, draftTeamTemplateId, isProjectEditOpen, onAutoSaveProjectMeta, row.code, row.endDate, row.id, row.name, row.startDate]);
 
+  const editProjectTooltip = `${t.editProjectMeta}: ${row.code}`;
+
   return (
     <div
       className={
@@ -208,7 +210,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 <TooltipAnchor text={isExpanded ? t.collapse : t.expand}>
                   <button
                     type="button"
-                    className={isExpanded ? 'timeline-row-toggle active' : 'timeline-row-toggle'}
+                    className={isExpanded ? 'timeline-row-toggle timeline-row-toggle-expand active' : 'timeline-row-toggle timeline-row-toggle-expand'}
                     onClick={(event) => onToggleProject(event, row.id)}
                     aria-label={isExpanded ? t.collapseProjectRow : t.expandProjectRow}
                   >
@@ -236,12 +238,12 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                 ) : null}
 
                 <div className="timeline-meta-actions" ref={editPopoverRef}>
-                  <TooltipAnchor text={t.editProjectDates}>
+                  <TooltipAnchor text={editProjectTooltip}>
                     <button
                       type="button"
                       className="timeline-meta-icon-btn"
                       onClick={() => setIsProjectEditOpen((prev) => !prev)}
-                      aria-label={t.editProjectDates}
+                      aria-label={editProjectTooltip}
                     >
                       <Icon name="edit" />
                     </button>
@@ -349,7 +351,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
             <span className="timeline-inline-tooltip-anchor project-fact-tooltip-anchor" style={projectFact.style}>
               <span className="project-fact-bar" style={{ left: '0', width: '100%' }} />
               <span className="timeline-inline-tooltip" role="tooltip">
-                {t.factLabel}: {formatTimelineDate(projectFact.startIso)} {t.fromTo} {formatTimelineDate(projectFact.endIso)}
+                {t.assignmentSpanLabel}: {formatTimelineDate(projectFact.startIso)} {t.fromTo} {formatTimelineDate(projectFact.endIso)}
               </span>
             </span>
           ) : null}

@@ -188,6 +188,34 @@ button[data-tooltip]:focus-visible::after,
   gap: 0.3rem;
 }
 
+.project-space-card-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.project-space-card-stat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--ios-border);
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.08);
+  color: var(--ios-text-secondary);
+  font-size: 0.72rem;
+  padding: 0.1rem 0.34rem;
+}
+
+.project-space-card-stat[data-tooltip]::after {
+  @include tooltip.tooltip-above;
+}
+
+.project-space-card-stat[data-tooltip]:hover::after,
+.project-space-card-stat[data-tooltip]:focus-visible::after {
+  @include tooltip.tooltip-visible;
+}
+
 .project-space-card-create {
   align-items: center;
   justify-content: center;
