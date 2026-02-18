@@ -27,9 +27,18 @@ import { ActiveTab, Employee, Role, Toast } from '../pages/app-types';
 const WEB_DEFAULT_LOGIN_EMAIL = import.meta.env.VITE_WEB_DEFAULT_LOGIN_EMAIL ?? '';
 const WEB_DEFAULT_LOGIN_PASSWORD = import.meta.env.VITE_WEB_DEFAULT_LOGIN_PASSWORD ?? '';
 
+const getShouldUseDefaultLoginCredentials = () => {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  const { hostname } = window.location;
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
+const SHOULD_USE_DEFAULT_LOGIN_CREDENTIALS = getShouldUseDefaultLoginCredentials();
+
 export function useAppState() {
-  const [email, setEmail] = useState(WEB_DEFAULT_LOGIN_EMAIL);
-  const [password, setPassword] = useState(WEB_DEFAULT_LOGIN_PASSWORD);
+  const [email, setEmail] = useState(SHOULD_USE_DEFAULT_LOGIN_CREDENTIALS ? WEB_DEFAULT_LOGIN_EMAIL : '');
+  const [password, setPassword] = useState(SHOULD_USE_DEFAULT_LOGIN_CREDENTIALS ? WEB_DEFAULT_LOGIN_PASSWORD : '');
   const [token, setToken] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
