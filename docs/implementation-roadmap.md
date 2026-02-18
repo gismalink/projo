@@ -2,7 +2,7 @@
 
 ## 1) Назначение документа
 - Этот файл хранит только **план предстоящих работ** и приоритеты.
-- Детали уже закрытого функционала сюда не дублируются.
+- После закрытия блока задач, сделанный функционал фиксируется в документах и убирается отсюда.
 
 ## 2) Где фиксируется закрытое
 - Технические результаты и срезы качества: `docs/audits/*`.
@@ -13,19 +13,19 @@
 ## 3) Активные приоритеты
 
 ### P0 — Security remediation (из `security-audit-2026-02-18`)
-1. [ ] Закрыть high-уязвимости dependency-цепочки в `apps/api`:
-   - [ ] мигрировать `bcrypt` на `^6.0.0` (или согласованный эквивалент),
-   - [ ] добиться `0 high/critical` для `npm audit -w apps/api --omit=dev --audit-level=high`.
-2. [ ] Ограничить CORS-policy:
-   - [ ] заменить `app.enableCors()` на allowlist через env (`ALLOWED_ORIGINS`),
-   - [ ] задать явные `methods/allowedHeaders/credentials`.
-3. [ ] Добавить базовый API hardening:
-   - [ ] подключить `helmet` с согласованной CSP-политикой,
-   - [ ] добавить rate-limit (`@nestjs/throttler`) для auth/public endpoints,
-   - [ ] усилить лимиты для `/auth/login`.
+1. [x] Закрыть high-уязвимости dependency-цепочки в `apps/api`:
+   - [x] мигрировать `bcrypt` на `^6.0.0` (или согласованный эквивалент),
+   - [x] добиться `0 high/critical` для `npm audit -w apps/api --omit=dev --audit-level=high`.
+2. [x] Ограничить CORS-policy:
+   - [x] заменить `app.enableCors()` на allowlist через env (`ALLOWED_ORIGINS`),
+   - [x] задать явные `methods/allowedHeaders/credentials`.
+3. [x] Добавить базовый API hardening:
+   - [x] подключить `helmet` с согласованной CSP-политикой,
+   - [x] добавить rate-limit (`@nestjs/throttler`) для auth/public endpoints,
+   - [x] усилить лимиты для `/auth/login`.
 4. [ ] Встроить security-gate в CI:
-   - [ ] отдельный job `npm audit` с fail threshold,
-   - [ ] policy по регулярному обновлению уязвимых зависимостей.
+   - [x] отдельный job `npm audit` с fail threshold,
+   - [x] policy по регулярному обновлению уязвимых зависимостей.
 
 ### P1 — Модель окружений и релизный контур
 1. [ ] Зафиксировать модель: `dev` локально (на машине разработчика), `test/prod` публично.
