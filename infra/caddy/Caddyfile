@@ -1,0 +1,29 @@
+{
+  email {$ACME_EMAIL}
+}
+
+gismalink.art {
+  reverse_proxy {$LEGACY_UPSTREAM}
+}
+
+test.projo.gismalink.art {
+  @api path /api*
+  handle @api {
+    reverse_proxy projo-api-test:4000
+  }
+
+  handle {
+    reverse_proxy projo-web-test:4173
+  }
+}
+
+projo.gismalink.art {
+  @api path /api*
+  handle @api {
+    reverse_proxy projo-api-prod:4000
+  }
+
+  handle {
+    reverse_proxy projo-web-prod:4173
+  }
+}

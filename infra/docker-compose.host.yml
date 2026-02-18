@@ -1,0 +1,146 @@
+services:
+  reverse-proxy:
+    image: caddy:2.9
+    container_name: projo-reverse-proxy
+    restart: unless-stopped
+    env_file:
+      - ./.env.host
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - projo-web-test
+      - projo-api-test
+      - projo-web-prod
+      - projo-api-prod
+    networks:
+      - public
+
+  projo-api-test:
+    image: node:22-alpine
+    container_name: projo-api-test
+    restart: unless-stopped
+    working_dir: /tmp/app
+    command: >-
+      sh -lc "set -e;
+      rm -rf /tmp/app;
+      cp -R /app-src /tmp/app;
+      cd /tmp/app;
+      npm ci;
+      npm run prisma:generate -w @projo/api;
+      npx prisma migrate deploy --schema apps/api/prisma/schema.prisma;
+      TS_NODE_PROJECT=apps/api/tsconfig.json TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node -r ts-node/register/transpile-only apps/api/src/main.ts"
+    env_file:
+      - ../apps/api/.env.test
+    depends_on:
+      - projo-db-test
+    networks:
+      - public
+      - data_test
+    volumes:
+      - ../:/app-src:ro
+
+  projo-web-test:
+    image: node:22-alpine
+    container_name: projo-web-test
+    restart: unless-stopped
+    working_dir: /tmp/app
+    command: >-
+      sh -lc "set -e;
+      rm -rf /tmp/app;
+      cp -R /app-src /tmp/app;
+      cd /tmp/app;
+      npm ci;
+      npm run build -w @projo/web;
+      npm run preview -w @projo/web -- --host 0.0.0.0 --port 4173"
+    env_file:
+      - ../apps/web/.env.test
+    networks:
+      - public
+    volumes:
+      - ../:/app-src:ro
+
+  projo-db-test:
+    image: postgres:16
+    container_name: projo-db-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: projo_test
+      POSTGRES_USER: projo_test
+      POSTGRES_PASSWORD: projo_test
+    networks:
+      - data_test
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+  projo-api-prod:
+    image: node:22-alpine
+    container_name: projo-api-prod
+    restart: unless-stopped
+    working_dir: /tmp/app
+    command: >-
+      sh -lc "set -e;
+      rm -rf /tmp/app;
+      cp -R /app-src /tmp/app;
+      cd /tmp/app;
+      npm ci;
+      npm run prisma:generate -w @projo/api;
+      npx prisma migrate deploy --schema apps/api/prisma/schema.prisma;
+      TS_NODE_PROJECT=apps/api/tsconfig.json TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node -r ts-node/register/transpile-only apps/api/src/main.ts"
+    env_file:
+      - ../apps/api/.env.prod
+    depends_on:
+      - projo-db-prod
+    networks:
+      - public
+      - data_prod
+    volumes:
+      - ../:/app-src:ro
+
+  projo-web-prod:
+    image: node:22-alpine
+    container_name: projo-web-prod
+    restart: unless-stopped
+    working_dir: /tmp/app
+    command: >-
+      sh -lc "set -e;
+      rm -rf /tmp/app;
+      cp -R /app-src /tmp/app;
+      cd /tmp/app;
+      npm ci;
+      npm run build -w @projo/web;
+      npm run preview -w @projo/web -- --host 0.0.0.0 --port 4173"
+    env_file:
+      - ../apps/web/.env.prod
+    networks:
+      - public
+    volumes:
+      - ../:/app-src:ro
+
+  projo-db-prod:
+    image: postgres:16
+    container_name: projo-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: projo_prod
+      POSTGRES_USER: projo_prod
+      POSTGRES_PASSWORD: projo_prod
+    networks:
+      - data_prod
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+networks:
+  public:
+  data_test:
+  data_prod:
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_test_data:
+  postgres_prod_data:

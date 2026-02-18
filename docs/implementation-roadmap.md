@@ -23,18 +23,18 @@
    - [x] подключить `helmet` с согласованной CSP-политикой,
    - [x] добавить rate-limit (`@nestjs/throttler`) для auth/public endpoints,
    - [x] усилить лимиты для `/auth/login`.
-4. [ ] Встроить security-gate в CI:
+4. [x] Встроить security-gate в CI:
    - [x] отдельный job `npm audit` с fail threshold,
    - [x] policy по регулярному обновлению уязвимых зависимостей.
 
 ### P1 — Модель окружений и релизный контур
-1. [ ] Зафиксировать модель: `dev` локально (на машине разработчика), `test/prod` публично.
-2. [ ] Описать environment matrix:
-   - [ ] отдельные env-файлы,
-   - [ ] отдельные секреты,
-   - [ ] отдельные БД для `test` и `prod`.
-3. [ ] Ввести релизный поток: `dev(local) -> test(public) -> prod(public)`.
-4. [ ] Определить rollback-процедуру для приложения и БД.
+1. [x] Зафиксировать модель: `dev` локально (на машине разработчика), `test/prod` публично.
+2. [x] Описать environment matrix:
+   - [x] отдельные env-файлы,
+   - [x] отдельные секреты,
+   - [x] отдельные БД для `test` и `prod`.
+3. [x] Ввести релизный поток: `dev(local) -> test(public) -> prod(public)`.
+4. [x] Определить rollback-процедуру для приложения и БД.
 
 ### P2 — Разворачивание на существующем Mac-сервере (`gismalink.art`)
 1. [ ] Сохранить текущий сайт на `gismalink.art` без деградации.
@@ -49,7 +49,7 @@
    - [ ] отдельные `.env.test` / `.env.prod`,
    - [ ] отдельные volume/сети/секреты,
    - [ ] Postgres только во внутренней сети (без внешней публикации).
-5. [ ] Внедрить runbook запуска/обновления/rollback.
+5. [x] Внедрить runbook запуска/обновления/rollback.
 
 ### P3 — Качество и проверка поставки
 1. [ ] Закрепить минимальный набор post-deploy проверок для `test`:
@@ -74,11 +74,13 @@
 ## 4) Definition of Done для ближайшего этапа
 - [ ] Security-пункты P0 закрыты или имеют согласованные mitigation + дедлайн.
 - [ ] `test` и `prod` контуры опубликованы, изолированы и проходят smoke.
-- [ ] `dev` остается локальным, без внешней публикации.
-- [ ] Документирован runbook для deploy/rollback.
+- [x] `dev` остается локальным, без внешней публикации.
+- [x] Документирован runbook для deploy/rollback.
 
 ## 5) Связанные документы
 - `docs/audits/security-audit-2026-02-18.md`
 - `docs/architecture-overview.md`
 - `docs/product-spec.md`
 - `docs/workflow-checklist.md`
+- `docs/release-runbook.md`
+- `docs/server-deploy-mac.md`

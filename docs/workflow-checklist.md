@@ -22,7 +22,9 @@
 	- `architecture-overview.md`,
 	- `api-reference.md`,
 	- `product-spec.md`,
-	- `implementation-roadmap.md`.
+	- `implementation-roadmap.md`,
+	- `release-runbook.md` (если менялись окружения/release-flow/rollback),
+	- `server-deploy-mac.md` (если менялись reverse-proxy/host-routing/deploy-контур).
 3. Для нетривиальных изменений обновить/создать технический аудит (`docs/audits/technical-audit-YYYY-MM-DD.md`) с:
 	- списком найденных hardcode,
 	- приоритетами рефакторинга,
