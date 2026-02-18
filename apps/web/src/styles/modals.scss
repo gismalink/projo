@@ -32,14 +32,8 @@
   align-items: center;
 }
 
-.department-manage-row-color {
-  grid-template-columns: 1fr 40px auto;
-}
-
-.department-manage-row-grade {
-  grid-template-columns: 1fr 40px auto;
-}
-
+.department-manage-row-color,
+.department-manage-row-grade,
 .department-manage-row-grade-edit {
   grid-template-columns: 1fr 40px auto;
 }
@@ -49,10 +43,7 @@
   margin-bottom: 0.08rem;
 }
 
-.department-manage-row.create.department-manage-row-color {
-  grid-template-columns: 1fr 40px auto;
-}
-
+.department-manage-row.create.department-manage-row-color,
 .department-manage-row.create.department-manage-row-grade {
   grid-template-columns: 1fr 40px auto;
 }
