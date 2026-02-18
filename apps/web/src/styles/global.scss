@@ -207,9 +207,7 @@ button:active {
 }
 
 .header-icon-btn {
-  min-width: 38px;
-  width: 38px;
-  height: 38px;
+  @include button.icon-button-chrome(38px, 999px, 0);
 }
 
 .header-project-tab {
