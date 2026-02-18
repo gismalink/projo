@@ -22,7 +22,7 @@
 	- `api-reference.md`,
 	- `product-spec.md`,
 	- `implementation-roadmap.md`.
-3. Для нетривиальных изменений обновить/создать технический аудит (`docs/technical-audit-YYYY-MM-DD.md`) с:
+3. Для нетривиальных изменений обновить/создать технический аудит (`docs/audits/technical-audit-YYYY-MM-DD.md`) с:
 	- списком найденных hardcode,
 	- приоритетами рефакторинга,
 	- планом выноса конфигурации.

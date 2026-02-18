@@ -1,4 +1,4 @@
-# План реализации (актуализация: 2026-02-16)
+# План реализации (актуализация: 2026-02-18)
 
 ## 1. Текущая базовая точка
 - Реализованный функциональный scope зафиксирован в `docs/product-spec.md`.
@@ -15,6 +15,10 @@
 - Добавлен чип выбранного шаблона в строке проекта.
 - Продолжен безопасный рефакторинг Timeline: date/marker утилиты вынесены в `apps/web/src/components/timeline/timeline-date.utils.ts`.
 - Продолжена декомпозиция web-hooks: salary parsing/conversion вынесены в `apps/web/src/hooks/salary.utils.ts`.
+- Выполнена миграция `web`-стилей на Sass c единым entrypoint `apps/web/src/styles/index.scss`.
+- Выполнена декомпозиция стилей на partials (`_forms.scss`, `_header.scss`, `_buttons.scss`, `_tooltips.scss`, `_typography.scss`, `_responsive.scss`).
+- Убраны cross-tab конфликты list-стилей (`InstructionTab` отделен от `roles-list`).
+- Assignment больше не блокируется сервером при выходе за плановые даты проекта (остается визуальная диагностика `fact-range` в Timeline).
 
 ### P1 — техдолг и срочный рефакторинг
 1. [x] Убрать хардкод bootstrap-учеток из web state и API service:
@@ -64,7 +68,7 @@
    - [x] create/update/delete assignment,
    - [x] чтение project details для timeline.
 - [ ] Добавить/уточнить валидации:
-   - [x] запрет assignment вне диапазона проекта,
+   - [x] согласованное правило assignment относительно диапазона проекта (жесткий запрет снят, используется диагностическая подсветка `fact-range`),
    - [x] запрет assignment для сотрудника вне member-пула (или авто-добавление по зафиксированному правилу),
    - [x] запрет конфликтных дублей,
    - [ ] корректная обработка пересечений и граничных дат.
@@ -72,8 +76,8 @@
 - [ ] Проверить DTO/сервисы на согласованность полей и nullability.
 - [ ] Проверить, что `ProjectDetail` всегда возвращает полный набор полей, нужных UI (включая role/grade/status, если используются в timeline).
 
-  Текущее состояние после audit:
-   - assignment CRUD валидирует базовый диапазон дат (`start <= end`), уникальность пары `projectId + employeeId` и границы дат проекта;
+   Текущее состояние после audit:
+    - assignment CRUD валидирует базовый диапазон дат (`start <= end`) и уникальность пары `projectId + employeeId`;
   - assignment CRUD автоматически восстанавливает membership (`ProjectMember`) при create/update;
   - в `ProjectDetail` уже есть `role` и `grade`, поле `status` для assignment-employee в response сейчас не отдается.
 

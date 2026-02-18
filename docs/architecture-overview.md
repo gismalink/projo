@@ -57,19 +57,22 @@
   - salary helpers: `src/hooks/salary.utils.ts`
 - Components by domain: `src/components/personnel`, `src/components/roles`, `src/components/timeline`, `src/components/modals`.
 - i18n dictionaries: `src/pages/app-i18n.ts` (`ru`/`en`).
-- Styles are split by domain:
-  - `src/styles/global.css`
-  - `src/styles/personnel.css`
-  - `src/styles/roles.css`
-  - `src/styles/timeline.css`
-  - `src/styles/modals.css`
+- Styles are split by domain with Sass partials and unified entrypoint:
+  - `src/styles/index.scss`
+  - `src/styles/global.scss`
+  - `src/styles/_header.scss`
+  - `src/styles/_forms.scss`
+  - `src/styles/personnel.scss`
+  - `src/styles/roles.scss`
+  - `src/styles/timeline.scss`
+  - `src/styles/modals.scss`
 
 ## 6) Related docs
 - Product behavior, user flows and business rules: `docs/product-spec.md`.
 - API endpoints and contracts: `docs/api-reference.md`.
 - Run/start instructions: `README.md`.
 - Delivery workflow and checks: `docs/workflow-checklist.md`.
-- Stabilization/technical audits: `docs/stabilization-audit-2026-02-15.md`, `docs/technical-audit-2026-02-16.md`.
+- Stabilization/technical audits: `docs/audits/stabilization-audit-2026-02-15.md`, `docs/audits/technical-audit-2026-02-16.md`, `docs/audits/technical-audit-2026-02-18.md`.
 
 ## 7) Domain invariants: ProjectMember vs ProjectAssignment
 - `ProjectAssignment` хранит фактическое планирование сотрудника в проекте (даты/нагрузка) и является источником данных для Timeline.
@@ -79,6 +82,7 @@
 - Удаление assignment не удаляет member автоматически.
 - Удаление member не удаляет assignment автоматически; при следующем create/update assignment member будет восстановлен backend-логикой.
 - Смещение дат проекта не триггерит принудительный cascade в API-слое; сдвиг assignment дат выполняется отдельными операциями Timeline flow.
+- Assignment может выходить за плановые даты проекта; это не блокируется API и подсвечивается как диагностическая ошибка `fact-range` на Timeline.
 
 ## 8) Aggregation levels
 - Уровень 1 (текущий): **Планы** — карточки на экране «Мои планы», переключают активный tenant-контекст.

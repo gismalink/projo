@@ -1,6 +1,6 @@
 # Projo Planner
 
-Актуализация: 2026-02-16
+Актуализация: 2026-02-18
 
 Это продуктовый годовой планер для команд и руководителей, который помогает собирать реалистичный план проектов с прозрачной загрузкой людей и прогнозом стоимости. Система учитывает рабочий календарь, выходные и отпуска, показывает влияние назначений на доступность сотрудников и снижает риск перегрузки на этапе планирования. В одном интерфейсе доступны управление командой (роли, отделы, грейды), планирование по таймлайну, контроль факта/потерь часов и быстрые сценарии перепланирования без ручных таблиц.
 
@@ -53,8 +53,9 @@ Bootstrap admin is created automatically on API startup if the required env vari
 - Product specification: `docs/product-spec.md`
 - Implementation roadmap: `docs/implementation-roadmap.md`
 - Workflow checklist: `docs/workflow-checklist.md`
-- Stabilization audit (2026-02-15): `docs/stabilization-audit-2026-02-15.md`
-- Technical audit (2026-02-16): `docs/technical-audit-2026-02-16.md`
+- Stabilization audit (2026-02-15): `docs/audits/stabilization-audit-2026-02-15.md`
+- Technical audit (2026-02-16): `docs/audits/technical-audit-2026-02-16.md`
+- Technical audit (2026-02-18): `docs/audits/technical-audit-2026-02-18.md`
 
 ## Documentation ownership
 - API methods, roles and request contracts: `docs/api-reference.md`

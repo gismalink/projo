@@ -49,6 +49,25 @@
 - Body: `{ projectId: string }`
 - Назначение: переключить активный project-space пользователя.
 
+### `GET /api/auth/companies`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Response: `{ activeCompanyId, companies[] }`
+
+### `POST /api/auth/companies`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ name: string }`
+- Назначение: создать компанию и сделать её активной.
+
+### `PATCH /api/auth/companies/:companyId`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ name: string }`
+- Назначение: owner-only переименование компании.
+
+### `POST /api/auth/companies/switch`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+- Body: `{ companyId: string }`
+- Назначение: переключить активную компанию пользователя.
+
 ### `PATCH /api/auth/projects/:projectId`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 - Body: `{ name: string }`
@@ -86,6 +105,10 @@
 - Roles: `ADMIN`
 - Body: `CreateRoleDto`
 
+### `POST /api/roles/defaults`
+- Roles: `ADMIN`
+- Назначение: создать дефолтный набор ролей для активной компании.
+
 ### `GET /api/roles`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 
@@ -102,6 +125,10 @@
 - Roles: `ADMIN`
 - Body: `CreateDepartmentDto` (`name`, `description?`, `colorHex?`)
 
+### `POST /api/departments/defaults`
+- Roles: `ADMIN`
+- Назначение: создать дефолтный набор департаментов для активной компании.
+
 ### `GET /api/departments`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 
@@ -112,11 +139,31 @@
 ### `DELETE /api/departments/:id`
 - Roles: `ADMIN`
 
+## Grades
+
+### `POST /api/grades`
+- Roles: `ADMIN`
+- Body: `CreateGradeDto`
+
+### `POST /api/grades/defaults`
+- Roles: `ADMIN`
+- Назначение: создать дефолтный набор грейдов для активной компании.
+
+### `GET /api/grades`
+- Roles: `ADMIN | PM | VIEWER | FINANCE`
+
+### `PATCH /api/grades/:id`
+- Roles: `ADMIN`
+- Body: `UpdateGradeDto`
+
+### `DELETE /api/grades/:id`
+- Roles: `ADMIN`
+
 ## Employees
 
 ### `POST /api/employees`
 - Roles: `ADMIN | PM`
-- Body: `CreateEmployeeDto`
+- Body: `CreateEmployeeDto` (`email` опциональный, может быть `null`)
 
 ### `POST /api/employees/import-csv`
 - Roles: `ADMIN | PM`
@@ -182,7 +229,7 @@
 - Все endpoints раздела работают в рамках активного `workspaceId` из JWT.
 
 ### `POST /api/cost-rates`
-- Roles: `ADMIN | FINANCE`
+- Roles: `ADMIN | PM | FINANCE`
 - Body: `CreateCostRateDto`
 
 ### `GET /api/cost-rates`
@@ -192,11 +239,11 @@
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
 
 ### `PATCH /api/cost-rates/:id`
-- Roles: `ADMIN | FINANCE`
+- Roles: `ADMIN | PM | FINANCE`
 - Body: `UpdateCostRateDto`
 
 ### `DELETE /api/cost-rates/:id`
-- Roles: `ADMIN | FINANCE`
+- Roles: `ADMIN | PM | FINANCE`
 
 ## Projects
 
@@ -241,6 +288,10 @@
 - Body:
   - `name: string`
   - `roleIds: string[]` (минимум 1)
+
+### `POST /api/team-templates/defaults`
+- Roles: `ADMIN`
+- Назначение: создать дефолтный набор шаблонов команды для активной компании.
 
 ### `GET /api/team-templates`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
@@ -287,8 +338,11 @@
 - `ERR_PROJECT_MEMBER_NOT_FOUND` — попытка удалить несуществующий member.
 - `ERR_ASSIGNMENT_EMPLOYEE_ALREADY_IN_PROJECT` — попытка создать второй assignment той же пары `project + employee`.
 - `ERR_ASSIGNMENT_DATE_RANGE_INVALID` — конец assignment раньше начала.
-- `ERR_ASSIGNMENT_OUTSIDE_PROJECT_RANGE` — assignment выходит за границы дат проекта.
 - `ERR_PROJECT_DATE_RANGE_INVALID` — конец проекта раньше начала.
+
+### Политика диапазона assignment
+- Assignment допускается вне плановых дат проекта.
+- Несоответствие факта/плана отражается в Timeline как диагностическая ошибка `fact-range`, но не блокирует CRUD assignment.
 
 ### Текущие ограничения (open gaps)
 - Коды `ERR_ASSIGNMENT_OVERLAPS_VACATION`, `ERR_ASSIGNMENT_EMPLOYEE_OVERLOADED` зарезервированы в `error-codes`, но не задействованы как единое правило во всех assignment-flow.
