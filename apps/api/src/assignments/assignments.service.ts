@@ -270,17 +270,6 @@ export class AssignmentsService {
     }
   }
 
-  private ensureWithinProjectRange(
-    assignmentStartDate: Date,
-    assignmentEndDate: Date,
-    projectStartDate: Date,
-    projectEndDate: Date,
-  ) {
-    if (assignmentStartDate < projectStartDate || assignmentEndDate > projectEndDate) {
-      throw new BadRequestException(ErrorCode.ASSIGNMENT_OUTSIDE_PROJECT_RANGE);
-    }
-  }
-
   private async ensureUniqueEmployeeInProject(params: {
     projectId: string;
     employeeId: string;
@@ -317,8 +306,6 @@ export class AssignmentsService {
     }
 
     await this.ensureEmployeeInWorkspaceScope(workspaceId, dto.employeeId);
-
-    this.ensureWithinProjectRange(startDate, endDate, project.startDate, project.endDate);
 
     await this.ensureUniqueEmployeeInProject({
       projectId: dto.projectId,
@@ -405,8 +392,6 @@ export class AssignmentsService {
     }
 
     await this.ensureEmployeeInWorkspaceScope(workspaceId, employeeId);
-
-    this.ensureWithinProjectRange(nextStart, nextEnd, project.startDate, project.endDate);
 
     await this.ensureUniqueEmployeeInProject({
       projectId,
