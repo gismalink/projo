@@ -140,7 +140,7 @@ export type CreateRolePayload = {
 
 export type CreateEmployeePayload = {
   fullName: string;
-  email: string;
+  email?: string | null;
   roleId: string;
   departmentId?: string;
   grade?: string;
@@ -215,6 +215,10 @@ export type CreateGradePayload = {
 };
 
 export type UpdateGradePayload = Partial<CreateGradePayload>;
+
+export type DefaultsCreateResult = {
+  created: number;
+};
 
 export type SkillItem = {
   id: string;
@@ -526,6 +530,8 @@ export const api = {
   getSkills: (token: string) => request<SkillItem[]>('/skills', {}, token),
   createRole: (payload: CreateRolePayload, token: string) =>
     request('/roles', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createDefaultRoles: (token: string) => request<DefaultsCreateResult>('/roles/defaults', { method: 'POST' }, token),
+  deleteRole: (roleId: string, token: string) => request(`/roles/${roleId}`, { method: 'DELETE' }, token),
   createSkill: (payload: CreateSkillPayload, token: string) =>
     request('/skills', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateSkill: (skillId: string, payload: UpdateSkillPayload, token: string) =>
@@ -538,8 +544,12 @@ export const api = {
     request(`/employees/${employeeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   createDepartment: (payload: CreateDepartmentPayload, token: string) =>
     request('/departments', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createDefaultDepartments: (token: string) =>
+    request<DefaultsCreateResult>('/departments/defaults', { method: 'POST' }, token),
   createTeamTemplate: (payload: CreateTeamTemplatePayload, token: string) =>
     request<TeamTemplateItem>('/team-templates', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createDefaultTeamTemplates: (token: string) =>
+    request<DefaultsCreateResult>('/team-templates/defaults', { method: 'POST' }, token),
   updateDepartment: (departmentId: string, payload: UpdateDepartmentPayload, token: string) =>
     request(`/departments/${departmentId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   updateTeamTemplate: (templateId: string, payload: UpdateTeamTemplatePayload, token: string) =>
@@ -548,6 +558,7 @@ export const api = {
   deleteTeamTemplate: (templateId: string, token: string) => request(`/team-templates/${templateId}`, { method: 'DELETE' }, token),
   createGrade: (payload: CreateGradePayload, token: string) =>
     request<GradeItem>('/grades', { method: 'POST', body: JSON.stringify(payload) }, token),
+  createDefaultGrades: (token: string) => request<DefaultsCreateResult>('/grades/defaults', { method: 'POST' }, token),
   updateGrade: (gradeId: string, payload: UpdateGradePayload, token: string) =>
     request<GradeItem>(`/grades/${gradeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   deleteGrade: (gradeId: string, token: string) => request(`/grades/${gradeId}`, { method: 'DELETE' }, token),

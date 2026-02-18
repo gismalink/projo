@@ -98,14 +98,13 @@ export function EmployeeProfileFields({
         />
       </label>
       <label>
-        <span className="field-label required">{t.email}</span>
+        <span className="field-label optional">{t.email}</span>
         <input
           type="email"
           inputMode="email"
           autoComplete="email"
           placeholder="name@example.com"
           value={email}
-          required
           onChange={(event) => setEmail(event.target.value)}
         />
       </label>

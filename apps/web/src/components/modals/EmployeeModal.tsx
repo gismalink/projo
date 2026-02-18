@@ -25,7 +25,7 @@ type EmployeeModalProps = {
   vacations: VacationItem[];
   onProfileAutoSave: (payload: {
     fullName: string;
-    email: string;
+    email?: string | null;
     roleId: string;
     departmentId?: string;
     grade?: string;
@@ -76,7 +76,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
 
   const toProfileKey = (payload: {
     fullName: string;
-    email: string;
+    email?: string | null;
     roleId: string;
     departmentId?: string;
     grade?: string;
@@ -85,7 +85,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
   }) =>
     [
       payload.fullName.trim(),
-      payload.email.trim().toLowerCase(),
+      payload.email?.trim().toLowerCase() ?? '',
       payload.roleId,
       payload.departmentId ?? '',
       payload.grade ?? '',
@@ -277,10 +277,10 @@ export function EmployeeModal(props: EmployeeModalProps) {
     const normalizedSalary = salary.trim();
     const salaryMonthly = normalizedSalary ? Number(normalizedSalary) : undefined;
 
-    const hasRequiredFields = Boolean(normalizedFullName) && Boolean(normalizedEmail) && Boolean(roleId) && Boolean(normalizedStatus);
+    const hasRequiredFields = Boolean(normalizedFullName) && Boolean(roleId) && Boolean(normalizedStatus);
     if (!hasRequiredFields) return;
 
-    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+    const isValidEmail = !normalizedEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
     if (!isValidEmail) return;
 
     if (normalizedSalary && (!Number.isFinite(salaryMonthly) || (salaryMonthly as number) < 0)) {
@@ -289,7 +289,7 @@ export function EmployeeModal(props: EmployeeModalProps) {
 
     const payload = {
       fullName: normalizedFullName,
-      email: normalizedEmail,
+      email: normalizedEmail || null,
       roleId,
       departmentId: departmentId || undefined,
       grade: grade || undefined,

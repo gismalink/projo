@@ -35,8 +35,10 @@ export class EmployeesService {
     };
   }
 
-  private normalizeEmail(email: string) {
-    return email.trim().toLowerCase();
+  private normalizeEmail(email?: string | null) {
+    if (!email) return null;
+    const trimmed = email.trim().toLowerCase();
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   private async ensureRoleExists(workspaceId: string, roleId: string) {
@@ -87,11 +89,10 @@ export class EmployeesService {
   }
 
   private async ensureEmployeeEmailAvailable(workspaceId: string, email: string, excludeEmployeeId?: string) {
-    const normalizedEmail = this.normalizeEmail(email);
     const scope = await this.getWorkspaceScope(workspaceId);
     const existing = await this.prisma.employee.findFirst({
       where: {
-        email: normalizedEmail,
+        email,
         workspace: {
           ...(scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId }),
         },
@@ -188,13 +189,17 @@ export class EmployeesService {
   async create(workspaceId: string, dto: CreateEmployeeDto) {
     await this.ensureRoleExists(workspaceId, dto.roleId);
     await this.ensureDepartmentExists(workspaceId, dto.departmentId);
-    await this.ensureEmployeeEmailAvailable(workspaceId, dto.email);
+
+    const normalizedEmail = this.normalizeEmail(dto.email);
+    if (normalizedEmail) {
+      await this.ensureEmployeeEmailAvailable(workspaceId, normalizedEmail);
+    }
 
     return this.prisma.employee.create({
       data: {
         workspaceId,
         ...dto,
-        email: this.normalizeEmail(dto.email),
+        email: normalizedEmail,
         defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay ?? STANDARD_DAY_HOURS,
       },
       include: { role: true, department: true },
@@ -242,18 +247,26 @@ export class EmployeesService {
 
     await this.ensureDepartmentExists(workspaceId, dto.departmentId);
 
-    if (dto.email) {
-      await this.ensureEmployeeEmailAvailable(workspaceId, dto.email, id);
-    }
+    const hasEmailField = Object.prototype.hasOwnProperty.call(dto, 'email');
+    const normalizedEmail = hasEmailField ? this.normalizeEmail(dto.email) : undefined;
 
-    const normalizedDto: UpdateEmployeeDto = {
-      ...dto,
-      email: dto.email ? this.normalizeEmail(dto.email) : undefined,
-    };
+    if (normalizedEmail) {
+      await this.ensureEmployeeEmailAvailable(workspaceId, normalizedEmail, id);
+    }
 
     return this.prisma.employee.update({
       where: { id },
-      data: normalizedDto,
+      data: {
+        ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
+        ...(hasEmailField ? { email: normalizedEmail } : {}),
+        ...(dto.roleId !== undefined ? { roleId: dto.roleId } : {}),
+        ...(dto.departmentId !== undefined ? { departmentId: dto.departmentId } : {}),
+        ...(dto.grade !== undefined ? { grade: dto.grade } : {}),
+        ...(dto.status !== undefined ? { status: dto.status } : {}),
+        ...(dto.defaultCapacityHoursPerDay !== undefined
+          ? { defaultCapacityHoursPerDay: dto.defaultCapacityHoursPerDay }
+          : {}),
+      },
       include: { role: true, department: true },
     });
   }

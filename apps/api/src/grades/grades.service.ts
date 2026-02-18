@@ -4,6 +4,17 @@ import { PrismaService } from '../common/prisma.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
 
+const DEFAULT_GRADES = [
+  { name: 'джу', colorHex: '#64B5F6' },
+  { name: 'джун+', colorHex: '#42A5F5' },
+  { name: 'мидл', colorHex: '#4DB6AC' },
+  { name: 'мидл+', colorHex: '#26A69A' },
+  { name: 'синьйор', colorHex: '#FFB74D' },
+  { name: 'синьйор+', colorHex: '#FFA726' },
+  { name: 'лид', colorHex: '#BA68C8' },
+  { name: 'рук-отдела', colorHex: '#9575CD' },
+];
+
 @Injectable()
 export class GradesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -34,6 +45,42 @@ export class GradesService {
         colorHex: dto.colorHex,
       },
     });
+  }
+
+  async createDefaultGradesForWorkspace(workspaceId: string) {
+    const scope = await this.getWorkspaceScope(workspaceId);
+    let created = 0;
+
+    for (const grade of DEFAULT_GRADES) {
+      const existing = await this.prisma.grade.findFirst({
+        where: {
+          companyId: scope.companyId,
+          name: grade.name,
+        },
+        select: { id: true },
+      });
+
+      if (existing) {
+        await this.prisma.grade.update({
+          where: { id: existing.id },
+          data: {
+            colorHex: grade.colorHex,
+          },
+        });
+        continue;
+      }
+
+      await this.prisma.grade.create({
+        data: {
+          companyId: scope.companyId,
+          name: grade.name,
+          colorHex: grade.colorHex,
+        },
+      });
+      created += 1;
+    }
+
+    return { created };
   }
 
   async findAll(workspaceId: string) {

@@ -23,6 +23,12 @@ export class GradesController {
     return this.gradesService.create(req.user.workspaceId, dto);
   }
 
+  @Post('defaults')
+  @Roles(AppRoleValue.ADMIN)
+  createDefaults(@Req() req: AuthenticatedRequest) {
+    return this.gradesService.createDefaultGradesForWorkspace(req.user.workspaceId);
+  }
+
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {

@@ -134,7 +134,7 @@ model Employee {
   workspaceId                String
   workspace                  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   fullName                   String
-  email                      String
+  email                      String?
   grade                      String?
   status                     String   @default("active")
   defaultCapacityHoursPerDay Decimal  @default(8.0) @db.Decimal(4, 2)

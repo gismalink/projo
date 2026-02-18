@@ -23,6 +23,12 @@ export class TeamTemplatesController {
     return this.teamTemplatesService.create(req.user.workspaceId, dto);
   }
 
+  @Post('defaults')
+  @Roles(AppRoleValue.ADMIN)
+  createDefaults(@Req() req: AuthenticatedRequest) {
+    return this.teamTemplatesService.createDefaultTemplatesForWorkspace(req.user.workspaceId);
+  }
+
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {

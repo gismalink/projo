@@ -1,13 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsEmail, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateIf } from 'class-validator';
 
 export class CreateEmployeeDto {
   @IsString()
   @MaxLength(200)
   fullName!: string;
 
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsEmail()
-  email!: string;
+  email?: string | null;
 
   @IsString()
   roleId!: string;

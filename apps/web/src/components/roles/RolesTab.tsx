@@ -26,17 +26,22 @@ type RolesTabProps = {
   roleLevel: number;
   onCreateRole: (event: FormEvent) => Promise<void>;
   onUpdateRole: (roleId: string, payload: UpdateRolePayload) => Promise<void>;
+  onDeleteRole: (roleId: string) => Promise<void>;
+  onCreateDefaultRoles: () => Promise<void>;
   setRoleName: (value: string) => void;
   setRoleShortName: (value: string) => void;
   setRoleDescription: (value: string) => void;
   setRoleLevel: (value: number) => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
+  onCreateDefaultDepartments: () => Promise<void>;
   onCreateDepartment: (name: string, colorHex: string) => Promise<void>;
   onUpdateDepartment: (departmentId: string, name: string, colorHex: string) => Promise<void>;
   onDeleteDepartment: (departmentId: string) => Promise<void>;
+  onCreateDefaultTeamTemplates: () => Promise<void>;
   onCreateTeamTemplate: (name: string, roleIds: string[]) => Promise<void>;
   onUpdateTeamTemplate: (templateId: string, payload: { name?: string; roleIds?: string[] }) => Promise<void>;
   onDeleteTeamTemplate: (templateId: string) => Promise<void>;
+  onCreateDefaultGrades: () => Promise<void>;
   onAddGrade: (name: string, colorHex: string) => void;
   onUpdateGrade: (gradeId: string, payload: { name?: string; colorHex?: string }) => void;
   onDeleteGrade: (gradeId: string) => void;
@@ -73,17 +78,22 @@ export function RolesTab(props: RolesTabProps) {
     roleLevel,
     onCreateRole,
     onUpdateRole,
+    onDeleteRole,
+    onCreateDefaultRoles,
     setRoleName,
     setRoleShortName,
     setRoleDescription,
     setRoleLevel,
     roleColorOrDefault,
+    onCreateDefaultDepartments,
     onCreateDepartment,
     onUpdateDepartment,
     onDeleteDepartment,
+    onCreateDefaultTeamTemplates,
     onCreateTeamTemplate,
     onUpdateTeamTemplate,
     onDeleteTeamTemplate,
+    onCreateDefaultGrades,
     onAddGrade,
     onUpdateGrade,
     onDeleteGrade,
@@ -399,15 +409,20 @@ export function RolesTab(props: RolesTabProps) {
       <article className="card">
         <div className="section-header roles-list-header">
           <h2>{t.rolesList}</h2>
-          <button
-            type="button"
-            className="create-role-icon-btn"
-            onClick={() => setIsCreateRoleOpen(true)}
-            aria-label={t.createRole}
-            data-tooltip={t.createRole}
-          >
-            <Icon name="plus" />
-          </button>
+          <div className="roles-header-actions">
+            <button type="button" className="ghost-btn" onClick={() => void onCreateDefaultRoles()}>
+              {t.createDefaultSet}
+            </button>
+            <button
+              type="button"
+              className="create-role-icon-btn"
+              onClick={() => setIsCreateRoleOpen(true)}
+              aria-label={t.createRole}
+              data-tooltip={t.createRole}
+            >
+              <Icon name="plus" />
+            </button>
+          </div>
         </div>
         <div className="role-table-head" aria-hidden="true">
           <span>{t.name}</span>
@@ -415,6 +430,7 @@ export function RolesTab(props: RolesTabProps) {
           <span>{t.description}</span>
           <span>{t.level}</span>
           <span>{t.color}</span>
+          <span>{t.actions}</span>
         </div>
         <ul className="roles-list">
           {roles.map((role) => (
@@ -461,6 +477,20 @@ export function RolesTab(props: RolesTabProps) {
                   );
                 })()}
               </div>
+              <button
+                type="button"
+                className="department-manage-action"
+                disabled={!role.companyId}
+                aria-label={t.deleteRole}
+                data-tooltip={t.deleteRole}
+                onClick={() => {
+                  if (!role.companyId) return;
+                  if (!window.confirm(t.confirmDeleteRole)) return;
+                  void onDeleteRole(role.id);
+                }}
+              >
+                <Icon name="x" />
+              </button>
             </li>
           ))}
         </ul>
@@ -471,6 +501,9 @@ export function RolesTab(props: RolesTabProps) {
           <section className="settings-column">
             <div className="section-header roles-list-header">
               <h3>{t.departmentsList}</h3>
+              <button type="button" className="ghost-btn" onClick={() => void onCreateDefaultDepartments()}>
+                {t.createDefaultSet}
+              </button>
             </div>
             <NameColorActionRow
               rowClassName="department-manage-row create department-manage-row-color"
@@ -531,6 +564,9 @@ export function RolesTab(props: RolesTabProps) {
           <section className="settings-column">
             <div className="section-header roles-list-header">
               <h3>{t.teamTemplatesList}</h3>
+              <button type="button" className="ghost-btn" onClick={() => void onCreateDefaultTeamTemplates()}>
+                {t.createDefaultSet}
+              </button>
             </div>
             <div className="template-manage-create">
               <input
@@ -623,6 +659,9 @@ export function RolesTab(props: RolesTabProps) {
           <section className="settings-column">
             <div className="section-header roles-list-header">
               <h3>{t.gradesList}</h3>
+              <button type="button" className="ghost-btn" onClick={() => void onCreateDefaultGrades()}>
+                {t.createDefaultSet}
+              </button>
             </div>
             <NameColorActionRow
               rowClassName="department-manage-row create department-manage-row-grade"

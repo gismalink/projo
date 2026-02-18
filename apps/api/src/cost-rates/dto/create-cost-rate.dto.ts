@@ -5,17 +5,16 @@ import {
   IsOptional,
   IsPositive,
   IsString,
-  IsUUID,
   MaxLength,
 } from 'class-validator';
 
 export class CreateCostRateDto {
   @IsOptional()
-  @IsUUID()
+  @IsString()
   employeeId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   roleId?: string;
 
   @Type(() => Number)

@@ -23,6 +23,12 @@ export class DepartmentsController {
     return this.departmentsService.create(req.user.workspaceId, dto);
   }
 
+  @Post('defaults')
+  @Roles(AppRoleValue.ADMIN)
+  createDefaults(@Req() req: AuthenticatedRequest) {
+    return this.departmentsService.createDefaultDepartmentsForWorkspace(req.user.workspaceId);
+  }
+
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {

@@ -23,6 +23,12 @@ export class RolesController {
     return this.rolesService.create(req.user.workspaceId, dto);
   }
 
+  @Post('defaults')
+  @Roles(AppRoleValue.ADMIN)
+  createDefaults(@Req() req: AuthenticatedRequest) {
+    return this.rolesService.createDefaultRolesForWorkspace(req.user.workspaceId);
+  }
+
   @Get()
   @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {

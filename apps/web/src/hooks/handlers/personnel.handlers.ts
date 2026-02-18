@@ -117,6 +117,58 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     });
   }
 
+  async function handleDeleteRole(roleId: string) {
+    if (!state.token) return;
+    await runWithErrorToast({
+      operation: async () => {
+        await api.deleteRole(roleId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiDeleteRoleFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
+  async function handleCreateDefaultRoles() {
+    if (!state.token) return;
+    await runWithErrorToast({
+      operation: async () => {
+        await api.createDefaultRoles(state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateDefaultRolesFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
+  async function handleCreateDefaultDepartments() {
+    if (!state.token) return;
+    await runWithErrorToast({
+      operation: async () => {
+        await api.createDefaultDepartments(state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateDefaultDepartmentsFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
+  async function handleCreateDefaultTeamTemplates() {
+    if (!state.token) return;
+    await runWithErrorToast({
+      operation: async () => {
+        await api.createDefaultTeamTemplates(state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiCreateDefaultTeamTemplatesFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
   async function handleCreateSkill(event: FormEvent) {
     event.preventDefault();
     if (!state.token) return;
@@ -140,6 +192,8 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     if (!state.token || !state.employeeRoleId) return;
 
     const salaryMonthly = parseSalaryInput(state.employeeSalary);
+    const normalizedEmail = state.employeeEmail.trim().toLowerCase();
+    const emailPayload = normalizedEmail || null;
     const isEditMode = Boolean(state.editEmployeeId);
     let savedEmployeeId = state.editEmployeeId;
 
@@ -149,7 +203,7 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
           state.editEmployeeId,
           {
             fullName: state.employeeFullName,
-            email: state.employeeEmail,
+            email: emailPayload,
             roleId: state.employeeRoleId,
             departmentId: state.employeeDepartmentId || undefined,
             status: state.employeeStatus,
@@ -161,7 +215,7 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
         const createdEmployee = (await api.createEmployee(
           {
             fullName: state.employeeFullName,
-            email: state.employeeEmail,
+            email: emailPayload,
             roleId: state.employeeRoleId,
             departmentId: state.employeeDepartmentId || undefined,
             status: state.employeeStatus,
@@ -186,10 +240,7 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
         state.setIsEmployeeModalOpen(false);
       } else {
         state.setIsEmployeeCreateModalOpen(false);
-        state.setEmployeeEmail((prev) => {
-          const [name, domain] = prev.split('@');
-          return `${name}.2@${domain ?? 'projo.local'}`;
-        });
+        state.setEmployeeEmail('');
       }
       state.setEditEmployeeId('');
       state.setEmployeeSalary('');
@@ -206,7 +257,7 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
 
   async function handleAutoSaveEmployeeProfile(payload: {
     fullName: string;
-    email: string;
+    email?: string | null;
     roleId: string;
     departmentId?: string;
     grade?: string;
@@ -215,11 +266,12 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
   }) {
     if (!state.token || !state.editEmployeeId || !payload.roleId) return;
     try {
+      const normalizedEmail = payload.email?.trim().toLowerCase() ?? '';
       await api.updateEmployee(
         state.editEmployeeId,
         {
           fullName: payload.fullName,
-          email: payload.email,
+          email: normalizedEmail || null,
           roleId: payload.roleId,
           departmentId: payload.departmentId,
           grade: payload.grade,
@@ -245,7 +297,7 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
       }
 
       state.setEmployeeFullName(payload.fullName);
-      state.setEmployeeEmail(payload.email);
+      state.setEmployeeEmail(normalizedEmail);
       state.setEmployeeRoleId(payload.roleId);
       state.setEmployeeDepartmentId(payload.departmentId ?? '');
       state.setEmployeeGrade(payload.grade ?? '');
@@ -534,6 +586,10 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     toggleRoleFilter,
     handleCreateRole,
     handleUpdateRole,
+    handleDeleteRole,
+    handleCreateDefaultRoles,
+    handleCreateDefaultDepartments,
+    handleCreateDefaultTeamTemplates,
     handleCreateSkill,
     handleCreateEmployee,
     handleAutoSaveEmployeeProfile,

@@ -4,6 +4,21 @@ import { PrismaService } from '../common/prisma.service';
 import { CreateTeamTemplateDto } from './dto/create-team-template.dto';
 import { UpdateTeamTemplateDto } from './dto/update-team-template.dto';
 
+const DEFAULT_TEAM_TEMPLATES = [
+  {
+    name: 'Core Team',
+    roleNames: ['PM', 'BACKEND_DEVELOPER', 'FRONTEND_DEVELOPER', 'QA_ENGINEER'],
+  },
+  {
+    name: 'Game Team',
+    roleNames: ['PM', 'UNITY_DEVELOPER', '3D_ARTIST', 'UI_DESIGNER', 'QA_ENGINEER'],
+  },
+  {
+    name: 'Discovery Team',
+    roleNames: ['PM', 'UX_DESIGNER', 'UI_DESIGNER', 'ANALYST'],
+  },
+];
+
 @Injectable()
 export class TeamTemplatesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -70,6 +85,85 @@ export class TeamTemplatesService {
         },
       });
     });
+  }
+
+  async createDefaultTemplatesForWorkspace(workspaceId: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    const availableRoles = await this.prisma.role.findMany({
+      where: companyId
+        ? {
+            OR: [{ companyId }, { companyId: null }],
+          }
+        : { companyId: null },
+      select: {
+        id: true,
+        name: true,
+        companyId: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const preferredRoleByName = new Map<string, string>();
+    for (const role of availableRoles) {
+      const currentRoleId = preferredRoleByName.get(role.name);
+      if (!currentRoleId) {
+        preferredRoleByName.set(role.name, role.id);
+        continue;
+      }
+
+      if (companyId && role.companyId === companyId) {
+        preferredRoleByName.set(role.name, role.id);
+      }
+    }
+
+    let created = 0;
+    for (const template of DEFAULT_TEAM_TEMPLATES) {
+      const roleIds = template.roleNames
+        .map((roleName) => preferredRoleByName.get(roleName))
+        .filter((roleId): roleId is string => Boolean(roleId));
+
+      if (roleIds.length === 0) {
+        continue;
+      }
+
+      const existing = await this.prisma.projectTeamTemplate.findFirst({
+        where: {
+          companyId,
+          name: template.name,
+        },
+        select: { id: true },
+      });
+
+      if (existing) {
+        await this.prisma.$transaction(async (tx) => {
+          await tx.projectTeamTemplateRole.deleteMany({ where: { templateId: existing.id } });
+          await tx.projectTeamTemplateRole.createMany({
+            data: roleIds.map((roleId, index) => ({
+              templateId: existing.id,
+              roleId,
+              position: index,
+            })),
+          });
+        });
+        continue;
+      }
+
+      await this.prisma.projectTeamTemplate.create({
+        data: {
+          companyId,
+          name: template.name,
+          roles: {
+            create: roleIds.map((roleId, index) => ({
+              roleId,
+              position: index,
+            })),
+          },
+        },
+      });
+      created += 1;
+    }
+
+    return { created };
   }
 
   async findAll(workspaceId: string) {

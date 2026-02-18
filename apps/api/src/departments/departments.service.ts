@@ -4,6 +4,14 @@ import { PrismaService } from '../common/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
+const DEFAULT_DEPARTMENTS = [
+  { name: 'Production', description: 'Development and art production', colorHex: '#7A8A9A' },
+  { name: 'Design', description: 'UI/UX design', colorHex: '#9B7BFF' },
+  { name: 'QA', description: 'Testing and quality assurance', colorHex: '#38A169' },
+  { name: 'Analytics', description: 'Business and product analytics', colorHex: '#D69E2E' },
+  { name: 'Management', description: 'PM and operational management', colorHex: '#E76F51' },
+];
+
 @Injectable()
 export class DepartmentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -22,15 +30,7 @@ export class DepartmentsService {
   }
 
   async ensureDefaultDepartments() {
-    const defaults = [
-      { name: 'Production', description: 'Development and art production', colorHex: '#7A8A9A' },
-      { name: 'Design', description: 'UI/UX design', colorHex: '#9B7BFF' },
-      { name: 'QA', description: 'Testing and quality assurance', colorHex: '#38A169' },
-      { name: 'Analytics', description: 'Business and product analytics', colorHex: '#D69E2E' },
-      { name: 'Management', description: 'PM and operational management', colorHex: '#E76F51' },
-    ];
-
-    for (const department of defaults) {
+    for (const department of DEFAULT_DEPARTMENTS) {
       const existing = await this.prisma.department.findFirst({
         where: {
           companyId: null,
@@ -56,6 +56,41 @@ export class DepartmentsService {
         },
       });
     }
+  }
+
+  async createDefaultDepartmentsForWorkspace(workspaceId: string) {
+    const companyId = await this.getWorkspaceCompanyId(workspaceId);
+    let created = 0;
+
+    for (const department of DEFAULT_DEPARTMENTS) {
+      const existing = await this.prisma.department.findFirst({
+        where: {
+          companyId,
+          name: department.name,
+        },
+        select: { id: true },
+      });
+
+      if (existing) {
+        await this.prisma.department.update({
+          where: { id: existing.id },
+          data: {
+            colorHex: department.colorHex,
+          },
+        });
+        continue;
+      }
+
+      await this.prisma.department.create({
+        data: {
+          ...department,
+          companyId,
+        },
+      });
+      created += 1;
+    }
+
+    return { created };
   }
 
   async create(workspaceId: string, dto: CreateDepartmentDto) {

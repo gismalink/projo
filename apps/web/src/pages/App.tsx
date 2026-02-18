@@ -268,6 +268,17 @@ export function App() {
     await app.handleSwitchCompany(companyId);
   };
 
+  const handleCreateDefaultGrades = async () => {
+    if (!app.token) return;
+    try {
+      await api.createDefaultGrades(app.token);
+      const items = await api.getGrades(app.token);
+      setGrades(items);
+    } catch {
+      app.pushToast(t.uiCreateDefaultGradesFailed);
+    }
+  };
+
   const handleCreateCompany = async () => {
     setCompanyModalMode('create');
     setCompanyNameDraft(buildUnnamedCompanyName());
@@ -684,7 +695,7 @@ export function App() {
                 const foundRole = app.roles.find((role) => role.name === employee.role?.name);
                 app.setEditEmployeeId(employee.id);
                 app.setEmployeeFullName(employee.fullName);
-                app.setEmployeeEmail(employee.email);
+                  app.setEmployeeEmail(employee.email ?? '');
                 app.setEmployeeRoleId(foundRole?.id ?? '');
                 app.setEmployeeDepartmentId(employee.department?.id ?? '');
                 app.setEmployeeGrade(employee.grade ?? '');
@@ -755,17 +766,22 @@ export function App() {
               roleLevel={app.roleLevel}
               onCreateRole={app.handleCreateRole}
               onUpdateRole={app.handleUpdateRole}
+              onDeleteRole={app.handleDeleteRole}
+              onCreateDefaultRoles={app.handleCreateDefaultRoles}
               setRoleName={app.setRoleName}
               setRoleShortName={app.setRoleShortName}
               setRoleDescription={app.setRoleDescription}
               setRoleLevel={app.setRoleLevel}
               roleColorOrDefault={roleColorOrDefault}
+              onCreateDefaultDepartments={app.handleCreateDefaultDepartments}
               onCreateDepartment={app.handleCreateDepartment}
               onUpdateDepartment={app.handleUpdateDepartment}
               onDeleteDepartment={app.handleDeleteDepartment}
+              onCreateDefaultTeamTemplates={app.handleCreateDefaultTeamTemplates}
               onCreateTeamTemplate={app.handleCreateTeamTemplate}
               onUpdateTeamTemplate={app.handleUpdateTeamTemplate}
               onDeleteTeamTemplate={app.handleDeleteTeamTemplate}
+              onCreateDefaultGrades={handleCreateDefaultGrades}
               onAddGrade={(name, colorHex) => {
                 if (!app.token) return;
                 const trimmed = name.trim();

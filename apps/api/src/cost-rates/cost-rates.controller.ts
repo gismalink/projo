@@ -18,7 +18,7 @@ export class CostRatesController {
   constructor(private readonly costRatesService: CostRatesService) {}
 
   @Post()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.FINANCE)
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateCostRateDto) {
     return this.costRatesService.create(req.user.workspaceId, dto);
   }
@@ -36,13 +36,13 @@ export class CostRatesController {
   }
 
   @Patch(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.FINANCE)
   update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateCostRateDto) {
     return this.costRatesService.update(req.user.workspaceId, id, dto);
   }
 
   @Delete(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.FINANCE)
   remove(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.costRatesService.remove(req.user.workspaceId, id);
   }
