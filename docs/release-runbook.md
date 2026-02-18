@@ -56,6 +56,11 @@
    - `curl -I https://test.projo.gismalink.art`
    - ручной smoke ключевых сценариев.
 
+### Упрощённый сценарий (одной SSH-командой)
+- Для обычного обновления test до актуального `master`:
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run test:update'`
+- Важно: в non-interactive SSH на macOS путь к Docker может не подхватываться автоматически, поэтому используется `export PATH=/usr/local/bin:$PATH`.
+
 ### Шаг D. Promote на prod (тот же SHA)
 1. Не менять SHA (всё ещё `git checkout <sha>` на сервере).
 2. Перезапустить только prod-сервисы:

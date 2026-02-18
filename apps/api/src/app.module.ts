@@ -26,17 +26,17 @@ import { VacationsModule } from './vacations/vacations.module';
       {
         name: 'default',
         ttl: 60_000,
-        limit: 120,
+        limit: 600,
       },
       {
         name: 'auth',
         ttl: 60_000,
-        limit: 30,
+        limit: 120,
       },
       {
         name: 'login',
         ttl: 60_000,
-        limit: 5,
+        limit: 15,
       },
     ]),
     PrismaModule,
