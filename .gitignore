@@ -2,6 +2,11 @@ node_modules
 .env
 .env.*
 !.env.example
+!apps/api/.env.test.example
+!apps/api/.env.prod.example
+!apps/web/.env.test.example
+!apps/web/.env.prod.example
+!infra/.env.host.example
 dist
 build
 coverage

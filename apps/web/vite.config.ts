@@ -6,4 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: ['test.projo.gismalink.art', 'projo.gismalink.art'],
+  },
 });

@@ -33,6 +33,15 @@
    - API only: `npm run dev:api`
    - Web only: `npm run dev:web`
 
+## Environments
+- `dev`: local only (`localhost`), no public exposure.
+- `test`: public test contour (`test.projo.gismalink.art`) with separate DB/secrets.
+- `prod`: public production contour (`projo.gismalink.art`) with separate DB/secrets.
+
+Environment templates:
+- API: `apps/api/.env.example`, `apps/api/.env.test.example`, `apps/api/.env.prod.example`
+- Web: `apps/web/.env.example`, `apps/web/.env.test.example`, `apps/web/.env.prod.example`
+
 ## Verification
 - Full check: `npm run verify`
 - Full check + runtime smoke API test: `SMOKE_API=1 npm run verify`
@@ -53,6 +62,8 @@ Bootstrap admin is created automatically on API startup if the required env vari
 - Product specification: `docs/product-spec.md`
 - Implementation roadmap: `docs/implementation-roadmap.md`
 - Workflow checklist: `docs/workflow-checklist.md`
+- Release runbook: `docs/release-runbook.md`
+- Mac server deploy guide: `docs/server-deploy-mac.md`
 - Stabilization audit (2026-02-15): `docs/audits/stabilization-audit-2026-02-15.md`
 - Technical audit (2026-02-16): `docs/audits/technical-audit-2026-02-16.md`
 - Technical audit (2026-02-18): `docs/audits/technical-audit-2026-02-18.md`
