@@ -101,12 +101,14 @@
   gap: 0.35rem;
 }
 
-.timeline-toolbar-icon-btn {
+.timeline-toolbar-icon-btn,
+.timeline-meta-icon-btn {
   @include button.icon-button-chrome(30px, 999px, 0);
   line-height: 1;
 }
 
-.timeline-toolbar-icon-btn:hover {
+.timeline-toolbar-icon-btn:hover,
+.timeline-meta-icon-btn:hover {
   @include button.icon-button-hover;
 }
 
@@ -629,22 +631,7 @@
 }
 
 .timeline-meta-icon-btn {
-  min-width: 30px;
-  height: 30px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid var(--ios-border);
-  background: var(--ios-surface-strong);
-  color: var(--ios-text-secondary);
-  box-shadow: none;
   font-size: 0.92rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.timeline-meta-icon-btn:hover {
-  background: rgba(10, 132, 255, 0.12);
 }
 
 .timeline-submeta {
@@ -929,13 +916,17 @@
   overflow: visible;
 }
 
-.assignment-track .track-day-grid {
+.assignment-track .track-day-grid,
+.assignment-vacation-track .track-day-grid {
   border-radius: 0;
   box-shadow: none;
-  background-image: linear-gradient(to right, rgba(60, 60, 67, 0.18) 0 1px, transparent 1px);
   background-size: var(--day-step) 100%;
   background-position: 0 0;
   background-repeat: repeat-x;
+}
+
+.assignment-track .track-day-grid {
+  background-image: linear-gradient(to right, rgba(60, 60, 67, 0.18) 0 1px, transparent 1px);
 }
 
 .assignment-bar {
@@ -1003,7 +994,8 @@
   -webkit-user-select: none;
 }
 
-.assignment-plan-handle {
+.assignment-plan-handle,
+.project-plan-handle {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -1019,22 +1011,32 @@
 
 .assignment-plan-handle.left {
   left: 0;
-  cursor: ew-resize;
 }
 
 .assignment-plan-handle.right {
   right: 0;
-  cursor: ew-resize;
 }
 
 .assignment-plan-handle.center {
   left: 8px;
   right: 8px;
+}
+
+.assignment-plan-handle.center,
+.project-plan-handle.center {
   cursor: grab;
 }
 
-.assignment-plan-handle.center:active {
+.assignment-plan-handle.center:active,
+.project-plan-handle.center:active {
   cursor: grabbing;
+}
+
+.assignment-plan-handle.left,
+.assignment-plan-handle.right,
+.project-plan-handle.left,
+.project-plan-handle.right {
+  cursor: ew-resize;
 }
 
 .assignment-vacation-bar {
@@ -1067,12 +1069,7 @@
 }
 
 .assignment-vacation-track .track-day-grid {
-  border-radius: 0;
-  box-shadow: none;
   background-image: linear-gradient(to right, rgba(60, 60, 67, 0.12) 0 1px, transparent 1px);
-  background-size: var(--day-step) 100%;
-  background-position: 0 0;
-  background-repeat: repeat-x;
 }
 
 .assignment-edit-row {
@@ -1145,13 +1142,6 @@
   right: 0;
 }
 
-.project-plan-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 5;
-}
-
 .project-plan-handle.left,
 .project-plan-handle.right {
   width: var(--project-handle-size, 10px);
@@ -1186,22 +1176,15 @@
 
 .project-plan-handle.left {
   left: calc(-1 * var(--project-handle-size, 10px));
-  cursor: ew-resize;
 }
 
 .project-plan-handle.right {
   right: calc(-1 * var(--project-handle-size, 10px));
-  cursor: ew-resize;
 }
 
 .project-plan-handle.center {
   left: 0;
   right: 0;
-  cursor: grab;
-}
-
-.project-plan-handle.center:active {
-  cursor: grabbing;
 }
 
 @media (max-width: 900px) {
