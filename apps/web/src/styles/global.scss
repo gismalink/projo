@@ -384,7 +384,8 @@ button[data-tooltip]::after {
 }
 
 
-ul {
+.roles-list,
+.project-settings-body ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -393,25 +394,29 @@ ul {
   gap: 0.6rem;
 }
 
-li {
+.roles-list > li,
+.project-settings-body ul > li {
   display: flex;
   justify-content: space-between;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--ios-border);
 }
 
-li span {
+.roles-list > li span,
+.project-settings-body ul > li span {
   font-size: 0.9rem;
   color: var(--ios-text-secondary);
 }
 
-li div {
+.roles-list > li div,
+.project-settings-body ul > li div {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
 }
 
-li:last-child {
+.roles-list > li:last-child,
+.project-settings-body ul > li:last-child {
   border-bottom: 0;
   padding-bottom: 0;
 }
