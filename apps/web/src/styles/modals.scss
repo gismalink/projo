@@ -1,3 +1,6 @@
+@use './variables' as vars;
+@use './mixins' as mix;
+
 .timeline-form {
   display: grid;
   gap: 0.25rem;
@@ -65,24 +68,14 @@
 }
 
 .department-manage-action {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 9px;
-  border: 1px solid var(--ios-border);
-  background: var(--ios-surface-strong);
-  color: var(--ios-text-secondary);
-  box-shadow: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  @include mix.icon-button-chrome(32px, 9px, 0);
   font-size: 0.95rem;
   line-height: 1;
   font-weight: 700;
 }
 
 .department-manage-action:hover:not(:disabled) {
-  background: rgba(10, 132, 255, 0.12);
+  background: vars.$icon-hover-bg;
 }
 
 .department-manage-action:disabled {

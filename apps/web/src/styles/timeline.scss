@@ -1,3 +1,6 @@
+@use './variables' as vars;
+@use './mixins' as mix;
+
 .timeline-layout {
   display: grid;
   grid-template-columns: 1fr;
@@ -100,22 +103,12 @@
 }
 
 .timeline-toolbar-icon-btn {
-  min-width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  padding: 0;
-  border: 1px solid var(--ios-border);
-  background: var(--ios-surface-strong);
-  color: var(--ios-text-secondary);
-  box-shadow: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  @include mix.icon-button-chrome(30px, 999px, 0);
   line-height: 1;
 }
 
 .timeline-toolbar-icon-btn:hover {
-  background: rgba(10, 132, 255, 0.12);
+  background: vars.$icon-hover-bg;
 }
 
 .month-grid {

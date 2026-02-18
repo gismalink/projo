@@ -1,3 +1,6 @@
+@use './variables' as vars;
+@use './mixins' as mix;
+
 .role-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 40px 32px;
@@ -86,7 +89,7 @@
   min-height: 34px;
   padding: 0.45rem 0.55rem;
   text-transform: uppercase;
-  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-family: vars.$font-family-mono;
 }
 
 .custom-color-sv {
@@ -164,17 +167,8 @@
 
 .color-picker-trigger {
   cursor: pointer;
-  width: 40px;
-  height: 32px;
-  border: 1px solid var(--ios-border);
-  border-radius: 12px;
-  padding: 0.2rem;
-  background: var(--ios-surface-strong);
+  @include mix.icon-button-chrome(40px, 12px, 0.2rem);
   color: inherit;
-  box-shadow: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .template-manage-create {

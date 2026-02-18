@@ -1,0 +1,62 @@
+@use './variables' as vars;
+
+@mixin icon-button-chrome($size: 30px, $radius: 999px, $padding: 0) {
+  min-width: $size;
+  width: $size;
+  height: $size;
+  padding: $padding;
+  border-radius: $radius;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin tooltip-below {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 7px);
+  transform: translate(-50%, -4px);
+  opacity: 0;
+  pointer-events: none;
+  background: vars.$tooltip-bg;
+  color: vars.$tooltip-text;
+  border-radius: 8px;
+  border: 1px solid vars.$tooltip-border;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 30;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+@mixin tooltip-above {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translate(-50%, 4px);
+  opacity: 0;
+  pointer-events: none;
+  background: vars.$tooltip-bg;
+  color: vars.$tooltip-text;
+  border-radius: 8px;
+  border: 1px solid vars.$tooltip-border;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 30;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+@mixin tooltip-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.14s;
+}
