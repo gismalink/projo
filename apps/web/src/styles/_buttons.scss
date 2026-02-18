@@ -1,0 +1,20 @@
+@use './variables' as vars;
+
+@mixin icon-button-chrome($size: 30px, $radius: 999px, $padding: 0) {
+  min-width: $size;
+  width: $size;
+  height: $size;
+  padding: $padding;
+  border-radius: $radius;
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin icon-button-hover {
+  background: vars.$icon-hover-bg;
+}

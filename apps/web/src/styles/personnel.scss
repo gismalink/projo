@@ -1,5 +1,4 @@
-@use './variables' as vars;
-@use './mixins' as mix;
+@use './buttons' as button;
 
 .role-filter-panel {
   display: flex;
@@ -57,13 +56,13 @@
 }
 
 .filter-clear-icon-btn {
-  @include mix.icon-button-chrome(28px, 999px, 0);
+  @include button.icon-button-chrome(28px, 999px, 0);
   line-height: 1;
   font-size: 0.9rem;
 }
 
 .filter-clear-icon-btn:hover {
-  background: vars.$icon-hover-bg;
+  @include button.icon-button-hover;
 }
 
 .employee-cards {

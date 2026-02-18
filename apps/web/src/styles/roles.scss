@@ -1,5 +1,5 @@
-@use './variables' as vars;
-@use './mixins' as mix;
+@use './buttons' as button;
+@use './typography' as type;
 
 .role-row {
   display: grid;
@@ -89,7 +89,7 @@
   min-height: 34px;
   padding: 0.45rem 0.55rem;
   text-transform: uppercase;
-  font-family: vars.$font-family-mono;
+  @include type.mono-font;
 }
 
 .custom-color-sv {
@@ -167,7 +167,7 @@
 
 .color-picker-trigger {
   cursor: pointer;
-  @include mix.icon-button-chrome(40px, 12px, 0.2rem);
+  @include button.icon-button-chrome(40px, 12px, 0.2rem);
   color: inherit;
 }
 

@@ -1,12 +1,13 @@
-@use './variables' as vars;
-@use './mixins' as mix;
+@use './buttons' as button;
+@use './tooltips' as tooltip;
+@use './typography' as type;
 
 html {
   scrollbar-gutter: stable both-edges;
 }
 
 :root {
-  font-family: vars.$font-family-sans;
+  @include type.sans-font;
   color: #1d1d1f;
   --ios-bg: #f2f2f7;
   --ios-surface: rgba(255, 255, 255, 0.76);
@@ -138,7 +139,7 @@ textarea[readonly]:focus {
 
 textarea {
   resize: vertical;
-  font-family: vars.$font-family-mono;
+  @include type.mono-font;
 }
 
 button {
@@ -260,12 +261,12 @@ button:active {
 }
 
 .icon-btn {
-  @include mix.icon-button-chrome(30px, 999px, 0);
+  @include button.icon-button-chrome(30px, 999px, 0);
   position: relative;
 }
 
 .icon-btn:hover {
-  background: vars.$icon-hover-bg;
+  @include button.icon-button-hover;
 }
 
 .icon-btn.active {
@@ -274,26 +275,23 @@ button:active {
   border-color: var(--ios-accent);
 }
 
-.icon-btn[data-tooltip]::after {
-  @include mix.tooltip-below;
-}
-
-.icon-btn[data-tooltip]:hover::after,
-.icon-btn[data-tooltip]:focus-visible::after {
-  @include mix.tooltip-visible;
-}
-
 button[data-tooltip] {
   position: relative;
 }
 
-button[data-tooltip]::after {
-  @include mix.tooltip-below;
+button[data-tooltip]::after,
+.icon-btn[data-tooltip]::after {
+  @include tooltip.tooltip-below;
 }
 
 button[data-tooltip]:hover::after,
-button[data-tooltip]:focus-visible::after {
-  @include mix.tooltip-visible;
+button[data-tooltip]:focus-visible::after,
+.icon-btn[data-tooltip]:hover::after,
+.icon-btn[data-tooltip]:focus-visible::after {
+  @include tooltip.tooltip-visible;
+}
+
+button[data-tooltip]::after {
 }
 
 .project-space-grid {
@@ -348,12 +346,12 @@ button[data-tooltip]:focus-visible::after {
 }
 
 .project-space-card-create[data-tooltip]::after {
-  @include mix.tooltip-above;
+  @include tooltip.tooltip-above;
 }
 
 .project-space-card-create[data-tooltip]:hover::after,
 .project-space-card-create[data-tooltip]:focus-visible::after {
-  @include mix.tooltip-visible;
+  @include tooltip.tooltip-visible;
 }
 
 .project-space-card-create-plus {

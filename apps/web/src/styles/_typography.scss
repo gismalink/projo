@@ -1,0 +1,9 @@
+@use './variables' as vars;
+
+@mixin sans-font {
+  font-family: vars.$font-family-sans;
+}
+
+@mixin mono-font {
+  font-family: vars.$font-family-mono;
+}
