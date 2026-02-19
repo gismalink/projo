@@ -560,6 +560,8 @@ export function App() {
           t={t}
           authMode={authMode}
           setAuthMode={setAuthMode}
+          lang={lang}
+          setLang={setLang}
           email={app.email}
           setEmail={app.setEmail}
           password={app.password}

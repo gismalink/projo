@@ -4,6 +4,17 @@ import { HandlerDeps } from './handler-deps';
 import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
 
 export function createAuthHandlers({ state, t, errorText, pushToast, refreshData }: HandlerDeps) {
+  const EMAIL_PATTERN =
+    /^(?=.{6,254}$)(?=.{1,64}@)(?!.*\.\.)[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i;
+
+  function normalizeEmail(value: string) {
+    return value.trim().toLowerCase();
+  }
+
+  function isValidEmail(value: string) {
+    return EMAIL_PATTERN.test(value);
+  }
+
   function applyAuthSession(
     payload: {
       accessToken: string;
@@ -66,15 +77,28 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
-    if (!state.email.trim() || !state.password.trim()) {
+    const normalizedEmail = normalizeEmail(state.email);
+    const trimmedPassword = state.password.trim();
+
+    if (!normalizedEmail || !trimmedPassword) {
       pushToast(t.uiAuthEmailPasswordRequired);
+      return;
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      pushToast(t.uiAuthEmailInvalid);
+      return;
+    }
+    if (trimmedPassword.length < 8) {
+      pushToast(t.uiAuthPasswordMinLength);
       return;
     }
 
     await runWithErrorToast({
       operation: async () => {
-        const result = await api.login(state.email, state.password);
+        const result = await api.login(normalizedEmail, trimmedPassword);
         applyAuthSession(result, { includeIdentity: true });
+        state.setEmail(normalizedEmail);
+        state.setPassword('');
         await refreshData(result.accessToken, state.selectedYear);
         await loadMyCompanies(result.accessToken);
         await loadMyProjects(result.accessToken);
@@ -94,16 +118,36 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     },
   ) {
     event.preventDefault();
-    if (!payload.email.trim() || !payload.password.trim() || !payload.fullName.trim()) {
+    const normalizedEmail = normalizeEmail(payload.email);
+    const trimmedFullName = payload.fullName.trim();
+    const trimmedPassword = payload.password.trim();
+
+    if (!normalizedEmail || !trimmedPassword || !trimmedFullName) {
       pushToast(t.uiRegisterRequiredFields);
+      return;
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      pushToast(t.uiAuthEmailInvalid);
+      return;
+    }
+    if (trimmedFullName.length < 2) {
+      pushToast(t.uiRegisterFullNameMinLength);
+      return;
+    }
+    if (trimmedPassword.length < 8) {
+      pushToast(t.uiAuthPasswordMinLength);
       return;
     }
 
     await runWithErrorToast({
       operation: async () => {
-        const result = await api.register(payload);
+        const result = await api.register({
+          email: normalizedEmail,
+          fullName: trimmedFullName,
+          password: trimmedPassword,
+        });
         applyAuthSession(result, { includeIdentity: true });
-        state.setEmail(payload.email);
+        state.setEmail(normalizedEmail);
         state.setPassword('');
         await refreshData(result.accessToken, state.selectedYear);
         await loadMyCompanies(result.accessToken);
@@ -318,15 +362,19 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
   async function handleInviteProjectMember(projectId: string, email: string, permission: 'viewer' | 'editor') {
     if (!state.token) return null;
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
       pushToast(t.uiInviteEmailRequired);
+      return null;
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      pushToast(t.uiInviteEmailInvalid);
       return null;
     }
 
     const members = await runWithErrorToast({
       operation: async () => {
-        const result = await api.inviteProjectMember(projectId, trimmedEmail, permission, state.token as string);
+        const result = await api.inviteProjectMember(projectId, normalizedEmail, permission, state.token as string);
         return result.members;
       },
       fallbackMessage: t.uiInviteFailed,

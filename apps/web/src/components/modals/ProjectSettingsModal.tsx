@@ -53,6 +53,11 @@ export function ProjectSettingsModal(props: ProjectSettingsModalProps) {
 
   if (!isOpen) return null;
 
+  const emailPattern =
+    /^(?=.{6,254}$)(?=.{1,64}@)(?!.*\.\.)[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i;
+  const inviteEmailValue = inviteEmail.trim().toLowerCase();
+  const isInviteEmailValid = Boolean(inviteEmailValue) && emailPattern.test(inviteEmailValue);
+
   return (
     <div className="modal-backdrop">
       <article className="modal-card auth-modal project-settings-modal">
@@ -133,15 +138,21 @@ export function ProjectSettingsModal(props: ProjectSettingsModalProps) {
                   <span className="field-label required">{t.inviteByEmail}</span>
                 </label>
                 <div className="project-settings-inline project-settings-inline-invite">
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="name@example.com"
-                    value={inviteEmail}
-                    required
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                  />
+                  <div className="project-settings-invite-email">
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="name@example.com"
+                      value={inviteEmail}
+                      required
+                      maxLength={254}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                    />
+                    <span className={!inviteEmailValue ? 'field-status pending' : isInviteEmailValid ? 'field-status success' : 'field-status error'}>
+                      {!inviteEmailValue ? t.uiStatusAwaitingEmail : isInviteEmailValid ? t.uiStatusEmailValid : t.uiStatusEmailInvalid}
+                    </span>
+                  </div>
                   <select
                     value={invitePermission}
                     onChange={(event) => setInvitePermission(event.target.value as 'viewer' | 'editor')}

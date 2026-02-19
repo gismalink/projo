@@ -44,6 +44,11 @@ export function EmployeeProfileFields({
   setStatus,
   setSalary,
 }: EmployeeProfileFieldsProps) {
+  const emailPattern =
+    /^(?=.{6,254}$)(?=.{1,64}@)(?!.*\.\.)[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i;
+  const emailValue = email.trim().toLowerCase();
+  const isEmailValid = Boolean(emailValue) && emailPattern.test(emailValue);
+
   const departmentField = (
     <label>
       <span className="field-label optional">{t.department}</span>
@@ -105,8 +110,14 @@ export function EmployeeProfileFields({
           autoComplete="email"
           placeholder="name@example.com"
           value={email}
+          maxLength={254}
           onChange={(event) => setEmail(event.target.value)}
         />
+        {emailValue ? (
+          <span className={isEmailValid ? 'field-status success' : 'field-status error'}>
+            {isEmailValid ? t.uiStatusEmailValid : t.uiStatusEmailInvalid}
+          </span>
+        ) : null}
       </label>
 
       {compactMeta ? (

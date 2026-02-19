@@ -41,6 +41,15 @@ export function AccountModal(props: AccountModalProps) {
 
   if (!isOpen) return null;
 
+  const accountFullNameValue = accountFullNameDraft.trim();
+  const currentPasswordValue = currentPassword.trim();
+  const newPasswordValue = newPassword.trim();
+  const newPasswordConfirmValue = newPasswordConfirm.trim();
+  const isAccountFullNameValid = accountFullNameValue.length >= 2;
+  const isCurrentPasswordValid = currentPasswordValue.length >= 8;
+  const isNewPasswordValid = newPasswordValue.length >= 8;
+  const isNewPasswordConfirmValid = newPasswordConfirmValue.length >= 8 && newPasswordConfirmValue === newPasswordValue;
+
   return (
     <div className="modal-backdrop">
       <article className="modal-card auth-modal">
@@ -71,8 +80,17 @@ export function AccountModal(props: AccountModalProps) {
                 value={accountFullNameDraft}
                 placeholder={t.fullName}
                 required
+                minLength={2}
+                maxLength={120}
                 onChange={(event) => setAccountFullNameDraft(event.target.value)}
               />
+              <span className={!accountFullNameValue ? 'field-status pending' : isAccountFullNameValid ? 'field-status success' : 'field-status error'}>
+                {!accountFullNameValue
+                  ? t.uiStatusAwaitingFullName
+                  : isAccountFullNameValid
+                    ? t.uiStatusFullNameValid
+                    : t.uiStatusFullNameInvalid}
+              </span>
             </label>
             <button type="submit">{t.saveProfile}</button>
           </form>
@@ -84,8 +102,16 @@ export function AccountModal(props: AccountModalProps) {
                 placeholder="••••••••"
                 value={currentPassword}
                 required
+                minLength={8}
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
+              <span className={!currentPasswordValue ? 'field-status pending' : isCurrentPasswordValid ? 'field-status success' : 'field-status error'}>
+                {!currentPasswordValue
+                  ? t.uiStatusAwaitingPassword
+                  : isCurrentPasswordValid
+                    ? t.uiStatusPasswordValid
+                    : t.uiStatusPasswordInvalid}
+              </span>
             </label>
             <label>
               <span className="field-label required">{t.newPassword}</span>
@@ -94,8 +120,16 @@ export function AccountModal(props: AccountModalProps) {
                 placeholder="••••••••"
                 value={newPassword}
                 required
+                minLength={8}
                 onChange={(event) => setNewPassword(event.target.value)}
               />
+              <span className={!newPasswordValue ? 'field-status pending' : isNewPasswordValid ? 'field-status success' : 'field-status error'}>
+                {!newPasswordValue
+                  ? t.uiStatusAwaitingPassword
+                  : isNewPasswordValid
+                    ? t.uiStatusPasswordValid
+                    : t.uiStatusPasswordInvalid}
+              </span>
             </label>
             <label>
               <span className="field-label required">{t.confirmPassword}</span>
@@ -104,8 +138,24 @@ export function AccountModal(props: AccountModalProps) {
                 placeholder="••••••••"
                 value={newPasswordConfirm}
                 required
+                minLength={8}
                 onChange={(event) => setNewPasswordConfirm(event.target.value)}
               />
+              <span
+                className={
+                  !newPasswordConfirmValue
+                    ? 'field-status pending'
+                    : isNewPasswordConfirmValid
+                      ? 'field-status success'
+                      : 'field-status error'
+                }
+              >
+                {!newPasswordConfirmValue
+                  ? t.uiStatusAwaitingPasswordConfirm
+                  : isNewPasswordConfirmValid
+                    ? t.uiStatusPasswordConfirmValid
+                    : t.uiStatusPasswordConfirmInvalid}
+              </span>
             </label>
             <button type="submit">{t.changePassword}</button>
           </form>
