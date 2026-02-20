@@ -1,4 +1,5 @@
 import { FormEvent } from 'react';
+import { LANGUAGE_OPTIONS } from '../../pages/app-i18n';
 import { Lang } from '../../pages/app-types';
 
 type AuthGateProps = {
@@ -76,8 +77,11 @@ export function AuthGate(props: AuthGateProps) {
             aria-label={t.language}
             className="lang-select"
           >
-            <option value="ru">RU</option>
-            <option value="en">EN</option>
+            {LANGUAGE_OPTIONS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="tabs auth-tabs" style={{ marginBottom: 12 }}>

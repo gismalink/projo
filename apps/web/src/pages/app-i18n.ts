@@ -1,15 +1,47 @@
 import { Lang } from './app-types';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-export const MONTHS_BY_LANG: Record<Lang, string[]> = {
-  ru: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
-  en: MONTHS,
+export const LOCALE_BY_LANG: Record<Lang, string> = {
+  ru: 'ru-RU',
+  en: 'en-US',
+  es: 'es-ES',
+  de: 'de-DE',
+  fr: 'fr-FR',
+  it: 'it-IT',
+  pt: 'pt-PT',
+  pl: 'pl-PL',
+  tr: 'tr-TR',
+  uk: 'uk-UA',
+  zh: 'zh-CN',
+  ja: 'ja-JP',
 };
+
+export const LANGUAGE_OPTIONS: Array<{ value: Lang; label: string }> = [
+  { value: 'ru', label: 'RU' },
+  { value: 'en', label: 'EN' },
+  { value: 'es', label: 'ES' },
+  { value: 'de', label: 'DE' },
+  { value: 'fr', label: 'FR' },
+  { value: 'it', label: 'IT' },
+  { value: 'pt', label: 'PT' },
+  { value: 'pl', label: 'PL' },
+  { value: 'tr', label: 'TR' },
+  { value: 'uk', label: 'UK' },
+  { value: 'zh', label: 'ZH' },
+  { value: 'ja', label: 'JA' },
+];
+
+const getMonthLabels = (locale: string) =>
+  Array.from({ length: 12 }, (_, month) =>
+    new Date(Date.UTC(2026, month, 1)).toLocaleString(locale, { month: 'short', timeZone: 'UTC' }),
+  );
+
+export const MONTHS_BY_LANG: Record<Lang, string[]> = Object.fromEntries(
+  (Object.entries(LOCALE_BY_LANG) as Array<[Lang, string]>).map(([lang, locale]) => [lang, getMonthLabels(locale)]),
+) as Record<Lang, string[]>;
 
 export const GRADE_OPTIONS = ['джу', 'джун+', 'мидл', 'мидл+', 'синьйор', 'синьйор+', 'лид', 'рук-отдела'];
 
-export const TEXT: Record<Lang, Record<string, string>> = {
+const TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
   ru: {
     appTitle: 'Projo Planner',
     subtitle: 'Планирование проектов',
@@ -562,7 +594,24 @@ export const TEXT: Record<Lang, Record<string, string>> = {
   },
 };
 
-export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
+const EN_TEXT = TEXT_BASE.en;
+
+export const TEXT: Record<Lang, Record<string, string>> = {
+  ru: TEXT_BASE.ru,
+  en: EN_TEXT,
+  es: EN_TEXT,
+  de: EN_TEXT,
+  fr: EN_TEXT,
+  it: EN_TEXT,
+  pt: EN_TEXT,
+  pl: EN_TEXT,
+  tr: EN_TEXT,
+  uk: EN_TEXT,
+  zh: EN_TEXT,
+  ja: EN_TEXT,
+};
+
+const ERROR_TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
   ru: {
     HTTP_400: 'Проверьте корректность заполнения полей',
     HTTP_401: 'Требуется повторный вход в систему',
@@ -637,4 +686,21 @@ export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
     ERR_ASSIGNMENT_OVERLAPS_VACATION: 'Assignment overlaps with employee vacation',
     ERR_CALENDAR_SYNC_FAILED: 'Failed to sync production calendar',
   },
+};
+
+const EN_ERROR_TEXT = ERROR_TEXT_BASE.en;
+
+export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
+  ru: ERROR_TEXT_BASE.ru,
+  en: EN_ERROR_TEXT,
+  es: EN_ERROR_TEXT,
+  de: EN_ERROR_TEXT,
+  fr: EN_ERROR_TEXT,
+  it: EN_ERROR_TEXT,
+  pt: EN_ERROR_TEXT,
+  pl: EN_ERROR_TEXT,
+  tr: EN_ERROR_TEXT,
+  uk: EN_ERROR_TEXT,
+  zh: EN_ERROR_TEXT,
+  ja: EN_ERROR_TEXT,
 };

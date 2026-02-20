@@ -13,7 +13,7 @@ type RoleStat = {
 
 type PersonnelTabProps = {
   t: Record<string, string>;
-  locale: 'ru-RU' | 'en-US';
+  locale: string;
   departments: DepartmentItem[];
   grades: GradeItem[];
   departmentGroups: [string, Employee[]][];

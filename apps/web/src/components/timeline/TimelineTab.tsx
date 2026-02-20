@@ -19,7 +19,7 @@ import { useTimelineProjectDrag } from './useTimelineProjectDrag';
 const TIMELINE_DRAG_STEP_STORAGE_KEY = 'timeline.dragStepDays';
 type TimelineTabProps = {
   t: Record<string, string>;
-  locale: 'ru-RU' | 'en-US';
+  locale: string;
   months: string[];
   canManageTimeline: boolean;
   selectedYear: number;

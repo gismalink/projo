@@ -20,7 +20,7 @@ export type Employee = {
 };
 
 export type ActiveTab = 'timeline' | 'personnel' | 'roles' | 'instruction';
-export type Lang = 'ru' | 'en';
+export type Lang = 'ru' | 'en' | 'es' | 'de' | 'fr' | 'it' | 'pt' | 'pl' | 'tr' | 'uk' | 'zh' | 'ja';
 
 export type Toast = {
   id: number;

@@ -8,7 +8,7 @@ import { VacationTypeSelect } from './VacationTypeSelect';
 
 type EmployeeModalProps = {
   t: Record<string, string>;
-  locale: 'ru-RU' | 'en-US';
+  locale: string;
   roles: Role[];
   departments: DepartmentItem[];
   isOpen: boolean;

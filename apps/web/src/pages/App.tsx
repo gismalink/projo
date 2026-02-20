@@ -19,7 +19,7 @@ import { PersonnelTab } from '../components/personnel/PersonnelTab';
 import { RolesTab } from '../components/roles/RolesTab';
 import { TimelineTab } from '../components/timeline/TimelineTab';
 import { useAppData, isoToInputDate, roleColorOrDefault, timelineStyle, utilizationColor } from '../hooks/useAppData';
-import { ERROR_TEXT, MONTHS_BY_LANG, TEXT } from './app-i18n';
+import { ERROR_TEXT, LANGUAGE_OPTIONS, LOCALE_BY_LANG, MONTHS_BY_LANG, TEXT } from './app-i18n';
 import { Lang } from './app-types';
 
 export function App() {
@@ -48,7 +48,7 @@ export function App() {
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const t = TEXT[lang];
-  const locale: 'ru-RU' | 'en-US' = lang === 'ru' ? 'ru-RU' : 'en-US';
+  const locale = LOCALE_BY_LANG[lang];
 
   const gradeOptions = grades.map((grade) => grade.name);
 
@@ -547,8 +547,11 @@ export function App() {
               value={lang}
               onChange={(event) => setLang(event.target.value as Lang)}
             >
-              <option value="ru">RU</option>
-              <option value="en">EN</option>
+              {LANGUAGE_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
