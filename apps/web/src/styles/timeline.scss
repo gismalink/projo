@@ -13,18 +13,34 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+
+  @include responsive.down(vars.$bp-sm) {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
 }
 
 .timeline-toolbar-title-group {
   display: flex;
   align-items: center;
   gap: 0.8rem;
+
+  @include responsive.down(vars.$bp-sm) {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+  }
 }
 
 .timeline-step-switch {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+
+  @include responsive.down(vars.$bp-sm) {
+    flex-wrap: wrap;
+  }
 }
 
 .timeline-step-switch .tab {
@@ -49,6 +65,11 @@
   font-size: 0.78rem;
   color: var(--ios-text-secondary);
   margin-right: 0.2rem;
+
+  @include responsive.down(vars.$bp-sm) {
+    width: 100%;
+    margin-right: 0;
+  }
 }
 
 .timeline-calendar-legend {
@@ -58,6 +79,13 @@
   margin: 0.05rem 0 0.45rem;
   font-size: 0.74rem;
   color: var(--ios-text-secondary);
+
+  @include responsive.down(vars.$bp-sm) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.3rem;
+  }
 }
 
 .timeline-calendar-legend-title {
@@ -101,6 +129,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+
+  @include responsive.down(vars.$bp-sm) {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .timeline-toolbar-icon-btn,
@@ -417,6 +450,12 @@
   border: 1px solid var(--ios-border);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.75);
+
+  @include responsive.down(vars.$bp-sm) {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
 .timeline-template-chip {
@@ -516,6 +555,13 @@
   align-items: center;
   gap: 2rem;
   min-width: 0;
+
+  @include responsive.down(vars.$bp-sm) {
+    width: 100%;
+    gap: 0.45rem;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
 }
 
 .timeline-error-inline-list {
