@@ -1,11 +1,21 @@
 # Release Runbook (test/prod)
 
-Актуализация: 2026-02-18
+Актуализация: 2026-02-20
+
+## Оперативное правило (для команд в чате)
+- Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально.
+- Команда по умолчанию:
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run test:update'`
+- Если явно не указано иное, использовать именно этот сценарий обновления test-окружения.
+- Фраза «деплой в prod/продакшн» означает запуск **на сервере по SSH** и promotion того же коммита, который уже прошёл проверку на `test`.
+- Команда по умолчанию для `prod`:
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-prod projo-web-prod'`
 
 ## 1) Модель окружений
 - `dev` — локально на машине разработчика, без внешней публикации.
 - `test` — публичный стенд для проверки релизного кандидата.
 - `prod` — публичный боевой контур.
+- Внешний reverse proxy для `test/prod` вынесен в отдельный `edge` stack; `projo` compose управляет только app+db сервисами.
 
 ## 2) Environment matrix
 | Параметр | dev | test | prod |

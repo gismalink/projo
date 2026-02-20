@@ -1,13 +1,19 @@
 # Server Deploy Guide (Mac host)
 
-Актуализация: 2026-02-18
+Актуализация: 2026-02-20
+
+## Оперативное правило (для команд в чате)
+- Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально на текущей машине.
+- Команда по умолчанию:
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run test:update'`
+- Если не оговорено иное, использовать именно этот путь для обновления test-окружения.
+- Фраза «деплой в prod/продакшн» также означает запуск **на сервере по SSH** и promotion уже проверенного test-коммита в prod.
+- Команда для promotion в `prod`:
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-prod projo-web-prod'`
 
 ## 1) Что поднимает этот контур
-- Reverse-proxy (Caddy) с host-routing:
-  - `gismalink.art` -> legacy upstream,
-  - `test.projo.gismalink.art` -> `projo-web-test` + `projo-api-test`,
-  - `projo.gismalink.art` -> `projo-web-prod` + `projo-api-prod`.
-- Изолированные `test/prod` БД и приложения в одном docker-compose контуре.
+- Изолированные `test/prod` БД и приложения `projo` в одном docker-compose контуре.
+- Reverse-proxy (Caddy) вынесен в отдельный stack `edge` и маршрутизирует трафик на `projo-*` сервисы через external network `edge_public`.
 
 ## 2) Подготовка DNS
 Создать A-record на публичный IP сервера:
@@ -27,6 +33,10 @@
 ## 4) Первый запуск
 Из корня репозитория:
 - `docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d`
+
+Важно:
+- Перед запуском убедиться, что на сервере есть external network `edge_public`.
+- Порты `80/443` в этом compose больше не публикуются (ими управляет отдельный `edge` stack).
 
 Проверка:
 - `docker compose -f infra/docker-compose.host.yml ps`

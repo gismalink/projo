@@ -1,25 +1,4 @@
 services:
-  reverse-proxy:
-    image: caddy:2.9
-    container_name: projo-reverse-proxy
-    restart: unless-stopped
-    env_file:
-      - ./.env.host
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - projo-web-test
-      - projo-api-test
-      - projo-web-prod
-      - projo-api-prod
-    networks:
-      - public
-
   projo-api-test:
     image: node:22-alpine
     container_name: projo-api-test
@@ -40,6 +19,7 @@ services:
       - projo-db-test
     networks:
       - public
+      - edge_public
       - data_test
     volumes:
       - ../:/app-src:ro
@@ -61,6 +41,7 @@ services:
       - ../apps/web/.env.test
     networks:
       - public
+      - edge_public
     volumes:
       - ../:/app-src:ro
 
@@ -97,6 +78,7 @@ services:
       - projo-db-prod
     networks:
       - public
+      - edge_public
       - data_prod
     volumes:
       - ../:/app-src:ro
@@ -118,6 +100,7 @@ services:
       - ../apps/web/.env.prod
     networks:
       - public
+      - edge_public
     volumes:
       - ../:/app-src:ro
 
@@ -136,11 +119,11 @@ services:
 
 networks:
   public:
+  edge_public:
+    external: true
   data_test:
   data_prod:
 
 volumes:
-  caddy_data:
-  caddy_config:
   postgres_test_data:
   postgres_prod_data:
