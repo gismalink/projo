@@ -1,4 +1,5 @@
 import { Lang } from './app-types';
+import { ERROR_TRANSLATIONS_BY_LANG, TEXT_TRANSLATIONS_BY_LANG } from './app-i18n-translations.generated';
 
 export const LOCALE_BY_LANG: Record<Lang, string> = {
   ru: 'ru-RU',
@@ -599,16 +600,16 @@ const EN_TEXT = TEXT_BASE.en;
 export const TEXT: Record<Lang, Record<string, string>> = {
   ru: TEXT_BASE.ru,
   en: EN_TEXT,
-  es: EN_TEXT,
-  de: EN_TEXT,
-  fr: EN_TEXT,
-  it: EN_TEXT,
-  pt: EN_TEXT,
-  pl: EN_TEXT,
-  tr: EN_TEXT,
-  uk: EN_TEXT,
-  zh: EN_TEXT,
-  ja: EN_TEXT,
+  es: TEXT_TRANSLATIONS_BY_LANG.es,
+  de: TEXT_TRANSLATIONS_BY_LANG.de,
+  fr: TEXT_TRANSLATIONS_BY_LANG.fr,
+  it: TEXT_TRANSLATIONS_BY_LANG.it,
+  pt: TEXT_TRANSLATIONS_BY_LANG.pt,
+  pl: TEXT_TRANSLATIONS_BY_LANG.pl,
+  tr: TEXT_TRANSLATIONS_BY_LANG.tr,
+  uk: TEXT_TRANSLATIONS_BY_LANG.uk,
+  zh: TEXT_TRANSLATIONS_BY_LANG.zh,
+  ja: TEXT_TRANSLATIONS_BY_LANG.ja,
 };
 
 const ERROR_TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
@@ -693,14 +694,14 @@ const EN_ERROR_TEXT = ERROR_TEXT_BASE.en;
 export const ERROR_TEXT: Record<Lang, Record<string, string>> = {
   ru: ERROR_TEXT_BASE.ru,
   en: EN_ERROR_TEXT,
-  es: EN_ERROR_TEXT,
-  de: EN_ERROR_TEXT,
-  fr: EN_ERROR_TEXT,
-  it: EN_ERROR_TEXT,
-  pt: EN_ERROR_TEXT,
-  pl: EN_ERROR_TEXT,
-  tr: EN_ERROR_TEXT,
-  uk: EN_ERROR_TEXT,
-  zh: EN_ERROR_TEXT,
-  ja: EN_ERROR_TEXT,
+  es: ERROR_TRANSLATIONS_BY_LANG.es,
+  de: ERROR_TRANSLATIONS_BY_LANG.de,
+  fr: ERROR_TRANSLATIONS_BY_LANG.fr,
+  it: ERROR_TRANSLATIONS_BY_LANG.it,
+  pt: ERROR_TRANSLATIONS_BY_LANG.pt,
+  pl: ERROR_TRANSLATIONS_BY_LANG.pl,
+  tr: ERROR_TRANSLATIONS_BY_LANG.tr,
+  uk: ERROR_TRANSLATIONS_BY_LANG.uk,
+  zh: ERROR_TRANSLATIONS_BY_LANG.zh,
+  ja: ERROR_TRANSLATIONS_BY_LANG.ja,
 };
