@@ -36,6 +36,25 @@
 3. [x] Ввести релизный поток: `dev(local) -> test(public) -> prod(public)`.
 4. [x] Определить rollback-процедуру для приложения и БД.
 
+### P1.5 — Миграция на Central SSO (auth.gismalink.art)
+1. [ ] Зафиксировать целевую модель:
+   - [ ] `test/prod`: только SSO (без local email/password логина),
+   - [ ] `dev(local)`: допускается local auth (опционально) для удобства разработки.
+2. [ ] API: добавить SSO-exchange endpoint (SSO -> projo JWT):
+   - [ ] принимать SSO identity (минимум email/fullName) и выпускать текущий `accessToken` projo (с `workspaceId`),
+   - [ ] авто-provision user по email (создать если нет),
+   - [ ] гарантировать наличие active workspace/company context.
+3. [ ] Web: заменить экран login/register на "Login via SSO":
+   - [ ] редирект на central auth с `returnUrl` обратно в projo,
+   - [ ] после возврата — запросить токен через API exchange и сохранить сессию.
+4. [ ] Отключить local auth в `test/prod` через env-flag:
+   - [ ] `POST /auth/login` и `POST /auth/register` возвращают 404/410 или понятную ошибку (только в `test/prod`).
+5. [ ] Logout:
+   - [ ] UI logout должен чистить локальный токен и инициировать logout в central auth (если требуется).
+6. [ ] Документация и смоук:
+   - [ ] обновить `docs/workflow-checklist.md` / `docs/release-runbook.md` с шагами SSO,
+   - [ ] добавить минимальный smoke: login->me->projects->logout.
+
 ### P2 — Разворачивание на существующем Mac-сервере (`gismalink.art`)
 1. [ ] Сохранить текущий сайт на `gismalink.art` без деградации.
 2. [ ] Настроить reverse-proxy (Dockerized `nginx`/`caddy`/`traefik`) с host-routing:
