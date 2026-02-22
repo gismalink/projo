@@ -4,6 +4,32 @@ import { HandlerDeps } from './handler-deps';
 import { runWithErrorToast, runWithErrorToastVoid } from './handler-utils';
 
 export function createAuthHandlers({ state, t, errorText, pushToast, refreshData }: HandlerDeps) {
+  const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE ?? 'local').toLowerCase();
+  const AUTH_BASE_URL_OVERRIDE = import.meta.env.VITE_AUTH_BASE_URL ?? '';
+
+  function resolveAuthBaseUrl() {
+    if (AUTH_BASE_URL_OVERRIDE) {
+      return String(AUTH_BASE_URL_OVERRIDE).replace(/\/+$/, '');
+    }
+    if (typeof window === 'undefined') {
+      return 'https://auth.gismalink.art';
+    }
+    const isTest = window.location.hostname.startsWith('test.');
+    return isTest ? 'https://test.auth.gismalink.art' : 'https://auth.gismalink.art';
+  }
+
+  function redirectToSsoLogin(provider: 'google' | 'yandex' = 'google') {
+    const authBase = resolveAuthBaseUrl();
+    const returnUrl = typeof window === 'undefined' ? '/' : window.location.href;
+    window.location.href = `${authBase}/auth/${provider}?returnUrl=${encodeURIComponent(returnUrl)}`;
+  }
+
+  function redirectToSsoLogout() {
+    const authBase = resolveAuthBaseUrl();
+    const returnUrl = typeof window === 'undefined' ? '/' : window.location.href;
+    window.location.href = `${authBase}/auth/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
+  }
+
   const EMAIL_PATTERN =
     /^(?=.{6,254}$)(?=.{1,64}@)(?!.*\.\.)[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9_%+-]*[a-z0-9])?)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i;
 
@@ -77,6 +103,12 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
+
+    if (AUTH_MODE === 'sso') {
+      redirectToSsoLogin('google');
+      return;
+    }
+
     const normalizedEmail = normalizeEmail(state.email);
     const trimmedPassword = state.password.trim();
 
@@ -118,6 +150,12 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     },
   ) {
     event.preventDefault();
+
+    if (AUTH_MODE === 'sso') {
+      redirectToSsoLogin('google');
+      return;
+    }
+
     const normalizedEmail = normalizeEmail(payload.email);
     const trimmedFullName = payload.fullName.trim();
     const trimmedPassword = payload.password.trim();
@@ -469,6 +507,8 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
   }
 
   async function handleLogout() {
+    const shouldRedirectToSso = AUTH_MODE === 'sso';
+
     if (state.token) {
       try {
         await api.logout(state.token);
@@ -488,11 +528,54 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     state.setActiveProjectSpaceId('');
     state.setCompanies([]);
     state.setActiveCompanyId('');
+
+    if (shouldRedirectToSso) {
+      redirectToSsoLogout();
+    }
+  }
+
+  async function bootstrapSsoSession() {
+    if (AUTH_MODE !== 'sso') return;
+    if (state.token) return;
+
+    const result = await runWithErrorToast({
+      operation: () => api.ssoGetToken(),
+      fallbackMessage: t.uiLoginFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (!result || !result.authenticated || !result.token) {
+      return;
+    }
+
+    // projo-specific identity/workspace context comes from projo API, not from auth service.
+    state.setToken(result.token);
+
+    const me = await runWithErrorToast({
+      operation: () => api.getMe(result.token as string),
+      fallbackMessage: t.uiLoginFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (me) {
+      state.setCurrentUserId(me.id);
+      state.setCurrentUserEmail(me.email);
+      state.setCurrentUserFullName(me.fullName);
+      state.setCurrentUserRole(me.workspaceRole ?? me.role);
+      state.setCurrentWorkspaceId(me.workspaceId ?? '');
+    }
+
+    await refreshData(result.token, state.selectedYear);
+    await loadMyCompanies(result.token);
+    await loadMyProjects(result.token);
   }
 
   return {
     handleLogin,
     handleRegister,
+    bootstrapSsoSession,
     loadMyProjects,
     loadMyCompanies,
     handleCreateCompany,

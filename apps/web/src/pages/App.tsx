@@ -58,6 +58,11 @@ export function App() {
   });
 
   useEffect(() => {
+    if (app.token) return;
+    void app.bootstrapSsoSession();
+  }, [app.token]);
+
+  useEffect(() => {
     if (!app.token) {
       setGrades([]);
       return;

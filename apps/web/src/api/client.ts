@@ -16,6 +16,15 @@ export type LoginResponse = {
   user: AuthUser;
 };
 
+export type SsoGetTokenResponse = {
+  authenticated: boolean;
+  token?: string;
+  id?: string;
+  username?: string;
+  email?: string | null;
+  role?: string;
+};
+
 export type AuthUser = {
   id: string;
   email: string;
@@ -467,6 +476,10 @@ export const api = {
   changePassword: (payload: ChangePasswordPayload, token: string) =>
     request<{ success: true }>('/auth/change-password', { method: 'POST', body: JSON.stringify(payload) }, token),
   logout: (token: string) => request<{ success: true }>('/auth/logout', { method: 'POST' }, token),
+
+  ssoGetToken: () => request<SsoGetTokenResponse>('/sso/get-token', { credentials: 'include' }),
+  ssoCurrentUser: () => request<Record<string, unknown>>('/sso/current-user', { credentials: 'include' }),
+
   getMyCompanies: (token: string) => request<MyCompaniesResponse>('/auth/companies', {}, token),
   createCompany: (name: string, token: string) =>
     request<LoginResponse>('/auth/companies', {
