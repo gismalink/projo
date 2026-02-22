@@ -104,11 +104,6 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
 
-    if (AUTH_MODE === 'sso') {
-      redirectToSsoLogin('google');
-      return;
-    }
-
     const normalizedEmail = normalizeEmail(state.email);
     const trimmedPassword = state.password.trim();
 
@@ -150,11 +145,6 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     },
   ) {
     event.preventDefault();
-
-    if (AUTH_MODE === 'sso') {
-      redirectToSsoLogin('google');
-      return;
-    }
 
     const normalizedEmail = normalizeEmail(payload.email);
     const trimmedFullName = payload.fullName.trim();
@@ -572,9 +562,19 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     await loadMyProjects(result.token);
   }
 
+  function handleOauthLoginGoogle() {
+    redirectToSsoLogin('google');
+  }
+
+  function handleOauthLoginYandex() {
+    redirectToSsoLogin('yandex');
+  }
+
   return {
     handleLogin,
     handleRegister,
+    handleOauthLoginGoogle,
+    handleOauthLoginYandex,
     bootstrapSsoSession,
     loadMyProjects,
     loadMyCompanies,

@@ -584,6 +584,8 @@ export function App() {
           setRegisterPasswordConfirm={setRegisterPasswordConfirm}
           onLoginSubmit={app.handleLogin}
           onRegisterSubmit={handleRegisterSubmit}
+          onOauthGoogle={app.handleOauthLoginGoogle}
+          onOauthYandex={app.handleOauthLoginYandex}
         />
       ) : (
         <>

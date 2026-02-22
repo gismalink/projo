@@ -23,6 +23,8 @@ type AuthGateProps = {
   setRegisterPasswordConfirm: (value: string) => void;
   onLoginSubmit: (event: FormEvent) => Promise<void> | void;
   onRegisterSubmit: (event: FormEvent) => Promise<void> | void;
+  onOauthGoogle: () => void;
+  onOauthYandex: () => void;
 };
 
 export function AuthGate(props: AuthGateProps) {
@@ -47,6 +49,8 @@ export function AuthGate(props: AuthGateProps) {
     setRegisterPasswordConfirm,
     onLoginSubmit,
     onRegisterSubmit,
+    onOauthGoogle,
+    onOauthYandex,
   } = props;
 
   if (!isOpen) return null;
@@ -135,6 +139,16 @@ export function AuthGate(props: AuthGateProps) {
               </span>
             </label>
             <button type="submit">{t.signIn}</button>
+
+            <div className="auth-oauth-divider" aria-hidden="true" />
+            <div className="auth-oauth-buttons">
+              <button type="button" onClick={onOauthGoogle}>
+                Google
+              </button>
+              <button type="button" onClick={onOauthYandex}>
+                Yandex
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={onRegisterSubmit} className="timeline-form">
@@ -222,6 +236,16 @@ export function AuthGate(props: AuthGateProps) {
               </span>
             </label>
             <button type="submit">{t.createAccount}</button>
+
+            <div className="auth-oauth-divider" aria-hidden="true" />
+            <div className="auth-oauth-buttons">
+              <button type="button" onClick={onOauthGoogle}>
+                Google
+              </button>
+              <button type="button" onClick={onOauthYandex}>
+                Yandex
+              </button>
+            </div>
           </form>
         )}
       </article>
