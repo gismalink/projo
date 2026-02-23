@@ -147,7 +147,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const [hoveredBenchEmployeeId, setHoveredBenchEmployeeId] = useState<string>('');
   const filterBenchEmployeeId = selectedBenchEmployeeId;
   const filterBenchDepartmentName = filterBenchEmployeeId ? '' : selectedBenchDepartmentName;
-  const highlightedBenchEmployeeId = hoveredBenchEmployeeId || selectedBenchEmployeeId;
+  const highlightedBenchEmployeeId = selectedBenchEmployeeId;
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
