@@ -165,6 +165,17 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
 
   const editProjectTooltip = `${t.editProjectMeta}: ${row.code}`;
 
+  const handleRowBackgroundClick = (event: ReactMouseEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    if (target.closest('.project-track')) return;
+    if (target.closest('button, input, select, textarea, a')) return;
+    if (target.closest('.project-edit-popover')) return;
+
+    onToggleProject(event, row.id);
+  };
+
   return (
     <div
       className={
@@ -180,7 +191,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
       onDragLeave={(event) => onRowDragLeave(event, row.id)}
       onDrop={(event) => onRowDrop(event, row.id)}
     >
-      <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'}>
+      <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'} onClick={handleRowBackgroundClick}>
         <div className="timeline-meta">
           <div className="timeline-meta-main">
             <div className="timeline-meta-topline">
@@ -205,16 +216,6 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                     aria-label={t.moveProjectDown}
                   >
                     <Icon name="arrow-down" />
-                  </button>
-                </TooltipAnchor>
-                <TooltipAnchor text={isExpanded ? t.collapse : t.expand}>
-                  <button
-                    type="button"
-                    className={isExpanded ? 'timeline-row-toggle timeline-row-toggle-expand active' : 'timeline-row-toggle timeline-row-toggle-expand'}
-                    onClick={(event) => onToggleProject(event, row.id)}
-                    aria-label={isExpanded ? t.collapseProjectRow : t.expandProjectRow}
-                  >
-                    <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
                   </button>
                 </TooltipAnchor>
                 <strong>
