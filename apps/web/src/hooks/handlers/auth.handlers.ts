@@ -535,15 +535,44 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       pushToast,
     });
 
-    if (!result || !result.authenticated || !result.token) {
+    const tokenResult =
+      result && result.authenticated && result.token
+        ? result
+        : await (async () => {
+            try {
+              const authBase = resolveAuthBaseUrl();
+              const response = await fetch(`${authBase}/auth/get-token`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                  accept: 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                return null;
+              }
+
+              const direct = (await response.json()) as { authenticated?: unknown; token?: unknown };
+              if (!direct || direct.authenticated !== true || typeof direct.token !== 'string' || !direct.token) {
+                return null;
+              }
+
+              return { authenticated: true, token: direct.token };
+            } catch {
+              return null;
+            }
+          })();
+
+    if (!tokenResult?.token) {
       return;
     }
 
     // projo-specific identity/workspace context comes from projo API, not from auth service.
-    state.setToken(result.token);
+    state.setToken(tokenResult.token);
 
     const me = await runWithErrorToast({
-      operation: () => api.getMe(result.token as string),
+      operation: () => api.getMe(tokenResult.token as string),
       fallbackMessage: t.uiLoginFailed,
       errorText,
       pushToast,
@@ -557,9 +586,9 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       state.setCurrentWorkspaceId(me.workspaceId ?? '');
     }
 
-    await refreshData(result.token, state.selectedYear);
-    await loadMyCompanies(result.token);
-    await loadMyProjects(result.token);
+    await refreshData(tokenResult.token, state.selectedYear);
+    await loadMyCompanies(tokenResult.token);
+    await loadMyProjects(tokenResult.token);
   }
 
   function handleOauthLoginGoogle() {
