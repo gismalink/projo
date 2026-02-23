@@ -1,3 +1,5 @@
+name: projo
+
 services:
   projo-api-test:
     image: node:22-alpine
@@ -126,4 +128,8 @@ networks:
 
 volumes:
   postgres_test_data:
+    external: true
+    name: infra_postgres_test_data
   postgres_prod_data:
+    external: true
+    name: infra_postgres_prod_data
