@@ -1195,12 +1195,24 @@ export function TimelineTab(props: TimelineTabProps) {
             selectedEmployeeId={selectedBenchEmployeeId}
             selectedDepartmentName={selectedBenchDepartmentName}
             hoveredEmployeeId={hoveredBenchEmployeeId}
-            onToggleEmployeeFilter={(employeeId) =>
-              setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
-            }
-            onToggleDepartmentFilter={(departmentName) =>
-              setSelectedBenchDepartmentName((prev) => (prev === departmentName ? '' : departmentName))
-            }
+            onToggleEmployeeFilter={(employeeId) => {
+              setSelectedBenchEmployeeId((prev) => {
+                const next = prev === employeeId ? '' : employeeId;
+                if (next) {
+                  setSelectedBenchDepartmentName('');
+                }
+                return next;
+              });
+            }}
+            onToggleDepartmentFilter={(departmentName) => {
+              setSelectedBenchDepartmentName((prev) => {
+                const next = prev === departmentName ? '' : departmentName;
+                if (next) {
+                  setSelectedBenchEmployeeId('');
+                }
+                return next;
+              });
+            }}
             onHoverEmployee={setHoveredBenchEmployeeId}
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {
