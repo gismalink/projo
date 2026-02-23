@@ -143,8 +143,10 @@ export function TimelineTab(props: TimelineTabProps) {
   const [draggedBenchEmployeeId, setDraggedBenchEmployeeId] = useState<string | null>(null);
   const [hoverProjectDropId, setHoverProjectDropId] = useState<string | null>(null);
   const [selectedBenchEmployeeId, setSelectedBenchEmployeeId] = useState<string>('');
+  const [selectedBenchDepartmentName, setSelectedBenchDepartmentName] = useState<string>('');
   const [hoveredBenchEmployeeId, setHoveredBenchEmployeeId] = useState<string>('');
   const filterBenchEmployeeId = selectedBenchEmployeeId;
+  const filterBenchDepartmentName = filterBenchEmployeeId ? '' : selectedBenchDepartmentName;
   const highlightedBenchEmployeeId = hoveredBenchEmployeeId || selectedBenchEmployeeId;
 
   const expandedSet = new Set(expandedProjectIds);
@@ -563,6 +565,14 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [employees, roleLabelByName]);
 
+  const employeeDepartmentById = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const employee of employees) {
+      result.set(employee.id, employee.department?.name ?? t.unassignedDepartment);
+    }
+    return result;
+  }, [employees, t.unassignedDepartment]);
+
   const assignmentsByProjectId = useMemo(() => {
     const result = new Map<string, AssignmentItem[]>();
     for (const assignment of assignments) {
@@ -577,23 +587,36 @@ export function TimelineTab(props: TimelineTabProps) {
   }, [assignments]);
 
   const visibleTimelineRows = useMemo(() => {
-    if (!filterBenchEmployeeId) return sortedTimeline;
+    if (!filterBenchEmployeeId && !filterBenchDepartmentName) return sortedTimeline;
 
     return sortedTimeline.filter((row) => {
       const detail = projectDetails[row.id];
 
-      // Prefer canonical membership/assignment data from project detail.
-      if (detail) {
-        const isMember = Array.isArray(detail.members) && detail.members.some((member) => member.employeeId === filterBenchEmployeeId);
-        if (isMember) return true;
-        return Array.isArray(detail.assignments) && detail.assignments.some((assignment) => assignment.employeeId === filterBenchEmployeeId);
+      if (filterBenchEmployeeId) {
+        // Prefer canonical membership/assignment data from project detail.
+        if (detail) {
+          const isMember = Array.isArray(detail.members) && detail.members.some((member) => member.employeeId === filterBenchEmployeeId);
+          if (isMember) return true;
+          return Array.isArray(detail.assignments) && detail.assignments.some((assignment) => assignment.employeeId === filterBenchEmployeeId);
+        }
+
+        // Fallback while details are loading.
+        const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+        return projectAssignments.some((assignment) => assignment.employeeId === filterBenchEmployeeId);
       }
 
-      // Fallback while details are loading.
       const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
-      return projectAssignments.some((assignment) => assignment.employeeId === filterBenchEmployeeId);
+      return projectAssignments.some((assignment) => employeeDepartmentById.get(assignment.employeeId) === filterBenchDepartmentName);
     });
-  }, [assignmentsByProjectId, filterBenchEmployeeId, projectDetails, sortedTimeline]);
+  }, [assignmentsByProjectId, employeeDepartmentById, filterBenchDepartmentName, filterBenchEmployeeId, projectDetails, sortedTimeline]);
+
+  const filteredEmployeeIds = useMemo(() => {
+    if (filterBenchEmployeeId) return [filterBenchEmployeeId];
+    if (!filterBenchDepartmentName) return [] as string[];
+    return employees
+      .filter((employee) => (employee.department?.name ?? t.unassignedDepartment) === filterBenchDepartmentName)
+      .map((employee) => employee.id);
+  }, [employees, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
 
   const projectFactByProjectId = useMemo(() => {
     const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
@@ -1011,7 +1034,8 @@ export function TimelineTab(props: TimelineTabProps) {
                   const draggedEmployeeAssigned = draggedBenchEmployeeId
                     ? projectAssignments.some((assignment) => assignment.employeeId === draggedBenchEmployeeId)
                     : false;
-                  const isDimmedBySelection = !filterBenchEmployeeId && Boolean(highlightedBenchEmployeeId) && !selectedEmployeeAssigned;
+                  const isDimmedBySelection =
+                    !filterBenchEmployeeId && !filterBenchDepartmentName && Boolean(highlightedBenchEmployeeId) && !selectedEmployeeAssigned;
                   const isDimmedByDrag = Boolean(draggedBenchEmployeeId) && draggedEmployeeAssigned;
                   const isRowDimmed = draggedBenchEmployeeId ? isDimmedByDrag : isDimmedBySelection;
 
@@ -1121,6 +1145,7 @@ export function TimelineTab(props: TimelineTabProps) {
                           isoToInputDate={isoToInputDate}
                           highlightedEmployeeId={highlightedBenchEmployeeId || undefined}
                           filterEmployeeId={filterBenchEmployeeId || undefined}
+                          filterEmployeeIds={filteredEmployeeIds}
                         />
                       ) : null}
                     </ProjectTimelineItem>
@@ -1135,9 +1160,13 @@ export function TimelineTab(props: TimelineTabProps) {
             benchGroups={benchGroups}
             canDragMembers={canManageTimeline}
             selectedEmployeeId={selectedBenchEmployeeId}
+            selectedDepartmentName={selectedBenchDepartmentName}
             hoveredEmployeeId={hoveredBenchEmployeeId}
             onToggleEmployeeFilter={(employeeId) =>
               setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
+            }
+            onToggleDepartmentFilter={(departmentName) =>
+              setSelectedBenchDepartmentName((prev) => (prev === departmentName ? '' : departmentName))
             }
             onHoverEmployee={setHoveredBenchEmployeeId}
             onMemberDragStart={setDraggedBenchEmployeeId}

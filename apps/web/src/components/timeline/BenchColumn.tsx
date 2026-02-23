@@ -21,8 +21,10 @@ type BenchColumnProps = {
   benchGroups: BenchGroup[];
   canDragMembers: boolean;
   selectedEmployeeId: string;
+  selectedDepartmentName: string;
   hoveredEmployeeId: string;
   onToggleEmployeeFilter: (employeeId: string) => void;
+  onToggleDepartmentFilter: (departmentName: string) => void;
   onHoverEmployee: (employeeId: string) => void;
   onMemberDragStart: (employeeId: string) => void;
   onMemberDragEnd: () => void;
@@ -34,8 +36,10 @@ export function BenchColumn(props: BenchColumnProps) {
     benchGroups,
     canDragMembers,
     selectedEmployeeId,
+    selectedDepartmentName,
     hoveredEmployeeId,
     onToggleEmployeeFilter,
+    onToggleDepartmentFilter,
     onHoverEmployee,
     onMemberDragStart,
     onMemberDragEnd,
@@ -62,8 +66,18 @@ export function BenchColumn(props: BenchColumnProps) {
         <p className="muted">—</p>
       ) : (
         benchGroups.map((group) => (
-          <section key={group.departmentName} className="bench-group">
-            <h4>{group.departmentName}</h4>
+          <section
+            key={group.departmentName}
+            className={selectedDepartmentName === group.departmentName ? 'bench-group selected' : 'bench-group'}
+          >
+            <button
+              type="button"
+              className="bench-group-title"
+              onClick={() => onToggleDepartmentFilter(group.departmentName)}
+              aria-label={group.departmentName}
+            >
+              {group.departmentName}
+            </button>
             <div className="bench-members">
               {group.members.map((member) => {
                 const isSelected = selectedEmployeeId === member.id;

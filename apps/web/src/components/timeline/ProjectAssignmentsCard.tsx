@@ -75,6 +75,7 @@ type ProjectAssignmentsCardProps = {
   isoToInputDate: (value: string) => string;
   highlightedEmployeeId?: string;
   filterEmployeeId?: string;
+  filterEmployeeIds?: string[];
 };
 
 type CurvePoint = {
@@ -112,6 +113,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     isoToInputDate,
     highlightedEmployeeId,
     filterEmployeeId,
+    filterEmployeeIds,
   } = props;
 
   const [curveDraftByAssignmentId, setCurveDraftByAssignmentId] = useState<Record<string, CurvePoint[]>>({});
@@ -172,9 +174,13 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   }, [curveDraftByAssignmentId]);
 
   const sortedAssignments = useMemo(() => {
+    const employeeIdAllowlist = Array.isArray(filterEmployeeIds) ? new Set(filterEmployeeIds) : null;
+
     const filtered = filterEmployeeId
       ? detail.assignments.filter((assignment) => assignment.employeeId === filterEmployeeId)
-      : detail.assignments;
+      : employeeIdAllowlist
+        ? detail.assignments.filter((assignment) => employeeIdAllowlist.has(assignment.employeeId))
+        : detail.assignments;
 
     return [...filtered].sort((left, right) => {
       const startDelta = new Date(left.assignmentStartDate).getTime() - new Date(right.assignmentStartDate).getTime();
@@ -183,7 +189,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
       if (nameDelta !== 0) return nameDelta;
       return left.id.localeCompare(right.id);
     });
-  }, [detail.assignments, filterEmployeeId]);
+  }, [detail.assignments, filterEmployeeId, filterEmployeeIds]);
 
   const toUtcDayTimestamp = (value: string) => {
     const parsed = new Date(value);

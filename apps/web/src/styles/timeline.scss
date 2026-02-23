@@ -356,10 +356,19 @@
   gap: 0.22rem;
 }
 
-.bench-group h4 {
+.bench-group-title {
   margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
   font-size: 0.72rem;
   color: var(--ios-text-secondary);
+  font-weight: 700;
+}
+
+.bench-group.selected .bench-group-title {
+  color: var(--ios-text);
 }
 
 .bench-members {
