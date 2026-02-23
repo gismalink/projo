@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DEFAULT_ROLE_COLOR_HEX } from '../common/app-constants';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
@@ -144,6 +144,9 @@ export class RolesService {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const role = await this.findOne(workspaceId, id);
     if (companyId && role.companyId !== companyId) {
+      if (role.companyId === null) {
+        throw new ForbiddenException(ErrorCode.ROLE_SYSTEM_ROLE_READ_ONLY);
+      }
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
     return this.prisma.role.update({ where: { id }, data: dto });
@@ -153,8 +156,39 @@ export class RolesService {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const role = await this.findOne(workspaceId, id);
     if (companyId && role.companyId !== companyId) {
+      if (role.companyId === null) {
+        throw new ForbiddenException(ErrorCode.ROLE_SYSTEM_ROLE_READ_ONLY);
+      }
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
+
+    const [employeeRefs, templateRefs] = await Promise.all([
+      this.prisma.employee.count({
+        where: companyId
+          ? {
+              roleId: id,
+              workspace: { companyId },
+            }
+          : {
+              roleId: id,
+            },
+      }),
+      this.prisma.projectTeamTemplateRole.count({
+        where: {
+          roleId: id,
+          template: companyId
+            ? {
+                companyId,
+              }
+            : undefined,
+        },
+      }),
+    ]);
+
+    if (employeeRefs > 0 || templateRefs > 0) {
+      throw new ConflictException(ErrorCode.ROLE_IN_USE);
+    }
+
     return this.prisma.role.delete({ where: { id } });
   }
 }
