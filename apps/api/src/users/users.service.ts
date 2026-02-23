@@ -404,6 +404,14 @@ export class UsersService {
       companyIds.add(companyId);
     }
 
+    const ownedCompanyIds = await this.prisma.company.findMany({
+      where: { ownerUserId: userId },
+      select: { id: true },
+    });
+    for (const item of ownedCompanyIds) {
+      companyIds.add(item.id);
+    }
+
     const activeCompanyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
 
     const companies = await this.prisma.company.findMany({

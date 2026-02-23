@@ -27,17 +27,17 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60_000,
+        ttl: 60,
         limit: 600,
       },
       {
         name: 'auth',
-        ttl: 60_000,
+        ttl: 60,
         limit: 120,
       },
       {
         name: 'login',
-        ttl: 60_000,
+        ttl: 60,
         limit: 15,
       },
     ]),

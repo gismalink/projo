@@ -130,7 +130,7 @@ export function App() {
   const isEditor = app.currentUserRole === 'EDITOR';
   const canUseCompanyAdminTabs = isCompanyOwner;
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
-  const canSeedDemoWorkspace = app.currentUserRole === 'ADMIN';
+  const canSeedDemoWorkspace = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
   const projectMemberSearchValue = projectMemberSearch.trim().toLowerCase();

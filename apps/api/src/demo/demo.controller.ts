@@ -16,7 +16,7 @@ export class DemoController {
   constructor(private readonly demoService: DemoService) {}
 
   @Post('seed')
-  @Roles(AppRoleValue.ADMIN)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR)
   seed(@Req() req: AuthenticatedRequest) {
     return this.demoService.seedDemoWorkspace(req.user.workspaceId);
   }
