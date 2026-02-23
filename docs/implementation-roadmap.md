@@ -87,6 +87,15 @@
    - [ ] uptime/5xx/latency метрики,
    - [ ] алерты на деградацию health-check.
 
+### P3.5 — Post-cutover hardening (tech audit 2026-02-24)
+Источник: `docs/audits/technical-audit-2026-02-24.md`.
+
+1. [ ] CORS deny-path: вместо error -> `callback(null, false)` + безопасное логирование origin.
+2. [ ] SSO proxy: добавить timeout на upstream fetch + контролируемую ошибку.
+3. [ ] Web config safety: заменить fallback `VITE_API_URL` на `/api` (чтобы misconfig не вшивал `localhost:4000/api` в bundle).
+4. [ ] Reduce config drift: `VITE_*` build args в `infra/docker-compose.host.yml` перевести на env-substitution (единый источник значений).
+5. [ ] Deploy scripts: явный маркер deployed SHA (файл/лог) + предупреждение про detached HEAD.
+
 ### P4 — Функциональные улучшения после стабилизации
 1. [ ] Довести стабильность UX/метрик timeline на краевых сценариях.
 2. [ ] Усилить тестовое покрытие критических сценариев (assignment/member, shift/resize, auth-flow).
