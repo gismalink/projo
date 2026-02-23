@@ -3,7 +3,7 @@
 
 .role-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 40px 32px;
+  grid-template-columns: minmax(0, 1fr) 32px 32px;
   align-items: flex-start;
   gap: 0.55rem;
   padding-bottom: 0.15rem;
@@ -22,7 +22,7 @@
 
 .role-table-head {
   display: grid;
-  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px 40px 32px;
+  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px 32px 32px;
   gap: 0.32rem;
   font-size: 0.72rem;
   color: var(--ios-text-secondary);
@@ -67,8 +67,8 @@
 
 .role-color-editor {
   display: flex;
-  width: 40px;
-  flex: 0 0 40px;
+  width: 32px;
+  flex: 0 0 32px;
   position: relative;
 }
 
@@ -172,7 +172,7 @@
 
 .color-picker-trigger {
   cursor: pointer;
-  @include button.icon-button-chrome(40px, 12px, 0.2rem);
+  @include button.icon-button-chrome(32px, 12px, 0.2rem);
   color: inherit;
 }
 
