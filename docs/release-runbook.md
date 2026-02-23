@@ -29,28 +29,34 @@
 
 ## 3) Release flow
 1. Разработка в `dev` (локально).
-2. Публикация ветки и PR в `master`.
+2. Публикация ветки и PR в default branch (`main`).
 3. Проверка CI (`check`, `Audit API dependencies`).
 4. Deploy на `test`.
 5. Проверка на `test`:
    - `npm run check`,
    - `SMOKE_API=1 npm run check`,
    - ручной smoke критических сценариев.
+
+Минимальный ручной smoke (SSO, test/prod):
+- Открыть web (`test.projo...` / `projo...`) и выполнить вход через SSO (Google/Yandex).
+- Убедиться, что загружается Timeline и нет 401 на запросах.
+- (Опционально) проверить `GET /api/auth/me` и `GET /api/auth/projects` через UI.
+- Выполнить logout и убедиться, что происходит редирект на central auth logout.
 6. Promote того же релизного коммита на `prod`.
 
 ## 3.1) Пошагово: dev -> test -> prod
 
 ### Шаг A. Подготовка релиз-кандидата (локально)
-1. Создать feature-ветку от `master` и внести изменения.
+1. Создать feature-ветку от `main` и внести изменения.
 2. Выполнить проверки:
    - `npm run check`
    - `npm run audit:api`
-3. Открыть PR в `master`, дождаться зелёного CI и merge.
+3. Открыть PR в `main`, дождаться зелёного CI и merge.
 
 ### Шаг B. Фиксация коммита для promotion
 1. После merge получить SHA релиза:
    - `git fetch origin`
-   - `git log origin/master -1 --oneline`
+   - `git log origin/main -1 --oneline`
 2. (Опционально) поставить тег релиз-кандидата:
    - `git tag -a rc-YYYYMMDD-HHMM <sha> -m "release candidate"`
    - `git push origin rc-YYYYMMDD-HHMM`
@@ -67,7 +73,7 @@
    - ручной smoke ключевых сценариев.
 
 ### Упрощённый сценарий (одной SSH-командой)
-- Для обычного обновления test до актуального `master`:
+- Для обычного обновления test до актуального `main`:
    - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
 - Важно: в non-interactive SSH на macOS путь к Docker может не подхватываться автоматически, поэтому используется `export PATH=/usr/local/bin:$PATH`.
 

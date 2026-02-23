@@ -1,0 +1,93 @@
+name: Nightly API Smoke
+
+on:
+  schedule:
+    - cron: '25 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  api-e2e-smoke:
+    name: API e2e smoke (local auth)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: projo
+          POSTGRES_USER: projo
+          POSTGRES_PASSWORD: projo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U projo -d projo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://projo:projo@localhost:5432/projo?schema=public
+        run: npm run prisma:generate -w @projo/api
+
+      - name: Apply DB migrations
+        env:
+          DATABASE_URL: postgresql://projo:projo@localhost:5432/projo?schema=public
+        run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+
+      - name: Build API
+        run: npm run build -w @projo/api
+
+      - name: Start API (background)
+        env:
+          DATABASE_URL: postgresql://projo:projo@localhost:5432/projo?schema=public
+          PORT: 4000
+          LOCAL_AUTH_ENABLED: 'true'
+          BOOTSTRAP_ADMIN_EMAIL: admin@projo.local
+          BOOTSTRAP_ADMIN_PASSWORD: ProjoAdmin!2026
+          JWT_ACCESS_SECRET: ci-access-secret
+          JWT_SECRETS: k1:ci-access-secret
+          JWT_ACTIVE_KID: k1
+          ALLOWED_ORIGINS: http://localhost:5173
+        run: |
+          node apps/api/dist/main.js &
+          echo "API_PID=$!" >> $GITHUB_ENV
+
+      - name: Wait for /api/health
+        run: |
+          for i in {1..40}; do
+            if curl -fsS http://localhost:4000/api/health >/dev/null; then
+              echo "api health ok"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "api health check failed"
+          exit 1
+
+      - name: Run e2e smoke tests
+        env:
+          E2E_API_URL: http://localhost:4000/api
+          E2E_USER_EMAIL: admin@projo.local
+          E2E_USER_PASSWORD: ProjoAdmin!2026
+        run: node --test ./scripts/e2e-api-smoke.test.mjs
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [[ -n "${API_PID:-}" ]]; then
+            kill "$API_PID" || true
+          fi

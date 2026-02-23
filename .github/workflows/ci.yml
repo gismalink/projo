@@ -1,4 +1,4 @@
-name: Security Audit
+name: CI
 
 on:
   pull_request:
@@ -8,8 +8,8 @@ on:
       - master
 
 jobs:
-  audit-api:
-    name: Audit API dependencies
+  check:
+    name: Check (lint/test/build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,5 +24,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run API audit gate
-        run: npm run audit:api
+      - name: Run checks
+        run: npm run check

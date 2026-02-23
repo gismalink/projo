@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, GoneException, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import { ErrorCode } from '../common/error-codes';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { CreateProjectSpaceDto } from './dto/create-project-space.dto';
@@ -24,16 +26,34 @@ type AuthenticatedRequest = {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private isLocalAuthEnabled() {
+    const raw = this.configService.get<string>('LOCAL_AUTH_ENABLED');
+    if (raw === undefined) return true;
+    const normalized = raw.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
+  }
+
+  private assertLocalAuthEnabled() {
+    if (!this.isLocalAuthEnabled()) {
+      throw new GoneException(ErrorCode.AUTH_LOCAL_AUTH_DISABLED);
+    }
+  }
 
   @Post('login')
   @Throttle({ login: { limit: 15, ttl: 60_000 } })
   login(@Body() dto: LoginDto) {
+    this.assertLocalAuthEnabled();
     return this.authService.login(dto.email, dto.password);
   }
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
+    this.assertLocalAuthEnabled();
     return this.authService.register(dto.email, dto.fullName, dto.password);
   }
 

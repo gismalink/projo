@@ -15,6 +15,7 @@
 2. При изменениях API runtime-логики: `SMOKE_API=1 npm run check`.
 3. Проверка security gate для API зависимостей: `npm run audit:api`.
 4. Ручной smoke-check критического пользовательского сценария.
+	- Для `test/prod` в режиме SSO: login через central auth (Google/Yandex) → загрузка Timeline → logout.
 
 ## 3) Документация
 1. Обновить `README.md` как индекс документации и инструкций запуска.

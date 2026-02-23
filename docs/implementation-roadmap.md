@@ -37,23 +37,22 @@
 4. [x] Определить rollback-процедуру для приложения и БД.
 
 ### P1.5 — Миграция на Central SSO (auth.gismalink.art)
-1. [ ] Зафиксировать целевую модель:
-   - [ ] `test/prod`: только SSO (без local email/password логина),
-   - [ ] `dev(local)`: допускается local auth (опционально) для удобства разработки.
-2. [ ] API: добавить SSO-exchange endpoint (SSO -> projo JWT):
-   - [ ] принимать SSO identity (минимум email/fullName) и выпускать текущий `accessToken` projo (с `workspaceId`),
-   - [ ] авто-provision user по email (создать если нет),
-   - [ ] гарантировать наличие active workspace/company context.
-3. [ ] Web: заменить экран login/register на "Login via SSO":
-   - [ ] редирект на central auth с `returnUrl` обратно в projo,
-   - [ ] после возврата — запросить токен через API exchange и сохранить сессию.
-4. [ ] Отключить local auth в `test/prod` через env-flag:
-   - [ ] `POST /auth/login` и `POST /auth/register` возвращают 404/410 или понятную ошибку (только в `test/prod`).
-5. [ ] Logout:
-   - [ ] UI logout должен чистить локальный токен и инициировать logout в central auth (если требуется).
-6. [ ] Документация и смоук:
-   - [ ] обновить `docs/workflow-checklist.md` / `docs/release-runbook.md` с шагами SSO,
-   - [ ] добавить минимальный smoke: login->me->projects->logout.
+1. [x] Зафиксировать целевую модель:
+   - [x] `test/prod`: только SSO (без local email/password логина),
+   - [x] `dev(local)`: допускается local auth (опционально) для удобства разработки.
+2. [x] API: принимать JWT central auth (без отдельного exchange-токена):
+   - [x] валидировать issuer (`JWT_ALLOWED_ISSUERS`) и ключи (`JWT_SECRETS`),
+   - [x] авто-provision user по email (если включено `SSO_AUTO_PROVISION=true`).
+3. [x] Web: заменить экран login/register на SSO-only в `VITE_AUTH_MODE="sso"`:
+   - [x] редирект на central auth с `returnUrl` обратно в projo,
+   - [x] после возврата — получить JWT через `GET /api/sso/get-token` и продолжить сессию.
+4. [x] Отключить local auth в `test/prod` через env-flag:
+   - [x] `POST /auth/login` и `POST /auth/register` возвращают 410 `ERR_AUTH_LOCAL_AUTH_DISABLED`.
+5. [x] Logout:
+   - [x] UI logout чистит локальный токен и инициирует logout в central auth.
+6. [x] Документация и смоук:
+   - [x] обновить `docs/api-reference.md` / `docs/release-runbook.md` с шагами SSO,
+   - [x] добавить минимальный smoke: login->me->projects->logout.
 
 ### P2 — Разворачивание на существующем Mac-сервере (`gismalink.art`)
 1. [ ] Сохранить текущий сайт на `gismalink.art` без деградации.
@@ -71,6 +70,9 @@
 5. [x] Внедрить runbook запуска/обновления/rollback.
 
 ### P3 — Качество и проверка поставки
+0. [x] CI quality-gates:
+   - [x] `npm run check` на PR/push (`.github/workflows/ci.yml`),
+   - [x] nightly runtime smoke API (local auth + ephemeral DB) (`.github/workflows/nightly-api-smoke.yml`).
 1. [ ] Закрепить минимальный набор post-deploy проверок для `test`:
    - [ ] `npm run check`,
    - [ ] `SMOKE_API=1 npm run check`,

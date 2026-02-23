@@ -9,6 +9,7 @@
 
 ## Auth model
 - `POST /api/auth/login` — публичный endpoint (без JWT).
+- В `test/prod` local auth может быть отключен через `LOCAL_AUTH_ENABLED=false` (в этом случае `login/register` вернут 410 `ERR_AUTH_LOCAL_AUTH_DISABLED`).
 - Остальные endpoints (кроме `GET /api/health`) защищены `JwtAuthGuard` + `RolesGuard`.
 - Роли доступа: `ADMIN`, `PM`, `VIEWER`, `FINANCE`.
 
@@ -25,11 +26,26 @@
 - Auth: public
 - Body: `{ email: string, password: string }`
 - Response: JWT payload (token + user)
+- Если `LOCAL_AUTH_ENABLED=false`: 410 `ERR_AUTH_LOCAL_AUTH_DISABLED`
 
 ### `POST /api/auth/register`
 - Auth: public
 - Body: `{ email: string, fullName: string, password: string }`
 - Response: JWT payload (token + user)
+- Если `LOCAL_AUTH_ENABLED=false`: 410 `ERR_AUTH_LOCAL_AUTH_DISABLED`
+
+## SSO (proxy)
+
+Эти endpoints проксируют запросы в central auth (`AUTH_SSO_BASE_URL`) и используются web-клиентом в `VITE_AUTH_MODE="sso"`.
+
+### `GET /api/sso/get-token`
+- Auth: public (но требует cookies central auth)
+- Назначение: получить JWT центральной auth-сессии для последующих запросов в Projo API.
+- Response: `{ authenticated: boolean, token?: string, email?: string | null, ... }`
+
+### `GET /api/sso/current-user`
+- Auth: public (но требует cookies central auth)
+- Назначение: получить текущего пользователя из central auth (для диагностики/отладки).
 
 ### `GET /api/auth/me`
 - Roles: `ADMIN | PM | VIEWER | FINANCE`
