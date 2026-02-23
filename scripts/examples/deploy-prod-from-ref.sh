@@ -36,8 +36,14 @@ fi
 echo "[deploy-prod] recreate prod services"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
+
+mkdir -p "$TMP_DOCKER_CONFIG/cli-plugins"
+if [[ -d "$HOME/.docker/cli-plugins" ]]; then
+  cp -R "$HOME/.docker/cli-plugins/." "$TMP_DOCKER_CONFIG/cli-plugins/"
+fi
 printf '{}' >"$TMP_DOCKER_CONFIG/config.json"
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-prod projo-web-prod
+
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-prod projo-web-prod
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate projo-api-prod projo-web-prod
 
 echo "[deploy-prod] wait api health"

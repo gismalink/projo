@@ -36,8 +36,17 @@ fi
 echo "[deploy-test] recreate test services"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
+
+# On macOS (Docker Desktop), docker auth can be delegated to Keychain, which is
+# not available in non-interactive SSH sessions. Use a temp docker config without
+# credsStore, but keep the compose plugin available by copying cli-plugins.
+mkdir -p "$TMP_DOCKER_CONFIG/cli-plugins"
+if [[ -d "$HOME/.docker/cli-plugins" ]]; then
+  cp -R "$HOME/.docker/cli-plugins/." "$TMP_DOCKER_CONFIG/cli-plugins/"
+fi
 printf '{}' >"$TMP_DOCKER_CONFIG/config.json"
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-test projo-web-test
+
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-test projo-web-test
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate projo-api-test projo-web-test
 
 echo "[deploy-test] wait api health"
