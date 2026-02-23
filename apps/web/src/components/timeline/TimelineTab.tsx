@@ -33,6 +33,8 @@ type TimelineTabProps = {
     department?: { name: string } | null;
   }>;
   roles: Array<{ name: string; shortName?: string | null; colorHex?: string | null }>;
+  canSeedDemoWorkspace: boolean;
+  onSeedDemoWorkspace: () => Promise<void>;
   teamTemplates: Array<{ id: string; name: string }>;
   grades: GradeItem[];
   sortedTimeline: ProjectTimelineRow[];
@@ -81,6 +83,8 @@ export function TimelineTab(props: TimelineTabProps) {
     locale,
     months,
     canManageTimeline,
+    canSeedDemoWorkspace,
+    onSeedDemoWorkspace,
     selectedYear,
     assignments,
     vacations,
@@ -1010,6 +1014,8 @@ export function TimelineTab(props: TimelineTabProps) {
           onOpenProjectModal={onOpenProjectModal}
           onYearChange={onYearChange}
           onDragStepDaysChange={setDragStepDays}
+          canSeedDemoWorkspace={canSeedDemoWorkspace}
+          onSeedDemoWorkspace={onSeedDemoWorkspace}
         />
 
         <div className="timeline-calendar-legend" aria-label={t.calendarLegendLabel}>

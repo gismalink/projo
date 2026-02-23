@@ -129,6 +129,7 @@ export function App() {
   const isEditor = app.currentUserRole === 'PM';
   const canUseCompanyAdminTabs = isCompanyOwner;
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
+  const canSeedDemoWorkspace = app.currentUserRole === 'ADMIN';
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
   const projectMemberSearchValue = projectMemberSearch.trim().toLowerCase();
@@ -895,6 +896,8 @@ export function App() {
               locale={locale}
               months={MONTHS_BY_LANG[lang]}
               canManageTimeline={canManageTimeline}
+              canSeedDemoWorkspace={canSeedDemoWorkspace}
+              onSeedDemoWorkspace={app.handleSeedDemoWorkspace}
               selectedYear={app.selectedYear}
               assignments={app.assignments}
               vacations={app.vacations}

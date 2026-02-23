@@ -589,6 +589,7 @@ export const api = {
   createGrade: (payload: CreateGradePayload, token: string) =>
     request<GradeItem>('/grades', { method: 'POST', body: JSON.stringify(payload) }, token),
   createDefaultGrades: (token: string) => request<DefaultsCreateResult>('/grades/defaults', { method: 'POST' }, token),
+  seedDemoWorkspace: (token: string) => request('/demo/seed', { method: 'POST' }, token),
   updateGrade: (gradeId: string, payload: UpdateGradePayload, token: string) =>
     request<GradeItem>(`/grades/${gradeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   deleteGrade: (gradeId: string, token: string) => request(`/grades/${gradeId}`, { method: 'DELETE' }, token),
