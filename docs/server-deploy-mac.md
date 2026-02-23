@@ -1,15 +1,15 @@
 # Server Deploy Guide (Mac host)
 
-Актуализация: 2026-02-20
+Актуализация: 2026-02-24
 
 ## Оперативное правило (для команд в чате)
 - Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально на текущей машине.
-- Команда по умолчанию:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
-- Если не оговорено иное, использовать именно этот путь для обновления test-окружения.
-- Фраза «деплой в prod/продакшн» также означает запуск **на сервере по SSH** и promotion уже проверенного test-коммита в prod.
-- Команда для promotion в `prod`:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-prod projo-web-prod'`
+- Runtime repo на сервере: `~/srv/projo`.
+- Команда по умолчанию (в test деплоим ref/ветку или main):
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo'`
+- Фраза «деплой в prod/продакшн» означает promotion уже проверенного SHA из `origin/main`.
+- Команда по умолчанию для `prod`:
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo'`
 
 ## 1) Что поднимает этот контур
 - Изолированные `test/prod` БД и приложения `projo` в одном docker-compose контуре.
@@ -34,6 +34,10 @@
 Из корня репозитория:
 - `docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d`
 
+Важно про web (Vite):
+- `VITE_*` переменные вшиваются в bundle на этапе `vite build`.
+- Поэтому для `test/prod` нужно прокидывать `VITE_API_URL`, `VITE_AUTH_MODE`, `VITE_AUTH_BASE_URL` в build (см. `infra/docker-compose.host.yml` -> `build.args`).
+
 Важно:
 - Перед запуском убедиться, что на сервере есть external network `edge_public`.
 - Порты `80/443` в этом compose больше не публикуются (ими управляет отдельный `edge` stack).
@@ -45,11 +49,15 @@
 - `curl -I https://projo.gismalink.art/api/health`
 
 ## 5) Обновление релиза
-1. Обновить код (`git pull`).
-2. Для `test` перезапустить только test-сервисы:
-   - `docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-test projo-web-test`
-3. После проверки `test` продвинуть тот же commit в `prod`:
-   - `docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-prod projo-web-prod`
+1. Использовать deploy-скрипты (они:
+   - делают `git fetch` + checkout detached SHA,
+   - пересобирают образы,
+   - перезапускают только нужные сервисы,
+   - ждут `.../api/health`).
+2. Test:
+   - `./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo`
+3. После проверки test — prod тем же SHA (из `origin/main`):
+   - `./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo`
 4. Выполнить smoke-проверки из `docs/release-runbook.md`.
 
 ## 6) Rollback

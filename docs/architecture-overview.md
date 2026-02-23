@@ -8,16 +8,24 @@
 - `scripts`: workspace automation (`verify-all.sh`, API smoke test, profiling helpers).
 
 ## 2) Runtime topology
-- PostgreSQL runs in Docker (`docker-compose.yml`).
+- PostgreSQL runs in Docker (host compose for test/prod: `infra/docker-compose.host.yml`).
 - API runs as NestJS service with global `/api` prefix.
+- Web is a Vite-built SPA served via `vite preview` in container.
+- В `test/prod` внешний ingress вынесен в отдельный stack (`edge`) и маршрутизирует:
+  - `https://test.projo.gismalink.art` -> `projo-web-test`, `.../api/*` -> `projo-api-test`
+  - `https://projo.gismalink.art` -> `projo-web-prod`, `.../api/*` -> `projo-api-prod`
 - Web calls API through `VITE_API_URL` in `apps/web/src/api/client.ts`.
-- Уровень агрегации стартового экрана — планы (project spaces / workspaces), внутри которых хранятся timeline-проекты.
+
+Важно про Vite env:
+- `VITE_*` переменные — compile-time (вшиваются в bundle на этапе `vite build`).
+- Поэтому для `test/prod` значения `VITE_API_URL`, `VITE_AUTH_MODE`, `VITE_AUTH_BASE_URL` должны попадать в сборку (см. `infra/docker-compose.host.yml` -> `build.args`).
 
 ## 3) Backend architecture (`apps/api`)
 - Entry: `src/main.ts` -> `src/app.module.ts`.
 - Cross-cutting:
   - Prisma integration: `src/common/prisma.*`
   - JWT + RBAC: `src/auth/*`, `src/common/decorators/roles.decorator.ts`, `src/common/guards/roles.guard.ts`
+  - SSO proxy endpoints (central auth): `src/auth/sso.controller.ts`
   - Error code map: `src/common/error-codes.ts`
 - Domain modules:
   - `roles`, `skills`, `departments`, `employees`, `vacations`, `cost-rates`, `team-templates`, `projects`, `assignments`, `timeline`, `calendar`, `health`.
@@ -32,7 +40,8 @@
   - `ProjectMember` keeps membership list,
   - `ProjectAssignment` keeps timeline allocation periods.
 - `Workspace` (project space) — контейнер плана для изоляции операционных расчетов (`timeline/assignments/vacations/cost-rates`) на уровне активного плана.
-- Сотрудники используются как owner-scoped shared team между планами одного владельца (без дублирования записей при создании нового плана).
+- Сотрудники используются как shared team в рамках компании (company-scoped), без пересечений между компаниями.
+- Компания может иметь 0 видимых планов: используется скрытый "company home workspace" (не показывается в списке планов).
 - `ProjectTeamTemplate` + `ProjectTeamTemplateRole`: настраиваемые шаблоны обязательного состава проекта.
 - `Vacation`: employee absences.
 - `CostRate`: role/employee rates with validity interval.
@@ -54,7 +63,7 @@
 - Shared frontend utilities and constants:
   - constants: `src/constants/app.constants.ts`, `src/constants/seed-defaults.constants.ts`
   - timeline date helpers: `src/components/timeline/timeline-date.utils.ts`
-  - salary helpers: `src/hooks/salary.utils.ts`
+  - cost/salary logic lives in API (`CostRate`) and is surfaced via project cost summary.
 - Components by domain: `src/components/personnel`, `src/components/roles`, `src/components/timeline`, `src/components/modals`.
 - i18n dictionaries: `src/pages/app-i18n.ts` (`ru`/`en`).
 - Styles are split by domain with Sass partials and unified entrypoint:
@@ -85,6 +94,6 @@
 - Assignment может выходить за плановые даты проекта; это не блокируется API и подсвечивается как диагностическая ошибка `fact-range` на Timeline.
 
 ## 8) Aggregation levels
-- Уровень 1 (текущий): **Планы** — карточки на экране «Мои планы», переключают активный tenant-контекст.
-- Уровень 2 (текущий): **Проекты внутри плана** — участвуют в Timeline и расчетах загрузки.
-- Будущий уровень (planned): **Компании** как надстройка над планами, где у пользователя может быть несколько независимых наборов планов.
+- Уровень 1: **Компании** — независимые tenant-контексты (roles/departments/grades/team templates и список планов).
+- Уровень 2: **Планы (workspaces / project spaces)** — карточки на экране «Мои планы» внутри выбранной компании.
+- Уровень 3: **Проекты внутри плана** — участвуют в Timeline и расчетах.

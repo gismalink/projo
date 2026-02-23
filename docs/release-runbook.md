@@ -1,15 +1,14 @@
 # Release Runbook (test/prod)
 
-Актуализация: 2026-02-20
+Актуализация: 2026-02-24
 
 ## Оперативное правило (для команд в чате)
-- Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально.
-- Команда по умолчанию:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
-- Если явно не указано иное, использовать именно этот сценарий обновления test-окружения.
-- Фраза «деплой в prod/продакшн» означает запуск **на сервере по SSH** и promotion того же коммита, который уже прошёл проверку на `test`.
-- Команда по умолчанию для `prod`:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-prod projo-web-prod'`
+- Деплой делается **на сервере по SSH**, repo лежит в `~/srv/projo`.
+- `test` допускает деплой конкретного ref/ветки; `prod` — только из `origin/main` после smoke в `test`.
+- Test (пример):
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo'`
+- Prod (пример):
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo'`
 
 ## 1) Модель окружений
 - `dev` — локально на машине разработчика, без внешней публикации.
@@ -43,6 +42,10 @@
 - Убедиться, что загружается Timeline и нет 401 на запросах.
 - (Опционально) проверить `GET /api/auth/me` и `GET /api/auth/projects` через UI.
 - Выполнить logout и убедиться, что происходит редирект на central auth logout.
+
+Примечание по web build:
+- В `test/prod` web собирается как Vite bundle; `VITE_*` переменные должны попасть в `vite build`.
+- Для окружений на сервере используем `VITE_API_URL=/api` (в bundle), чтобы не получить `localhost:4000/api`.
 6. Promote того же релизного коммита на `prod`.
 
 ## 3.1) Пошагово: dev -> test -> prod
@@ -63,25 +66,20 @@
    - `git push origin rc-YYYYMMDD-HHMM`
 
 ### Шаг C. Deploy на test (сервер)
-1. На сервере перейти в каталог репозитория и зафиксировать нужный SHA:
-   - `git fetch --all --tags`
-   - `git checkout <sha>`
-2. Перезапустить только test-сервисы:
-   - `docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-test projo-web-test`
+1. Использовать deploy-скрипт (fetch + checkout detached + build + up + health wait):
+   - `./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo`
 3. Проверить test:
    - `curl -fsS https://test.projo.gismalink.art/api/health`
    - `curl -I https://test.projo.gismalink.art`
    - ручной smoke ключевых сценариев.
 
 ### Упрощённый сценарий (одной SSH-командой)
-- Для обычного обновления test до актуального `main`:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
-- Важно: в non-interactive SSH на macOS путь к Docker может не подхватываться автоматически, поэтому используется `export PATH=/usr/local/bin:$PATH`.
+- Для обычного обновления test до актуального `origin/main`:
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo'`
 
 ### Шаг D. Promote на prod (тот же SHA)
-1. Не менять SHA (всё ещё `git checkout <sha>` на сервере).
-2. Перезапустить только prod-сервисы:
-   - `docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host up -d --force-recreate projo-api-prod projo-web-prod`
+1. Promote только из `origin/main` после smoke в `test`:
+   - `./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo`
 3. Проверить prod:
    - `curl -fsS https://projo.gismalink.art/api/health`
    - `curl -I https://projo.gismalink.art`
