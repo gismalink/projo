@@ -34,7 +34,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 echo "[deploy-prod] recreate prod services"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-prod projo-web-prod
+DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-prod projo-web-prod
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate projo-api-prod projo-web-prod
 
 echo "[deploy-prod] wait api health"

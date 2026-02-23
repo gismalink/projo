@@ -34,7 +34,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 echo "[deploy-test] recreate test services"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-test projo-web-test
+DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-test projo-web-test
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate projo-api-test projo-web-test
 
 echo "[deploy-test] wait api health"
