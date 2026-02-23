@@ -18,7 +18,7 @@ export class SkillsController {
   }
 
   @Get()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll() {
     return this.skillsService.findAll();
   }

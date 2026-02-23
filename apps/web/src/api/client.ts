@@ -145,7 +145,6 @@ export type CreateRolePayload = {
   name: string;
   shortName?: string;
   description?: string;
-  level?: number;
   colorHex?: string;
 };
 
@@ -203,6 +202,7 @@ export type TeamTemplateItem = {
   id: string;
   name: string;
   roles: TeamTemplateRoleItem[];
+  _count?: { projects: number };
 };
 
 export type CreateTeamTemplatePayload = {
@@ -216,6 +216,7 @@ export type GradeItem = {
   id: string;
   name: string;
   colorHex?: string | null;
+  _count?: { employees: number };
   createdAt: string;
   updatedAt: string;
 };

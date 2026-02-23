@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { DEFAULT_ROLE_COLOR_HEX } from '../common/app-constants';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
@@ -6,15 +6,15 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
 const DEFAULT_ROLES = [
-  { name: 'PM', shortName: 'PM', description: 'Project manager', level: 2, colorHex: DEFAULT_ROLE_COLOR_HEX },
-  { name: 'UNITY_DEVELOPER', shortName: 'UNITY', description: 'Unity developer', level: 3, colorHex: '#9B8AFB' },
-  { name: 'UI_DESIGNER', shortName: 'UI', description: 'UI designer', level: 3, colorHex: '#46B7D6' },
-  { name: 'UX_DESIGNER', shortName: 'UX', description: 'UX designer', level: 3, colorHex: '#31B28D' },
-  { name: 'BACKEND_DEVELOPER', shortName: 'BACK', description: 'Backend developer', level: 3, colorHex: '#5B8DEF' },
-  { name: 'FRONTEND_DEVELOPER', shortName: 'FRONT', description: 'Frontend developer', level: 3, colorHex: '#4C9F70' },
-  { name: '3D_ARTIST', shortName: '3DART', description: '3D artist', level: 3, colorHex: '#C178E8' },
-  { name: 'ANALYST', shortName: 'ANLST', description: 'Business/system analyst', level: 3, colorHex: '#E6A23C' },
-  { name: 'QA_ENGINEER', shortName: 'QA', description: 'QA test engineer', level: 3, colorHex: '#F06A8A' },
+  { name: 'PM', shortName: 'PM', description: 'Project manager', colorHex: DEFAULT_ROLE_COLOR_HEX },
+  { name: 'UNITY_DEVELOPER', shortName: 'UNITY', description: 'Unity developer', colorHex: '#9B8AFB' },
+  { name: 'UI_DESIGNER', shortName: 'UI', description: 'UI designer', colorHex: '#46B7D6' },
+  { name: 'UX_DESIGNER', shortName: 'UX', description: 'UX designer', colorHex: '#31B28D' },
+  { name: 'BACKEND_DEVELOPER', shortName: 'BACK', description: 'Backend developer', colorHex: '#5B8DEF' },
+  { name: 'FRONTEND_DEVELOPER', shortName: 'FRONT', description: 'Frontend developer', colorHex: '#4C9F70' },
+  { name: '3D_ARTIST', shortName: '3DART', description: '3D artist', colorHex: '#C178E8' },
+  { name: 'ANALYST', shortName: 'ANLST', description: 'Business/system analyst', colorHex: '#E6A23C' },
+  { name: 'QA_ENGINEER', shortName: 'QA', description: 'QA test engineer', colorHex: '#F06A8A' },
 ];
 
 @Injectable()
@@ -116,7 +116,7 @@ export class RolesService {
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
-          select: { employees: true },
+          select: { employees: true, templateRoles: true, costRates: true },
         },
       },
     });
@@ -143,10 +143,7 @@ export class RolesService {
   async update(workspaceId: string, id: string, dto: UpdateRoleDto) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const role = await this.findOne(workspaceId, id);
-    if (companyId && role.companyId !== companyId) {
-      if (role.companyId === null) {
-        throw new ForbiddenException(ErrorCode.ROLE_SYSTEM_ROLE_READ_ONLY);
-      }
+    if (companyId && role.companyId && role.companyId !== companyId) {
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
     return this.prisma.role.update({ where: { id }, data: dto });
@@ -155,37 +152,56 @@ export class RolesService {
   async remove(workspaceId: string, id: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const role = await this.findOne(workspaceId, id);
-    if (companyId && role.companyId !== companyId) {
-      if (role.companyId === null) {
-        throw new ForbiddenException(ErrorCode.ROLE_SYSTEM_ROLE_READ_ONLY);
-      }
+    if (companyId && role.companyId && role.companyId !== companyId) {
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
     }
 
-    const [employeeRefs, templateRefs] = await Promise.all([
+    const isGlobalRole = role.companyId === null;
+
+    const [employeeRefs, templateRefs, costRateRefs] = await Promise.all([
       this.prisma.employee.count({
-        where: companyId
+        where: isGlobalRole
           ? {
               roleId: id,
-              workspace: { companyId },
             }
-          : {
-              roleId: id,
-            },
+          : companyId
+            ? {
+                roleId: id,
+                workspace: { companyId },
+              }
+            : {
+                roleId: id,
+              },
       }),
       this.prisma.projectTeamTemplateRole.count({
         where: {
           roleId: id,
-          template: companyId
-            ? {
-                companyId,
-              }
-            : undefined,
+          template: isGlobalRole
+            ? undefined
+            : companyId
+              ? {
+                  companyId,
+                }
+              : undefined,
         },
+      }),
+      this.prisma.costRate.count({
+        where: isGlobalRole
+          ? {
+              roleId: id,
+            }
+          : companyId
+            ? {
+                roleId: id,
+                workspace: { companyId },
+              }
+            : {
+                roleId: id,
+              },
       }),
     ]);
 
-    if (employeeRefs > 0 || templateRefs > 0) {
+    if (employeeRefs > 0 || templateRefs > 0 || costRateRefs > 0) {
       throw new ConflictException(ErrorCode.ROLE_IN_USE);
     }
 

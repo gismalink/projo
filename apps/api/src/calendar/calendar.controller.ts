@@ -11,19 +11,19 @@ export class CalendarController {
   constructor(private readonly calendarService: CalendarService) {}
 
   @Get('health/status')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   health() {
     return this.calendarService.getHealth();
   }
 
   @Post('sync')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR)
   sync(@Body() dto: SyncCalendarDto) {
     return this.calendarService.syncYears(dto.years ?? [], dto.force ?? false, dto.includeNextYear ?? true);
   }
 
   @Get(':year')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   getYear(
     @Param('year', ParseIntPipe) year: number,
     @Query('refresh', new ParseBoolPipe({ optional: true })) refresh?: boolean,

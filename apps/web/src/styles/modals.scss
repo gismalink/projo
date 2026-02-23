@@ -11,7 +11,8 @@
   display: grid;
   gap: 0.3rem;
   max-height: min(52vh, 460px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 0.08rem;
 }
 
@@ -74,13 +75,19 @@
   font-weight: 700;
 }
 
-.department-manage-action:hover:not(:disabled) {
+.department-manage-action:hover:not(:disabled):not([aria-disabled='true']):not(.is-locked) {
   @include button.icon-button-hover;
 }
 
 .department-manage-action:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.department-manage-action[aria-disabled='true'],
+.department-manage-action.is-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .department-manage-action.primary {

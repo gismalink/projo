@@ -178,20 +178,18 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
 
   return (
     <div
-      className={
-        isDropTarget
-          ? isDimmed
-            ? 'timeline-project-item drop-target dimmed'
-            : 'timeline-project-item drop-target'
-          : isDimmed
-            ? 'timeline-project-item dimmed'
-            : 'timeline-project-item'
-      }
+      className={(() => {
+        const classes = ['timeline-project-item'];
+        if (isExpanded) classes.push('selected');
+        if (isDropTarget) classes.push('drop-target');
+        if (isDimmed) classes.push('dimmed');
+        return classes.join(' ');
+      })()}
       onDragOver={(event) => onRowDragOver(event, row.id)}
       onDragLeave={(event) => onRowDragLeave(event, row.id)}
       onDrop={(event) => onRowDrop(event, row.id)}
     >
-      <div className={isExpanded ? 'timeline-row selected' : 'timeline-row'} onClick={handleRowBackgroundClick}>
+      <div className="timeline-row" onClick={handleRowBackgroundClick}>
         <div className="timeline-meta">
           <div className="timeline-meta-main">
             <div className="timeline-meta-topline">

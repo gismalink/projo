@@ -4,9 +4,8 @@ export type Role = {
   name: string;
   shortName?: string | null;
   description?: string;
-  level?: number;
   colorHex?: string | null;
-  _count?: { employees: number };
+  _count?: { employees: number; templateRoles?: number; costRates?: number };
 };
 
 export type Employee = {

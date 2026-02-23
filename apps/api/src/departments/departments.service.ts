@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -148,6 +148,21 @@ export class DepartmentsService {
     if (companyId && department.companyId !== companyId) {
       throw new NotFoundException(ErrorCode.DEPARTMENT_NOT_FOUND);
     }
+
+    const isGlobalDepartment = department.companyId === null;
+    const employeeRefs = await this.prisma.employee.count({
+      where: isGlobalDepartment
+        ? { departmentId: id }
+        : {
+            departmentId: id,
+            workspace: companyId ? { companyId } : { companyId: null },
+          },
+    });
+
+    if (employeeRefs > 0) {
+      throw new ConflictException(ErrorCode.DEPARTMENT_IN_USE);
+    }
+
     return this.prisma.department.delete({ where: { id } });
   }
 }

@@ -295,6 +295,21 @@
   overflow: visible;
 }
 
+.timeline-project-item:hover:not(.dimmed):not(.selected) {
+  border-color: rgba(10, 132, 255, 0.28);
+  background: rgba(10, 132, 255, 0.06);
+}
+
+.timeline-project-item.selected {
+  border-color: rgba(10, 132, 255, 0.42);
+  background: rgba(10, 132, 255, 0.12);
+}
+
+.timeline-project-item.selected:hover:not(.dimmed) {
+  border-color: rgba(10, 132, 255, 0.55);
+  background: rgba(10, 132, 255, 0.14);
+}
+
 .timeline-project-item.drop-target {
   border-color: rgba(10, 132, 255, 0.55);
   box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.2);
@@ -501,8 +516,8 @@
 }
 
 .timeline-row.selected {
-  border-color: rgba(10, 132, 255, 0.42);
-  background: rgba(10, 132, 255, 0.12);
+  border-color: transparent;
+  background: transparent;
 }
 
 .timeline-meta-controls {
@@ -719,6 +734,10 @@
   -webkit-user-select: none;
 }
 
+body.tooltip-portal-enabled .timeline-inline-tooltip {
+  display: none;
+}
+
 .timeline-meta .timeline-inline-tooltip {
   color: #fff !important;
   font-weight: 500;
@@ -811,11 +830,11 @@
 .project-card {
   margin-top: 0.55rem;
   border-top: 1px solid var(--ios-border);
-  padding: 0.55rem 0.7rem 0.6rem;
+  padding: 0.55rem 0.7rem 0.7rem;
   display: grid;
   gap: 0.45rem;
   background: rgba(255, 255, 255, 0.6);
-  border-radius: 0;
+  border-radius: 0 0 16px 16px;
   width: 100%;
 }
 

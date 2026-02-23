@@ -79,7 +79,6 @@ export class DemoService {
           name: extraRoleName,
           shortName: 'TEXT',
           description: 'Text writer / copywriter',
-          level: 3,
           colorHex: DEFAULT_ROLE_COLOR_HEX,
         },
       });

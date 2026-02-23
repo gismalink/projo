@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateTeamTemplateDto } from './dto/create-team-template.dto';
@@ -76,6 +76,9 @@ export class TeamTemplatesService {
           },
         },
         include: {
+          _count: {
+            select: { projects: true },
+          },
           roles: {
             orderBy: { position: 'asc' },
             include: {
@@ -176,6 +179,9 @@ export class TeamTemplatesService {
         : { companyId: null },
       orderBy: { name: 'asc' },
       include: {
+        _count: {
+          select: { projects: true },
+        },
         roles: {
           orderBy: { position: 'asc' },
           include: {
@@ -198,6 +204,9 @@ export class TeamTemplatesService {
           : { companyId: null }),
       },
       include: {
+        _count: {
+          select: { projects: true },
+        },
         roles: {
           orderBy: { position: 'asc' },
           include: {
@@ -240,6 +249,9 @@ export class TeamTemplatesService {
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         },
         include: {
+          _count: {
+            select: { projects: true },
+          },
           roles: {
             orderBy: { position: 'asc' },
             include: {
@@ -257,6 +269,23 @@ export class TeamTemplatesService {
     if (companyId && template.companyId !== companyId) {
       throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
     }
+
+    const isGlobalTemplate = template.companyId === null;
+    const projectRefs = await this.prisma.project.count({
+      where: isGlobalTemplate
+        ? {
+            teamTemplateId: id,
+          }
+        : {
+            teamTemplateId: id,
+            workspace: companyId ? { companyId } : { companyId: null },
+          },
+    });
+
+    if (projectRefs > 0) {
+      throw new ConflictException(ErrorCode.PROJECT_TEAM_TEMPLATE_IN_USE);
+    }
+
     return this.prisma.projectTeamTemplate.delete({ where: { id } });
   }
 }

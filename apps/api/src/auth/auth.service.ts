@@ -463,7 +463,7 @@ export class AuthService {
     email: string,
     permission: 'viewer' | 'editor',
   ): Promise<ProjectMembersResponse> {
-    const role = permission === 'editor' ? AppRole.PM : AppRole.VIEWER;
+    const role = permission === 'editor' ? AppRole.EDITOR : AppRole.VIEWER;
     const invited = await this.usersService.inviteProjectMemberByEmail(userId, projectId, this.normalizeEmail(email), role);
 
     if (invited === 'FORBIDDEN') {
@@ -492,7 +492,7 @@ export class AuthService {
     targetUserId: string,
     permission: 'viewer' | 'editor',
   ): Promise<ProjectMembersResponse> {
-    const role = permission === 'editor' ? AppRole.PM : AppRole.VIEWER;
+    const role = permission === 'editor' ? AppRole.EDITOR : AppRole.VIEWER;
     const updated = await this.usersService.updateProjectMemberPermission(userId, projectId, targetUserId, role);
 
     if (updated === 'FORBIDDEN') {

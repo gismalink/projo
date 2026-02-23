@@ -77,7 +77,6 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
             name: state.roleName,
             shortName: state.roleShortName || undefined,
             description: state.roleDescription,
-            level: state.roleLevel,
             colorHex: '#6E7B8A',
           },
           state.token as string,

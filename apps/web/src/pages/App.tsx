@@ -3,6 +3,7 @@ import { api, GradeItem, ProjectMemberItem } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
+import { TooltipPortal } from '../components/TooltipPortal';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { AccountModal } from '../components/modals/AccountModal';
 import { AuthGate } from '../components/modals/AuthGate';
@@ -126,9 +127,9 @@ export function App() {
       : null) || currentProjectAccess;
   const editingProjectId = projectSettingsProjectId || app.activeProjectSpaceId;
   const isOwner = Boolean(currentProjectAccess?.isOwner);
-  const isEditor = app.currentUserRole === 'PM';
+  const isEditor = app.currentUserRole === 'EDITOR';
   const canUseCompanyAdminTabs = isCompanyOwner;
-  const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
+  const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
   const canSeedDemoWorkspace = app.currentUserRole === 'ADMIN';
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
@@ -419,7 +420,6 @@ export function App() {
               <div className="project-top-main">
                 <button
                   type="button"
-                  className="icon-btn header-btn header-icon-btn"
                   onClick={() => setIsProjectHomeOpen(true)}
                   aria-label={t.projectList}
                   data-tooltip={t.projectList}
@@ -561,6 +561,7 @@ export function App() {
             </select>
           </div>
         </div>
+        <TooltipPortal />
       </div>
 
       {!app.token ? (
@@ -613,7 +614,7 @@ export function App() {
                               >
                                 <Icon name="copy" />
                               </button>
-                              {item.isOwner || item.role === 'PM' ? (
+                              {item.isOwner || item.role === 'EDITOR' ? (
                                 <button
                                   type="button"
                                   className="icon-btn"
@@ -655,7 +656,7 @@ export function App() {
                           <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
                             <div className="project-space-card-topline">
                               <strong>{item.name}</strong>
-                              {item.isOwner || item.role === 'PM' ? (
+                              {item.isOwner || item.role === 'EDITOR' ? (
                                 <button
                                   type="button"
                                   className="icon-btn"
@@ -806,7 +807,6 @@ export function App() {
               roleName={app.roleName}
               roleShortName={app.roleShortName}
               roleDescription={app.roleDescription}
-              roleLevel={app.roleLevel}
               onCreateRole={app.handleCreateRole}
               onUpdateRole={app.handleUpdateRole}
               onDeleteRole={app.handleDeleteRole}
@@ -814,7 +814,6 @@ export function App() {
               setRoleName={app.setRoleName}
               setRoleShortName={app.setRoleShortName}
               setRoleDescription={app.setRoleDescription}
-              setRoleLevel={app.setRoleLevel}
               roleColorOrDefault={roleColorOrDefault}
               onCreateDefaultDepartments={app.handleCreateDefaultDepartments}
               onCreateDepartment={app.handleCreateDepartment}

@@ -85,7 +85,6 @@ export function useAppState() {
   const [roleName, setRoleName] = useState<string>(DEFAULT_ROLE_FORM.name);
   const [roleShortName, setRoleShortName] = useState<string>(DEFAULT_ROLE_FORM.shortName);
   const [roleDescription, setRoleDescription] = useState<string>(DEFAULT_ROLE_FORM.description);
-  const [roleLevel, setRoleLevel] = useState<number>(DEFAULT_ROLE_FORM.level);
   const [skillName, setSkillName] = useState<string>(DEFAULT_SKILL_FORM.name);
   const [skillDescription, setSkillDescription] = useState<string>(DEFAULT_SKILL_FORM.description);
 
@@ -180,7 +179,6 @@ export function useAppState() {
     roleName,
     roleShortName,
     roleDescription,
-    roleLevel,
     skillName,
     skillDescription,
     departments,
@@ -265,7 +263,6 @@ export function useAppState() {
     setRoleName,
     setRoleShortName,
     setRoleDescription,
-    setRoleLevel,
     setSkillName,
     setSkillDescription,
     setDepartments,
