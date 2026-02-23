@@ -174,7 +174,7 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
   }, [curveDraftByAssignmentId]);
 
   const sortedAssignments = useMemo(() => {
-    const employeeIdAllowlist = Array.isArray(filterEmployeeIds) ? new Set(filterEmployeeIds) : null;
+    const employeeIdAllowlist = Array.isArray(filterEmployeeIds) && filterEmployeeIds.length > 0 ? new Set(filterEmployeeIds) : null;
 
     const filtered = filterEmployeeId
       ? detail.assignments.filter((assignment) => assignment.employeeId === filterEmployeeId)
