@@ -55,18 +55,18 @@
    - [x] добавить минимальный smoke: login->me->projects->logout.
 
 ### P2 — Разворачивание на существующем Mac-сервере (`gismalink.art`)
-1. [ ] Сохранить текущий сайт на `gismalink.art` без деградации.
-2. [ ] Настроить reverse-proxy (Dockerized `nginx`/`caddy`/`traefik`) с host-routing:
-   - [ ] `gismalink.art` -> текущий legacy upstream,
-   - [ ] `test.projo.gismalink.art` -> `projo-web-test` + `projo-api-test`,
-   - [ ] `projo.gismalink.art` -> `projo-web-prod` + `projo-api-prod`.
-3. [ ] Подготовить DNS записи:
-   - [ ] `A test.projo.gismalink.art -> <public-ip>`,
-   - [ ] `A projo.gismalink.art -> <public-ip>`.
-4. [ ] Разделить docker-стэки `test` и `prod`:
-   - [ ] отдельные `.env.test` / `.env.prod`,
-   - [ ] отдельные volume/сети/секреты,
-   - [ ] Postgres только во внутренней сети (без внешней публикации).
+1. [x] Сохранить текущий сайт на `gismalink.art` без деградации.
+2. [x] Настроить reverse-proxy (Dockerized `caddy`) с host-routing:
+   - [x] `gismalink.art` -> текущий legacy upstream,
+   - [x] `test.projo.gismalink.art` -> `projo-web-test` + `projo-api-test`,
+   - [x] `projo.gismalink.art` -> `projo-web-prod` + `projo-api-prod`.
+3. [x] Подготовить DNS записи:
+   - [x] `A test.projo.gismalink.art -> <public-ip>`,
+   - [x] `A projo.gismalink.art -> <public-ip>`.
+4. [x] Разделить docker-стэки `test` и `prod`:
+   - [x] отдельные `.env.test` / `.env.prod`,
+   - [x] отдельные volume/сети/секреты,
+   - [x] Postgres только во внутренней сети (без внешней публикации).
 5. [x] Внедрить runbook запуска/обновления/rollback.
 
 ### P3 — Качество и проверка поставки
@@ -113,8 +113,8 @@
 12. [ ] Подготовить следующий пакет продуктовых улучшений (отчеты, фильтры, интеграционные API-контракты).
 
 ## 4) Definition of Done для ближайшего этапа
-- [ ] Security-пункты P0 закрыты или имеют согласованные mitigation + дедлайн.
-- [ ] `test` и `prod` контуры опубликованы, изолированы и проходят smoke.
+- [x] Security-пункты P0 закрыты или имеют согласованные mitigation + дедлайн.
+- [x] `test` и `prod` контуры опубликованы, изолированы и проходят smoke.
 - [x] `dev` остается локальным, без внешней публикации.
 - [x] Документирован runbook для deploy/rollback.
 
