@@ -40,7 +40,7 @@ export const MONTHS_BY_LANG: Record<Lang, string[]> = Object.fromEntries(
   (Object.entries(LOCALE_BY_LANG) as Array<[Lang, string]>).map(([lang, locale]) => [lang, getMonthLabels(locale)]),
 ) as Record<Lang, string[]>;
 
-export const GRADE_OPTIONS = ['джу', 'джун+', 'мидл', 'мидл+', 'синьйор', 'синьйор+', 'лид', 'рук-отдела'];
+export const GRADE_OPTIONS = ['junior', 'junior+', 'middle', 'middle+', 'senior', 'senior+', 'team lead', 'head of'];
 
 const TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
   ru: {
@@ -78,6 +78,9 @@ const TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
     deleteDepartment: 'Удалить отдел',
     deleteTeamTemplate: 'Удалить шаблон',
     cannotDeleteEmployeesInUse: 'Нельзя удалить: используется сотрудниками',
+    deleteEmployee: 'Удалить сотрудника',
+    confirmDeleteEmployee: 'Удалить сотрудника? Это действие нельзя отменить.',
+    uiDeleteEmployeeFailed: 'Не удалось удалить сотрудника',
     cannotDeleteTemplatesInUse: 'Нельзя удалить: используется шаблонами составов',
     cannotDeleteCostRatesInUse: 'Нельзя удалить: используется ставками',
     cannotDeleteProjectsInUse: 'Нельзя удалить: используется проектами',
@@ -91,6 +94,8 @@ const TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
     utilization: 'Годовая загрузка',
     monthlyLoadLabel: 'Помесячная загрузка',
     companyLoad: 'Нагрузка компании',
+    companyLoadDepartmentPrefix: 'Нагрузка отдела',
+    companyLoadEmployeePrefix: 'Нагрузка сотрудника',
     bench: 'Скамейка',
     rolesList: 'Список ролей',
     roleMgmt: 'Управление ролями',
@@ -361,6 +366,9 @@ const TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
     deleteDepartment: 'Delete department',
     deleteTeamTemplate: 'Delete template',
     cannotDeleteEmployeesInUse: 'Cannot delete: used by employees',
+    deleteEmployee: 'Delete employee',
+    confirmDeleteEmployee: 'Delete employee? This action cannot be undone.',
+    uiDeleteEmployeeFailed: 'Failed to delete employee',
     cannotDeleteTemplatesInUse: 'Cannot delete: used by team templates',
     cannotDeleteCostRatesInUse: 'Cannot delete: used by cost rates',
     cannotDeleteProjectsInUse: 'Cannot delete: used by projects',
@@ -374,6 +382,8 @@ const TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
     utilization: 'Year utilization',
     monthlyLoadLabel: 'Monthly utilization',
     companyLoad: 'Company load',
+    companyLoadDepartmentPrefix: 'Department load',
+    companyLoadEmployeePrefix: 'Employee load',
     bench: 'Bench',
     rolesList: 'Roles List',
     roleMgmt: 'Role management',
@@ -653,6 +663,7 @@ const ERROR_TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
     ERR_DEPARTMENT_IN_USE: 'Нельзя удалить отдел: он используется сотрудниками',
     ERR_EMPLOYEE_NOT_FOUND: 'Сотрудник не найден',
     ERR_EMPLOYEE_EMAIL_ALREADY_EXISTS: 'Сотрудник с таким email уже существует в проекте',
+    ERR_EMPLOYEE_IN_USE: 'Нельзя удалить сотрудника: он используется в проектах/назначениях',
     ERR_DEPARTMENT_NOT_FOUND: 'Отдел не найден',
     ERR_PROJECT_TEAM_TEMPLATE_IN_USE: 'Нельзя удалить шаблон состава: он используется проектами',
       ERR_GRADE_IN_USE: 'Нельзя удалить грейд: он используется сотрудниками',
@@ -696,6 +707,7 @@ const ERROR_TEXT_BASE: Record<'ru' | 'en', Record<string, string>> = {
     ERR_DEPARTMENT_IN_USE: 'Cannot delete department: it is used by employees',
     ERR_EMPLOYEE_NOT_FOUND: 'Employee not found',
     ERR_EMPLOYEE_EMAIL_ALREADY_EXISTS: 'Employee with this email already exists in project',
+    ERR_EMPLOYEE_IN_USE: 'Cannot delete employee: used in projects/assignments',
     ERR_DEPARTMENT_NOT_FOUND: 'Department not found',
     ERR_PROJECT_TEAM_TEMPLATE_IN_USE: 'Cannot delete team template: it is used by projects',
       ERR_GRADE_IN_USE: 'Cannot delete grade: it is used by employees',

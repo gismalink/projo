@@ -25,11 +25,7 @@ export class ProjectsService {
     const template = await this.prisma.projectTeamTemplate.findFirst({
       where: {
         id: templateId,
-        ...(scope.companyId
-          ? {
-              OR: [{ companyId: scope.companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(scope.companyId ? { companyId: scope.companyId } : { companyId: null }),
       },
       select: { id: true },
     });

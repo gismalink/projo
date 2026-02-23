@@ -44,11 +44,7 @@ export class TeamTemplatesService {
         id: {
           in: uniqueRoleIds,
         },
-        ...(companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(companyId ? { companyId } : { companyId: null }),
       },
     });
 
@@ -93,11 +89,7 @@ export class TeamTemplatesService {
   async createDefaultTemplatesForWorkspace(workspaceId: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const availableRoles = await this.prisma.role.findMany({
-      where: companyId
-        ? {
-            OR: [{ companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+      where: companyId ? { companyId } : { companyId: null },
       select: {
         id: true,
         name: true,
@@ -172,11 +164,7 @@ export class TeamTemplatesService {
   async findAll(workspaceId: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     return this.prisma.projectTeamTemplate.findMany({
-      where: companyId
-        ? {
-            OR: [{ companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+      where: companyId ? { companyId } : { companyId: null },
       orderBy: { name: 'asc' },
       include: {
         _count: {
@@ -197,11 +185,7 @@ export class TeamTemplatesService {
     const template = await this.prisma.projectTeamTemplate.findFirst({
       where: {
         id,
-        ...(companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(companyId ? { companyId } : { companyId: null }),
       },
       include: {
         _count: {

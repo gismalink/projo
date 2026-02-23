@@ -573,6 +573,7 @@ export const api = {
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateEmployee: (employeeId: string, payload: UpdateEmployeePayload, token: string) =>
     request(`/employees/${employeeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  deleteEmployee: (employeeId: string, token: string) => request(`/employees/${employeeId}`, { method: 'DELETE' }, token),
   createDepartment: (payload: CreateDepartmentPayload, token: string) =>
     request('/departments', { method: 'POST', body: JSON.stringify(payload) }, token),
   createDefaultDepartments: (token: string) =>

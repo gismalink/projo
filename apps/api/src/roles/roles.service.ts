@@ -97,6 +97,43 @@ export class RolesService {
       created += 1;
     }
 
+    // If this workspace previously used global (companyId=null) roles, migrate employees
+    // to the company-scoped equivalents by role name so companies are fully isolated.
+    if (companyId) {
+      const [companyRoles, globalRolesUsed] = await Promise.all([
+        this.prisma.role.findMany({
+          where: { companyId },
+          select: { id: true, name: true },
+        }),
+        this.prisma.employee.findMany({
+          where: {
+            workspaceId,
+            role: { companyId: null },
+          },
+          select: {
+            roleId: true,
+            role: { select: { name: true } },
+          },
+        }),
+      ]);
+
+      const companyRoleIdByName = new Map(companyRoles.map((role) => [role.name, role.id] as const));
+
+      const seenGlobalRoleIds = new Set<string>();
+      for (const item of globalRolesUsed) {
+        if (seenGlobalRoleIds.has(item.roleId)) continue;
+        seenGlobalRoleIds.add(item.roleId);
+
+        const nextRoleId = companyRoleIdByName.get(item.role.name);
+        if (!nextRoleId) continue;
+
+        await this.prisma.employee.updateMany({
+          where: { workspaceId, roleId: item.roleId },
+          data: { roleId: nextRoleId },
+        });
+      }
+    }
+
     return { created };
   }
 
@@ -107,19 +144,68 @@ export class RolesService {
 
   async findAll(workspaceId: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
-    return this.prisma.role.findMany({
-      where: companyId
-        ? {
-            OR: [{ companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+    const roles = await this.prisma.role.findMany({
+      where: companyId ? { companyId } : { companyId: null },
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: { employees: true, templateRoles: true, costRates: true },
-        },
-      },
     });
+
+    const roleIds = roles.map((role) => role.id);
+    if (roleIds.length === 0) {
+      return roles.map((role) => ({
+        ...role,
+        _count: { employees: 0, templateRoles: 0, costRates: 0 },
+      }));
+    }
+
+    const [employeesCounts, templateRoleCounts, costRateCounts] = await Promise.all([
+      this.prisma.employee.groupBy({
+        by: ['roleId'],
+        where: {
+          roleId: { in: roleIds },
+          workspace: companyId ? { companyId } : { companyId: null },
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.projectTeamTemplateRole.groupBy({
+        by: ['roleId'],
+        where: {
+          roleId: { in: roleIds },
+          template: companyId ? { companyId } : { companyId: null },
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.costRate.groupBy({
+        by: ['roleId'],
+        where: {
+          roleId: { in: roleIds },
+          workspace: companyId ? { companyId } : { companyId: null },
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const employeesCountByRoleId = new Map<string, number>();
+    for (const item of employeesCounts) {
+      employeesCountByRoleId.set(item.roleId, item._count._all);
+    }
+    const templateRolesCountByRoleId = new Map<string, number>();
+    for (const item of templateRoleCounts) {
+      templateRolesCountByRoleId.set(item.roleId, item._count._all);
+    }
+    const costRatesCountByRoleId = new Map<string, number>();
+    for (const item of costRateCounts) {
+      if (!item.roleId) continue;
+      costRatesCountByRoleId.set(item.roleId, item._count._all);
+    }
+
+    return roles.map((role) => ({
+      ...role,
+      _count: {
+        employees: employeesCountByRoleId.get(role.id) ?? 0,
+        templateRoles: templateRolesCountByRoleId.get(role.id) ?? 0,
+        costRates: costRatesCountByRoleId.get(role.id) ?? 0,
+      },
+    }));
   }
 
   async findOne(workspaceId: string, id: string) {
@@ -127,11 +213,7 @@ export class RolesService {
     const role = await this.prisma.role.findFirst({
       where: {
         id,
-        ...(companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(companyId ? { companyId } : { companyId: null }),
       },
     });
     if (!role) {

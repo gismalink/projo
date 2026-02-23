@@ -90,6 +90,44 @@ export class DepartmentsService {
       created += 1;
     }
 
+    // Migrate employees in this workspace off global (companyId=null) departments.
+    if (companyId) {
+      const [companyDepartments, globalDepartmentsUsed] = await Promise.all([
+        this.prisma.department.findMany({
+          where: { companyId },
+          select: { id: true, name: true },
+        }),
+        this.prisma.employee.findMany({
+          where: {
+            workspaceId,
+            department: { companyId: null },
+          },
+          select: {
+            departmentId: true,
+            department: { select: { name: true } },
+          },
+        }),
+      ]);
+
+      const companyDepartmentIdByName = new Map(companyDepartments.map((dept) => [dept.name, dept.id] as const));
+      const seenGlobalDepartmentIds = new Set<string>();
+
+      for (const item of globalDepartmentsUsed) {
+        const globalDepartmentId = item.departmentId;
+        if (!globalDepartmentId || !item.department) continue;
+        if (seenGlobalDepartmentIds.has(globalDepartmentId)) continue;
+        seenGlobalDepartmentIds.add(globalDepartmentId);
+
+        const nextDepartmentId = companyDepartmentIdByName.get(item.department.name);
+        if (!nextDepartmentId) continue;
+
+        await this.prisma.employee.updateMany({
+          where: { workspaceId, departmentId: globalDepartmentId },
+          data: { departmentId: nextDepartmentId },
+        });
+      }
+    }
+
     return { created };
   }
 
@@ -101,11 +139,7 @@ export class DepartmentsService {
   async findAll(workspaceId: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     return this.prisma.department.findMany({
-      where: companyId
-        ? {
-            OR: [{ companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+      where: companyId ? { companyId } : { companyId: null },
       orderBy: { name: 'asc' },
       include: {
         _count: {
@@ -120,11 +154,7 @@ export class DepartmentsService {
     const department = await this.prisma.department.findFirst({
       where: {
         id,
-        ...(companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(companyId ? { companyId } : { companyId: null }),
       },
     });
     if (!department) {

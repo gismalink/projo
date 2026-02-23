@@ -55,6 +55,20 @@ export class DemoService {
     return workspace.companyId;
   }
 
+  private isoDate(value: Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  private buildCurveProfile(points: Array<{ date: Date; value: number }>) {
+    return {
+      mode: 'curve',
+      points: points.map((point) => ({
+        date: point.date.toISOString(),
+        value: point.value,
+      })),
+    };
+  }
+
   async seedDemoWorkspace(workspaceId: string): Promise<SeedResult> {
     const ensuredDefaults = {
       rolesCreated: (await this.rolesService.createDefaultRolesForWorkspace(workspaceId)).created,
@@ -87,27 +101,15 @@ export class DemoService {
 
     const [roles, departments, grades] = await Promise.all([
       this.prisma.role.findMany({
-        where: companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null },
+        where: companyId ? { companyId } : { companyId: null },
         select: { id: true, name: true },
       }),
       this.prisma.department.findMany({
-        where: companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null },
+        where: companyId ? { companyId } : { companyId: null },
         select: { id: true, name: true },
       }),
       this.prisma.grade.findMany({
-        where: companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null },
+        where: companyId ? { companyId } : { companyId: null },
         select: { name: true },
         orderBy: { createdAt: 'asc' },
       }),
@@ -147,22 +149,33 @@ export class DemoService {
       const grade = gradeNames.length > 0 ? gradeNames[index % gradeNames.length] : null;
 
       const existing = await this.prisma.employee.findFirst({
-        where: { workspaceId, fullName: spec.fullName },
-        select: { id: true },
+        where: companyId
+          ? {
+              fullName: spec.fullName,
+              workspace: {
+                companyId,
+              },
+            }
+          : { workspaceId, fullName: spec.fullName },
+        select: { id: true, workspaceId: true },
       });
 
       if (existing) {
-        await this.prisma.employee.update({
-          where: { id: existing.id },
-          data: {
-            roleId,
-            departmentId: departmentId ?? null,
-            grade,
-            status: 'active',
-          },
-        });
+        // Only update attributes when the employee already belongs to this workspace,
+        // to avoid accidentally modifying a real employee from another plan.
+        if (existing.workspaceId === workspaceId) {
+          await this.prisma.employee.update({
+            where: { id: existing.id },
+            data: {
+              roleId,
+              departmentId: departmentId ?? null,
+              grade,
+              status: 'active',
+            },
+          });
+        }
         employeeByFullName.set(spec.fullName, { id: existing.id });
-        updatedEmployees += 1;
+        updatedEmployees += existing.workspaceId === workspaceId ? 1 : 0;
         continue;
       }
 
@@ -187,22 +200,28 @@ export class DemoService {
     const year = now.getUTCFullYear();
     const projectSpecs = [
       {
-        code: 'DEMO-1',
-        name: 'Demo: Альфа',
+        code: 'DEMO-CORE',
+        name: 'Demo: Core Delivery',
         startDate: new Date(Date.UTC(year, 0, 1)),
-        endDate: new Date(Date.UTC(year, 3, 30)),
-      },
-      {
-        code: 'DEMO-2',
-        name: 'Demo: Бета',
-        startDate: new Date(Date.UTC(year, 4, 1)),
-        endDate: new Date(Date.UTC(year, 7, 31)),
-      },
-      {
-        code: 'DEMO-3',
-        name: 'Demo: Гамма',
-        startDate: new Date(Date.UTC(year, 8, 1)),
         endDate: new Date(Date.UTC(year, 11, 31)),
+      },
+      {
+        code: 'DEMO-Q1',
+        name: 'Demo: Q1 Release (peak)',
+        startDate: new Date(Date.UTC(year, 1, 1)),
+        endDate: new Date(Date.UTC(year, 2, 31)),
+      },
+      {
+        code: 'DEMO-Q4',
+        name: 'Demo: Q4 Release (peak)',
+        startDate: new Date(Date.UTC(year, 9, 1)),
+        endDate: new Date(Date.UTC(year, 9, 31)),
+      },
+      {
+        code: 'DEMO-HOTFIX',
+        name: 'Demo: Hotfix Sprint',
+        startDate: new Date(Date.UTC(year, 10, 15)),
+        endDate: new Date(Date.UTC(year, 11, 15)),
       },
     ];
 
@@ -256,20 +275,121 @@ export class DemoService {
     }
 
     const byCode = new Map(projects.map((p) => [p.code, p] as const));
-    const assignmentPlan: Array<{ projectCode: string; employeeFullName: string; allocationPercent: number }> = [
-      { projectCode: 'DEMO-1', employeeFullName: 'Дизайнер Дизайнерски', allocationPercent: 60 },
-      { projectCode: 'DEMO-1', employeeFullName: 'Моделлер Моделлерски', allocationPercent: 60 },
-      { projectCode: 'DEMO-1', employeeFullName: 'Юнити Юнитевски', allocationPercent: 50 },
-      { projectCode: 'DEMO-1', employeeFullName: 'Веб Вебовски', allocationPercent: 40 },
 
-      { projectCode: 'DEMO-2', employeeFullName: 'Юнити Грантовски', allocationPercent: 60 },
-      { projectCode: 'DEMO-2', employeeFullName: 'Бэк Бэковски', allocationPercent: 50 },
-      { projectCode: 'DEMO-2', employeeFullName: 'Анали Аналитовски', allocationPercent: 40 },
+    const core = byCode.get('DEMO-CORE');
+    const q1 = byCode.get('DEMO-Q1');
+    const q4 = byCode.get('DEMO-Q4');
+    const hotfix = byCode.get('DEMO-HOTFIX');
 
-      { projectCode: 'DEMO-3', employeeFullName: 'Текст Текстисовски', allocationPercent: 40 },
-      { projectCode: 'DEMO-3', employeeFullName: 'Руководски', allocationPercent: 40 },
-      { projectCode: 'DEMO-3', employeeFullName: 'Тестировски', allocationPercent: 50 },
-    ];
+    const assignmentPlan: Array<{
+      projectCode: string;
+      employeeFullName: string;
+      allocationPercent: number;
+      loadProfile?: unknown;
+    }> = [];
+
+    const corePointDates = {
+      y0: new Date(Date.UTC(year, 0, 1)),
+      feb15: new Date(Date.UTC(year, 1, 15)),
+      apr1: new Date(Date.UTC(year, 3, 1)),
+      jun1: new Date(Date.UTC(year, 5, 1)),
+      jul1: new Date(Date.UTC(year, 6, 1)),
+      aug15: new Date(Date.UTC(year, 7, 15)),
+      sep1: new Date(Date.UTC(year, 8, 1)),
+      oct15: new Date(Date.UTC(year, 9, 15)),
+      nov15: new Date(Date.UTC(year, 10, 15)),
+      y1: new Date(Date.UTC(year, 11, 31)),
+    };
+
+    const perEmployeeJitter = (index: number) => {
+      const normalized = Math.sin((index + 1) * 1337) * 0.5 + 0.5;
+      return Math.round((normalized * 8 - 4) * 10) / 10;
+    };
+
+    // Baseline: everyone is assigned to the core project for the whole year, with a summer dip and release peaks.
+    for (let index = 0; index < employeesToCreate.length; index += 1) {
+      const spec = employeesToCreate[index];
+      if (!core) continue;
+
+      const jitter = perEmployeeJitter(index);
+      const roleFactor = spec.roleName === 'PM' ? -6 : spec.roleName === 'ANALYST' ? -3 : spec.roleName === 'QA_ENGINEER' ? -1 : 0;
+
+      const points = [
+        { date: corePointDates.y0, value: 86 + jitter + roleFactor },
+        { date: corePointDates.feb15, value: 92 + jitter + roleFactor },
+        { date: corePointDates.apr1, value: 88 + jitter + roleFactor },
+        { date: corePointDates.jun1, value: 82 + jitter + roleFactor },
+        { date: corePointDates.jul1, value: 70 + jitter + roleFactor },
+        { date: corePointDates.aug15, value: 72 + jitter + roleFactor },
+        { date: corePointDates.sep1, value: 84 + jitter + roleFactor },
+        { date: corePointDates.oct15, value: 90 + jitter + roleFactor },
+        { date: corePointDates.nov15, value: 94 + jitter + roleFactor },
+        { date: corePointDates.y1, value: 86 + jitter + roleFactor },
+      ].map((point) => ({
+        date: point.date,
+        value: Math.max(45, Math.min(98, point.value)),
+      }));
+
+      assignmentPlan.push({
+        projectCode: core.code,
+        employeeFullName: spec.fullName,
+        allocationPercent: 86,
+        loadProfile: this.buildCurveProfile(points),
+      });
+    }
+
+    // Q1 peak: add extra load for the delivery team (+ design + QA + PM).
+    if (q1) {
+      const q1Names = [
+        'Юнити Юнитевски',
+        'Юнити Грантовски',
+        'Веб Вебовски',
+        'Бэк Бэковски',
+        'Дизайнер Дизайнерски',
+        'Тестировски',
+        'Руководски',
+      ];
+      for (const fullName of q1Names) {
+        assignmentPlan.push({
+          projectCode: q1.code,
+          employeeFullName: fullName,
+          allocationPercent: 35,
+        });
+      }
+    }
+
+    // Q4 peak: larger spike for most of the team.
+    if (q4) {
+      const q4Names = [
+        'Юнити Юнитевски',
+        'Юнити Грантовски',
+        'Веб Вебовски',
+        'Бэк Бэковски',
+        'Дизайнер Дизайнерски',
+        'Моделлер Моделлерски',
+        'Тестировски',
+        'Анали Аналитовски',
+      ];
+      for (const fullName of q4Names) {
+        assignmentPlan.push({
+          projectCode: q4.code,
+          employeeFullName: fullName,
+          allocationPercent: 40,
+        });
+      }
+    }
+
+    // Hotfix sprint: short overload for a small subset.
+    if (hotfix) {
+      const hotfixNames = ['Юнити Юнитевски', 'Веб Вебовски', 'Бэк Бэковски', 'Тестировски'];
+      for (const fullName of hotfixNames) {
+        assignmentPlan.push({
+          projectCode: hotfix.code,
+          employeeFullName: fullName,
+          allocationPercent: 30,
+        });
+      }
+    }
 
     let createdAssignments = 0;
     let updatedAssignments = 0;
@@ -315,6 +435,7 @@ export class DemoService {
             assignmentStartDate: project.startDate,
             assignmentEndDate: project.endDate,
             allocationPercent: item.allocationPercent,
+            loadProfile: item.loadProfile ?? undefined,
             roleOnProject: null,
           },
         });
@@ -327,6 +448,7 @@ export class DemoService {
             assignmentStartDate: project.startDate,
             assignmentEndDate: project.endDate,
             allocationPercent: item.allocationPercent,
+            loadProfile: item.loadProfile ?? undefined,
             roleOnProject: null,
           },
         });

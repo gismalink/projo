@@ -231,7 +231,18 @@ export function TimelineTab(props: TimelineTabProps) {
       return day !== 0 && day !== 6;
     };
 
+    const filterEmployeeIdSet = filterBenchEmployeeId
+      ? new Set([filterBenchEmployeeId])
+      : filterBenchDepartmentName
+        ? new Set(
+            employees
+              .filter((employee) => (employee.department?.name ?? t.unassignedDepartment) === filterBenchDepartmentName)
+              .map((employee) => employee.id),
+          )
+        : null;
+
     for (const assignment of assignments) {
+      if (filterEmployeeIdSet && !filterEmployeeIdSet.has(assignment.employeeId)) continue;
       const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const start = new Date(assignment.assignmentStartDate);
@@ -252,7 +263,7 @@ export function TimelineTab(props: TimelineTabProps) {
       }
     }
 
-    const employeeCapacity = Math.max(1, employees.length);
+    const employeeCapacity = Math.max(1, filterEmployeeIdSet ? filterEmployeeIdSet.size : employees.length);
     const dailyUtilization = rawTotals.map((value) => value / employeeCapacity);
 
     const values: number[] = [];
@@ -292,7 +303,22 @@ export function TimelineTab(props: TimelineTabProps) {
 
     const max = Math.max(1, ...values);
     return { values, max };
-  }, [assignments, selectedYear, employees.length, dragStepDays, calendarDayByIso]);
+  }, [assignments, selectedYear, employees, dragStepDays, calendarDayByIso, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
+
+  const companyLoadTitle = useMemo(() => {
+    if (filterBenchEmployeeId) {
+      const employeeName = employees.find((employee) => employee.id === filterBenchEmployeeId)?.fullName ?? '';
+      const prefix = t.companyLoadEmployeePrefix ?? t.companyLoad;
+      return employeeName ? `${prefix} "${employeeName}"` : prefix;
+    }
+
+    if (filterBenchDepartmentName) {
+      const prefix = t.companyLoadDepartmentPrefix ?? t.companyLoad;
+      return `${prefix} "${filterBenchDepartmentName}"`;
+    }
+
+    return t.companyLoad;
+  }, [employees, filterBenchDepartmentName, filterBenchEmployeeId, t.companyLoad, t.companyLoadDepartmentPrefix, t.companyLoadEmployeePrefix]);
 
   const companyLoadScaleMax = Math.max(100, Math.ceil(companyLoad.max / 25) * 25);
   const companyDayMarkers = dragStepDays === 30 ? [] : dayMarkers;
@@ -1033,6 +1059,7 @@ export function TimelineTab(props: TimelineTabProps) {
               <div className="timeline-year-row">
                 <CompanyLoadCard
                   t={t}
+                  title={companyLoadTitle}
                   companyLoad={companyLoad}
                   companyLoadScaleMax={companyLoadScaleMax}
                   todayPosition={todayPosition}

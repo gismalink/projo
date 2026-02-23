@@ -270,6 +270,27 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     }
   }
 
+  async function handleDeleteEmployee(employeeId: string) {
+    if (!state.token) return false;
+
+    const deleted = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.deleteEmployee(employeeId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiDeleteEmployeeFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (deleted && state.editEmployeeId === employeeId) {
+      state.setIsEmployeeModalOpen(false);
+      state.setEditEmployeeId('');
+    }
+
+    return deleted;
+  }
+
   async function handleAutoSaveEmployeeProfile(payload: {
     fullName: string;
     email?: string | null;
@@ -608,6 +629,7 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     handleSeedDemoWorkspace,
     handleCreateSkill,
     handleCreateEmployee,
+    handleDeleteEmployee,
     handleAutoSaveEmployeeProfile,
     handleCreateVacationFromEmployeeModal,
     handleUpdateVacationFromEmployeeModal,

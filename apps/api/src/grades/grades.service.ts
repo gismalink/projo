@@ -5,14 +5,25 @@ import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
 
 const DEFAULT_GRADES = [
-  { name: 'джу', colorHex: '#64B5F6' },
-  { name: 'джун+', colorHex: '#42A5F5' },
-  { name: 'мидл', colorHex: '#4DB6AC' },
-  { name: 'мидл+', colorHex: '#26A69A' },
-  { name: 'синьйор', colorHex: '#FFB74D' },
-  { name: 'синьйор+', colorHex: '#FFA726' },
-  { name: 'лид', colorHex: '#BA68C8' },
-  { name: 'рук-отдела', colorHex: '#9575CD' },
+  { name: 'junior', colorHex: '#64B5F6' },
+  { name: 'junior+', colorHex: '#42A5F5' },
+  { name: 'middle', colorHex: '#4DB6AC' },
+  { name: 'middle+', colorHex: '#26A69A' },
+  { name: 'senior', colorHex: '#FFB74D' },
+  { name: 'senior+', colorHex: '#FFA726' },
+  { name: 'team lead', colorHex: '#BA68C8' },
+  { name: 'head of', colorHex: '#9575CD' },
+];
+
+const LEGACY_GRADE_RENAMES: Array<{ from: string; to: string }> = [
+  { from: 'джу', to: 'junior' },
+  { from: 'джун+', to: 'junior+' },
+  { from: 'мидл', to: 'middle' },
+  { from: 'мидл+', to: 'middle+' },
+  { from: 'синьйор', to: 'senior' },
+  { from: 'синьйор+', to: 'senior+' },
+  { from: 'лид', to: 'team lead' },
+  { from: 'рук-отдела', to: 'head of' },
 ];
 
 @Injectable()
@@ -72,6 +83,55 @@ export class GradesService {
     const scope = await this.getWorkspaceScope(workspaceId);
     let created = 0;
 
+    await this.prisma.$transaction(async (tx) => {
+      const employeeWorkspaceScope = scope.companyId ? { companyId: scope.companyId } : { ownerUserId: scope.ownerUserId };
+
+      for (const rename of LEGACY_GRADE_RENAMES) {
+        await tx.employee.updateMany({
+          where: {
+            grade: rename.from,
+            workspace: employeeWorkspaceScope,
+          },
+          data: {
+            grade: rename.to,
+          },
+        });
+
+        const [legacyGrade, nextGrade] = await Promise.all([
+          tx.grade.findFirst({
+            where: {
+              companyId: scope.companyId,
+              name: rename.from,
+            },
+            select: { id: true },
+          }),
+          tx.grade.findFirst({
+            where: {
+              companyId: scope.companyId,
+              name: rename.to,
+            },
+            select: { id: true },
+          }),
+        ]);
+
+        if (!legacyGrade) continue;
+
+        if (!nextGrade) {
+          await tx.grade.update({
+            where: { id: legacyGrade.id },
+            data: {
+              name: rename.to,
+            },
+          });
+          continue;
+        }
+
+        await tx.grade.delete({
+          where: { id: legacyGrade.id },
+        });
+      }
+    });
+
     for (const grade of DEFAULT_GRADES) {
       const existing = await this.prisma.grade.findFirst({
         where: {
@@ -107,11 +167,7 @@ export class GradesService {
   async findAll(workspaceId: string) {
     const scope = await this.getWorkspaceScope(workspaceId);
     const grades = await this.prisma.grade.findMany({
-      where: scope.companyId
-        ? {
-            OR: [{ companyId: scope.companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+      where: scope.companyId ? { companyId: scope.companyId } : { companyId: null },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -152,11 +208,7 @@ export class GradesService {
     const grade = await this.prisma.grade.findFirst({
       where: {
         id,
-        ...(scope.companyId
-          ? {
-              OR: [{ companyId: scope.companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(scope.companyId ? { companyId: scope.companyId } : { companyId: null }),
       },
     });
     if (!grade) {
