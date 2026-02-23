@@ -65,20 +65,24 @@ export function BenchColumn(props: BenchColumnProps) {
       {benchGroups.length === 0 ? (
         <p className="muted">—</p>
       ) : (
-        benchGroups.map((group) => (
-          <section
-            key={group.departmentName}
-            className={selectedDepartmentName === group.departmentName ? 'bench-group selected' : 'bench-group'}
-          >
-            <button
-              type="button"
-              className="bench-group-title"
-              onClick={() => onToggleDepartmentFilter(group.departmentName)}
-              aria-label={group.departmentName}
-            >
-              {group.departmentName}
-            </button>
-            <div className="bench-members">
+        benchGroups.map((group) => {
+          const isDepartmentSelected = selectedDepartmentName === group.departmentName;
+          return (
+            <section key={group.departmentName} className={isDepartmentSelected ? 'bench-group selected' : 'bench-group'}>
+              <button
+                type="button"
+                className="bench-group-title"
+                onClick={() => onToggleDepartmentFilter(group.departmentName)}
+                aria-label={group.departmentName}
+              >
+                <span className="bench-group-title-text">{group.departmentName}</span>
+                {isDepartmentSelected ? (
+                  <span className="bench-group-selected" aria-hidden="true">
+                    <Icon name="check" size={12} />
+                  </span>
+                ) : null}
+              </button>
+              <div className="bench-members">
               {group.members.map((member) => {
                 const isSelected = selectedEmployeeId === member.id;
                 const isActive = isSelected || hoveredEmployeeId === member.id;
@@ -123,9 +127,10 @@ export function BenchColumn(props: BenchColumnProps) {
                   </button>
                 );
               })}
-            </div>
-          </section>
-        ))
+              </div>
+            </section>
+          );
+        })
       )}
     </aside>
   );

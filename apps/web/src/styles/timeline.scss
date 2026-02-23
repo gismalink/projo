@@ -358,16 +358,50 @@
 
 .bench-group-title {
   margin: 0;
-  padding: 0;
+  padding: 0.18rem 0.28rem;
   border: 0;
   background: transparent;
   text-align: left;
   font-size: 0.72rem;
   color: var(--ios-text-secondary);
   font-weight: 700;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.bench-group-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bench-group-selected {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--ios-border);
+  border-radius: 999px;
+  background: var(--ios-surface);
+  color: var(--ios-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .bench-group.selected .bench-group-title {
+  color: var(--ios-text);
+  border: 1px solid rgba(10, 132, 255, 0.28);
+  background: rgba(10, 132, 255, 0.08);
+}
+
+.bench-group.selected .bench-group-selected {
+  border-color: rgba(10, 132, 255, 0.34);
   color: var(--ios-text);
 }
 

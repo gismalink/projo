@@ -618,6 +618,39 @@ export function TimelineTab(props: TimelineTabProps) {
       .map((employee) => employee.id);
   }, [employees, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
 
+  const forcedExpandedProjectIdSet = useMemo(() => {
+    if (!highlightedBenchEmployeeId && !filterBenchDepartmentName) return new Set<string>();
+
+    const allowedEmployeeIds = new Set(filteredEmployeeIds);
+    const result = new Set<string>();
+
+    for (const row of visibleTimelineRows) {
+      const detail = projectDetails[row.id];
+      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+
+      if (highlightedBenchEmployeeId) {
+        const matchesHighlight = detail
+          ? (Array.isArray(detail.members) && detail.members.some((member) => member.employeeId === highlightedBenchEmployeeId)) ||
+            (Array.isArray(detail.assignments) && detail.assignments.some((assignment) => assignment.employeeId === highlightedBenchEmployeeId))
+          : projectAssignments.some((assignment) => assignment.employeeId === highlightedBenchEmployeeId);
+
+        if (matchesHighlight) result.add(row.id);
+        continue;
+      }
+
+      if (filterBenchDepartmentName) {
+        const matchesDepartment = detail
+          ? (Array.isArray(detail.members) && detail.members.some((member) => allowedEmployeeIds.has(member.employeeId))) ||
+            (Array.isArray(detail.assignments) && detail.assignments.some((assignment) => allowedEmployeeIds.has(assignment.employeeId)))
+          : projectAssignments.some((assignment) => allowedEmployeeIds.has(assignment.employeeId));
+
+        if (matchesDepartment) result.add(row.id);
+      }
+    }
+
+    return result;
+  }, [assignmentsByProjectId, filterBenchDepartmentName, filteredEmployeeIds, highlightedBenchEmployeeId, projectDetails, visibleTimelineRows]);
+
   const projectFactByProjectId = useMemo(() => {
     const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
 
@@ -1055,7 +1088,7 @@ export function TimelineTab(props: TimelineTabProps) {
                             endDate: pendingPreview.nextEnd.toISOString(),
                           })
                         : timelineStyle(row);
-                  const isExpanded = expandedSet.has(row.id);
+                  const isExpanded = expandedSet.has(row.id) || forcedExpandedProjectIdSet.has(row.id);
                   const detail = projectDetails[row.id];
                   const tooltipMode =
                     dragState && dragState.projectId === row.id
