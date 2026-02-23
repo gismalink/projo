@@ -59,6 +59,64 @@ export class DemoService {
     return value.toISOString().slice(0, 10);
   }
 
+  private normalize(value: unknown) {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private resolveMonthlySalaryUsd(grade: unknown, roleName: unknown) {
+    const normalizedGrade = this.normalize(grade);
+    const normalizedRole = this.normalize(roleName);
+
+    if (
+      normalizedGrade.includes('рук') ||
+      normalizedRole.includes('head') ||
+      normalizedRole.includes('руковод') ||
+      normalizedRole.includes('director') ||
+      normalizedRole === 'pm'
+    ) {
+      return 9000;
+    }
+    if (normalizedGrade.includes('lead') || normalizedGrade.includes('лид') || normalizedGrade.includes('синьйор+')) {
+      return 7600;
+    }
+    if (normalizedGrade.includes('senior') || normalizedGrade.includes('синь')) {
+      return 6400;
+    }
+    if (normalizedGrade.includes('middle') || normalizedGrade.includes('мидл+')) {
+      return 5300;
+    }
+    if (normalizedGrade.includes('мидл')) {
+      return 4800;
+    }
+    if (normalizedGrade.includes('jun') || normalizedGrade.includes('джун+')) {
+      return 3600;
+    }
+    if (normalizedGrade.includes('джу')) {
+      return 3200;
+    }
+
+    if (normalizedRole.includes('backend') || normalizedRole.includes('frontend') || normalizedRole.includes('unity')) {
+      return 5200;
+    }
+    if (normalizedRole.includes('qa')) {
+      return 4400;
+    }
+    if (normalizedRole.includes('design') || normalizedRole.includes('artist') || normalizedRole.includes('copy')) {
+      return 4600;
+    }
+    if (normalizedRole.includes('analyst')) {
+      return 5000;
+    }
+
+    return 4200;
+  }
+
+  private toHourly(monthlySalaryUsd: number) {
+    return Number((monthlySalaryUsd / 168).toFixed(2));
+  }
+
   private buildCurveProfile(points: Array<{ date: Date; value: number }>) {
     return {
       mode: 'curve',
@@ -194,6 +252,61 @@ export class DemoService {
 
       employeeByFullName.set(spec.fullName, { id: created.id });
       createdEmployees += 1;
+    }
+
+    // Ensure demo employees have personal hourly rates ("salary") so cost summaries work out of the box.
+    // Note: rates are per-employee and used by the project cost summary (employee overrides role).
+    const employeeIds = Array.from(employeeByFullName.values()).map((item) => item.id);
+    if (employeeIds.length > 0) {
+      const today = new Date();
+      const validFrom = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+
+      const [demoEmployees, existingRates] = await Promise.all([
+        this.prisma.employee.findMany({
+          where: { id: { in: employeeIds } },
+          select: {
+            id: true,
+            workspaceId: true,
+            grade: true,
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        }),
+        this.prisma.costRate.findMany({
+          where: {
+            employeeId: { in: employeeIds },
+            validFrom: { lte: today },
+            OR: [{ validTo: null }, { validTo: { gte: today } }],
+          },
+          select: {
+            employeeId: true,
+          },
+        }),
+      ]);
+
+      const hasActiveRateByEmployeeId = new Set(existingRates.map((row) => row.employeeId).filter(Boolean) as string[]);
+
+      const rateInserts = demoEmployees
+        .filter((employee) => !hasActiveRateByEmployeeId.has(employee.id))
+        .map((employee) => {
+          const monthlySalaryUsd = this.resolveMonthlySalaryUsd(employee.grade, employee.role?.name);
+          return {
+            workspaceId: employee.workspaceId,
+            employeeId: employee.id,
+            roleId: null,
+            amountPerHour: this.toHourly(monthlySalaryUsd),
+            currency: 'USD',
+            validFrom,
+            validTo: null,
+          };
+        });
+
+      if (rateInserts.length > 0) {
+        await this.prisma.costRate.createMany({ data: rateInserts });
+      }
     }
 
     const now = new Date();
