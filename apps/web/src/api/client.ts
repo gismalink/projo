@@ -389,6 +389,21 @@ export type ProjectDetail = {
       role: { name: string };
     };
   }>;
+  members: Array<{
+    id: string;
+    projectId: string;
+    employeeId: string;
+    employee: {
+      id: string;
+      fullName: string;
+      email: string;
+      grade?: string | null;
+      roleId: string;
+      defaultCapacityHoursPerDay?: string | number | null;
+      role: { name: string };
+      department?: { id: string; name: string } | null;
+    };
+  }>;
 };
 
 export type CalendarDayItem = {
