@@ -413,6 +413,26 @@
   gap: 0.25rem;
 }
 
+.bench-member-load-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.bench-member-selected {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ios-border);
+  border-radius: 999px;
+  background: var(--ios-surface);
+  color: var(--ios-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
 .bench-member-load {
   font-size: 0.62rem;
   color: var(--ios-text-secondary);
