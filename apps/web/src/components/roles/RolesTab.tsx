@@ -121,6 +121,8 @@ export function RolesTab(props: RolesTabProps) {
     return map;
   }, [roles]);
 
+  const hasCompanyScopedRoles = useMemo(() => roles.some((role) => Boolean(role.companyId)), [roles]);
+
   useEffect(() => {
     setRoleDrafts((prev) => {
       const next: Record<string, RoleDraft> = {};
@@ -433,23 +435,31 @@ export function RolesTab(props: RolesTabProps) {
           <span>{t.actions}</span>
         </div>
         <ul className="roles-list">
-          {roles.map((role) => (
-            <li key={role.id} className="role-row">
+          {roles.map((role) => {
+            const isSystemRole = !role.companyId;
+            const isReadOnly = hasCompanyScopedRoles && isSystemRole;
+            const readOnlyTitle = t.systemRoleReadOnly;
+
+            return (
+            <li key={role.id} className="role-row" title={isReadOnly ? readOnlyTitle : undefined}>
               <div className="role-fields">
                 <input
                   aria-label={t.name}
                   value={roleDrafts[role.id]?.name ?? role.name}
                   onChange={(event) => updateRoleDraft(role.id, { name: event.target.value })}
+                  disabled={isReadOnly}
                 />
                 <input
                   aria-label={t.shortName}
                   value={roleDrafts[role.id]?.shortName ?? (role.shortName ?? '')}
                   onChange={(event) => updateRoleDraft(role.id, { shortName: event.target.value })}
+                  disabled={isReadOnly}
                 />
                 <input
                   aria-label={t.description}
                   value={roleDrafts[role.id]?.description ?? role.description}
                   onChange={(event) => updateRoleDraft(role.id, { description: event.target.value })}
+                  disabled={isReadOnly}
                 />
                 <input
                   aria-label={t.level}
@@ -461,6 +471,7 @@ export function RolesTab(props: RolesTabProps) {
                     const nextLevel = Number(event.target.value);
                     updateRoleDraft(role.id, { level: Number.isFinite(nextLevel) && nextLevel > 0 ? nextLevel : 1 });
                   }}
+                  disabled={isReadOnly}
                 />
               </div>
               <div className="role-color-editor">
@@ -473,6 +484,8 @@ export function RolesTab(props: RolesTabProps) {
                       copyLabel={t.copyHex}
                       fallbackHex={roleColorOrDefault(role.colorHex)}
                       onChange={(nextHex) => updateRoleDraft(role.id, { colorHex: nextHex })}
+                      disabled={isReadOnly}
+                      disabledTitle={isReadOnly ? readOnlyTitle : undefined}
                     />
                   );
                 })()}
@@ -480,11 +493,11 @@ export function RolesTab(props: RolesTabProps) {
               <button
                 type="button"
                 className="department-manage-action"
-                disabled={!role.companyId}
+                disabled={isReadOnly}
                 aria-label={t.deleteRole}
                 data-tooltip={t.deleteRole}
                 onClick={() => {
-                  if (!role.companyId) return;
+                  if (isReadOnly) return;
                   if (!window.confirm(t.confirmDeleteRole)) return;
                   void onDeleteRole(role.id);
                 }}
@@ -492,7 +505,8 @@ export function RolesTab(props: RolesTabProps) {
                 <Icon name="x" />
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
 
         <hr className="separator" />

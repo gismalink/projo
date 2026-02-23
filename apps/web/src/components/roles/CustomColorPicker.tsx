@@ -102,10 +102,12 @@ type CustomColorPickerProps = {
   copyLabel: string;
   fallbackHex: string;
   onChange: (nextHex: string) => void;
+  disabled?: boolean;
+  disabledTitle?: string;
 };
 
 export function CustomColorPicker(props: CustomColorPickerProps) {
-  const { value, label, copyLabel, fallbackHex, onChange } = props;
+  const { value, label, copyLabel, fallbackHex, onChange, disabled = false, disabledTitle } = props;
   const pickerId = useId();
   const validHex = normalizeHex(value) ?? fallbackHex;
   const rgb = hexToRgb(validHex) ?? { red: 122, green: 138, blue: 154 };
@@ -192,8 +194,10 @@ export function CustomColorPicker(props: CustomColorPickerProps) {
         type="button"
         className="color-picker-trigger"
         aria-label={label}
-        title={label}
+        title={disabled ? (disabledTitle ?? label) : label}
+        disabled={disabled}
         onClick={() => {
+          if (disabled) return;
           setIsOpen((prev) => {
             const next = !prev;
             if (next) {
