@@ -1,77 +1,77 @@
-# Technical Audit — 2026-02-24
+# Технический аудит — 2026-02-24
 
-Scope: `apps/api`, `apps/web`, deploy/infra (`infra/*`, `scripts/examples/*`), docs alignment.
+Область: `apps/api`, `apps/web`, deploy/infra (`infra/*`, `scripts/examples/*`), согласованность документации.
 
-## Executive summary
-- Current state is deployable and stable in `test/prod` (SSO-only) with tightened security baseline (CORS allowlist, helmet, throttling).
-- Biggest remaining risks are **configuration drift** (Vite env is build-time; missing build args produces broken prod bundle) and **operational clarity** (deploy scripts leave repo in detached HEAD; build args are hard-coded per env).
+## Краткое резюме
+- Текущее состояние разворачивается и работает стабильно в `test/prod` (SSO-only) с усиленной security-базой (CORS allowlist, helmet, throttling).
+- Ключевые оставшиеся риски: **дрейф конфигурации** (Vite env — compile-time; отсутствие build args приводит к сломанному prod bundle) и **операционная ясность** (deploy-скрипты оставляют repo в detached HEAD; build args захардкожены по окружениям).
 
-## Findings
+## Находки
 
-### A) Security
-**A1. CORS allowlist behavior may return errors instead of clean deny**
-- File: `apps/api/src/main.ts`
-- Current: disallowed origin triggers `callback(new Error('Origin is not allowed by CORS'))`.
-- Risk: error responses can look like 500s; also noisier for clients and can complicate debugging.
-- Recommendation: deny with `callback(null, false)` and optionally log with request id / origin (without leaking secrets).
+### A) Безопасность
+**A1. CORS allowlist может отвечать ошибкой вместо «чистого» deny**
+- Файл: `apps/api/src/main.ts`
+- Сейчас: для запрещённого origin вызывается `callback(new Error('Origin is not allowed by CORS'))`.
+- Риск: ответы могут выглядеть как 500; шумнее для клиентов и усложняет диагностику.
+- Рекомендация: deny через `callback(null, false)` и (опционально) безопасное логирование origin / request id (без утечек секретов).
 
-**A2. SSO proxy uses upstream fetch without timeout**
-- File: `apps/api/src/auth/sso.controller.ts`
-- Risk: upstream hangs can consume Node event loop resources under load.
-- Recommendation: add `AbortController` timeout (e.g., 3–5s) and return a controlled error payload.
+**A2. SSO proxy делает upstream fetch без timeout**
+- Файл: `apps/api/src/auth/sso.controller.ts`
+- Риск: зависание upstream может удерживать ресурсы и деградировать сервис под нагрузкой.
+- Рекомендация: добавить timeout через `AbortController` (например 3–5с) и возвращать контролируемую ошибку.
 
-**A3. Dependency audit clean**
-- Command: `npm run audit:api` (omit dev) => `0 vulnerabilities`.
+**A3. Dependency audit — чисто**
+- Команда: `npm run audit:api` (omit dev) => `0 vulnerabilities`.
 
-### B) Reliability / Ops
-**B1. Vite `VITE_*` config is build-time; missing build args breaks prod silently**
-- Files: `infra/Dockerfile.host`, `infra/docker-compose.host.yml`, `apps/web/src/api/client.ts`
-- Symptom we already hit: bundle compiled with defaults (`localhost:4000/api`, `AUTH_MODE=local`) when build args not wired.
-- Recommendation (short-term, already implemented): keep build args in compose.
-- Recommendation (hardening): change web default `VITE_API_URL` fallback from `http://localhost:4000/api` to `/api` so misconfiguration fails "less".
+### B) Надёжность / Ops
+**B1. Vite `VITE_*` — compile-time; отсутствие build args ломает prod «тихо»**
+- Файлы: `infra/Dockerfile.host`, `infra/docker-compose.host.yml`, `apps/web/src/api/client.ts`
+- Симптом (уже ловили): bundle собирается с дефолтами (`localhost:4000/api`, `AUTH_MODE=local`), если build args не прокинуты.
+- Рекомендация (короткий срок, уже сделано): держать build args в compose.
+- Рекомендация (hardening): заменить fallback `VITE_API_URL` в web с `http://localhost:4000/api` на `/api`, чтобы misconfig был менее разрушительным.
 
-**B2. Hard-coded env URLs in compose build args**
-- File: `infra/docker-compose.host.yml`
-- Risk: drift when domain names change; duplication across test/prod.
-- Recommendation: make `build.args` read from `apps/web/.env.*` values via env substitution (or move these into `infra/.env.host`), keeping a single source of truth.
+**B2. Захардкоженные URL в compose build args**
+- Файл: `infra/docker-compose.host.yml`
+- Риск: дрейф при смене доменов; дублирование значений между test/prod.
+- Рекомендация: перевести `build.args` на env-substitution (или вынести в `infra/.env.host`), чтобы был единый источник значений.
 
-**B3. Deploy scripts always checkout detached HEAD**
-- Files: `scripts/examples/deploy-test-from-ref.sh`, `scripts/examples/deploy-prod-from-ref.sh`
-- Pros: reproducible deploy by resolved SHA.
-- Risks: leaves repo detached; humans may commit accidentally (low risk but happened locally in this session).
-- Recommendation: print a clear warning at the end + optionally write `./.deployed-sha` file for observability.
+**B3. Deploy-скрипты всегда делают checkout в detached HEAD**
+- Файлы: `scripts/examples/deploy-test-from-ref.sh`, `scripts/examples/deploy-prod-from-ref.sh`
+- Плюсы: воспроизводимый деплой по resolved SHA.
+- Риски: repo остаётся detached; можно случайно закоммитить «в никуда» (уже случилось локально в этой сессии).
+- Рекомендация: явное предупреждение в конце + (опционально) запись `./.deployed-sha` для наблюдаемости.
 
-### C) Performance
-**C1. Demo seed uses many sequential Prisma queries**
-- File: `apps/api/src/demo/demo.service.ts`
-- Risk: for repeated runs it’s still OK, but it’s a lot of round-trips.
-- Recommendation: keep as-is for MVP; if demo seed becomes frequent, batch queries (preload existing employees/projects/members/assignments and do minimal writes).
+### C) Производительность
+**C1. Demo seed использует много последовательных Prisma-запросов**
+- Файл: `apps/api/src/demo/demo.service.ts`
+- Риск: для редких запусков нормально, но много round-trip’ов.
+- Рекомендация: оставить как есть для MVP; если seed запускается часто — батчинг (предзагрузка existing employees/projects/members/assignments и минимальные записи).
 
-### D) Maintainability
-**D1. Role naming is easy to confuse (AppRole vs employee Role)**
-- Files: `apps/api` (AppRole enum) vs `Role` model (employee roles like `PM`).
-- Risk: docs/UI confusion and permission mistakes.
-- Recommendation: consistently call them "app role" vs "employee role" in code/comments/docs; avoid reusing the same names in docs.
+### D) Поддерживаемость
+**D1. Нейминг ролей легко спутать (AppRole vs employee Role)**
+- Файлы: `apps/api` (enum `AppRole`) и модель `Role` (роли сотрудников, например `PM`).
+- Риск: путаница в документации/UI и ошибки в правах.
+- Рекомендация: везде явно называть «app role» vs «employee role» (код/доки), не смешивать термины.
 
-**D2. SSO bootstrap logic exists in multiple layers**
-- Web: fallback direct auth call; API: proxy endpoints.
-- Risk: behavior changes require touching both.
-- Recommendation: decide a single canonical bootstrap method for prod:
-  - either always call auth directly from web (CORS/credentials),
-  - or always call via API proxy (cookie scoping issues to solve via domain/cookie policy).
+**D2. SSO bootstrap реализован на нескольких слоях**
+- Web: fallback direct call на auth; API: proxy endpoints.
+- Риск: изменения поведения требуют правок в двух местах.
+- Рекомендация: выбрать один каноничный способ bootstrap для prod:
+  - либо всегда дергать auth напрямую из web (CORS/credentials),
+  - либо всегда через API proxy (и решить cookie scoping/policy).
 
-## Recommended plan (next 1–2 iterations)
+## Рекомендуемый план (следующие 1–2 итерации)
 
-### P0 — Hardening (1–2h)
-- [ ] CORS: change disallowed origin handling to clean deny; add safe logging.
-- [ ] SSO proxy: add fetch timeout + controlled error response.
+### P0 — Hardening (1–2ч)
+- [ ] CORS: заменить обработку запрещённого origin на «чистый» deny; добавить безопасное логирование.
+- [ ] SSO proxy: добавить timeout на upstream fetch + контролируемую ошибку.
 
-### P1 — Configuration drift reduction (2–4h)
-- [ ] Web: change `VITE_API_URL` default fallback to `/api` (safer for test/prod).
-- [ ] Compose: move `VITE_*` build args to env-substitution and document single source of truth.
+### P1 — Снижение дрейфа конфигов (2–4ч)
+- [ ] Web: заменить fallback `VITE_API_URL` на `/api` (безопаснее для test/prod).
+- [ ] Compose: перевести `VITE_*` build args на env-substitution и документировать единый источник значений.
 
-### P2 — Operability (1–2h)
-- [ ] Deploy scripts: write `deployed sha` marker + print reminder about detached HEAD.
+### P2 — Оперирование (1–2ч)
+- [ ] Deploy scripts: записывать marker с deployed SHA + печатать напоминание про detached HEAD.
 
-## Notes
-- This audit is based on repo state after the 2026-02-24 SSO/test/prod deployment work.
+## Примечания
+- Аудит сделан по состоянию репозитория после работ по деплою SSO/test/prod от 2026-02-24.
