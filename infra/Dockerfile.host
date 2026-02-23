@@ -26,6 +26,14 @@ RUN npm run prisma:generate -w @projo/api
 RUN npm run build -w @projo/api
 
 # Build WEB
+ARG VITE_API_URL=/api
+ARG VITE_AUTH_MODE=local
+ARG VITE_AUTH_BASE_URL=
+
+ENV VITE_API_URL=$VITE_API_URL \
+	VITE_AUTH_MODE=$VITE_AUTH_MODE \
+	VITE_AUTH_BASE_URL=$VITE_AUTH_BASE_URL
+
 RUN npm run build -w @projo/web
 
 # --- api runtime ---
