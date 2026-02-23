@@ -27,7 +27,7 @@
 **Risk:** Возможные path traversal / arbitrary file overwrite/read сценарии при эксплуатации уязвимого `tar` в цепочке поставки.
 
 **Recommendation:**
-1. Мигрировать `bcrypt` на `^6.0.0` (breaking change), затем прогнать полный regression (`verify` + auth smoke).
+1. Мигрировать `bcrypt` на `^6.0.0` (breaking change), затем прогнать полный regression (`check` + auth smoke).
 2. Если миграция блокируется, временно перейти на `bcryptjs` с проверкой производительности/совместимости.
 3. Зафиксировать dependency policy: регулярный `npm audit` в CI.
 

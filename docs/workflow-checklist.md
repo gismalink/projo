@@ -11,8 +11,8 @@
 	- выполнить `npm run prisma:migrate -w @projo/api`.
 
 ## 2) Локальная проверка
-1. Базовая проверка: `npm run verify`.
-2. При изменениях API runtime-логики: `SMOKE_API=1 npm run verify`.
+1. Базовая проверка: `npm run check`.
+2. При изменениях API runtime-логики: `SMOKE_API=1 npm run check`.
 3. Проверка security gate для API зависимостей: `npm run audit:api`.
 4. Ручной smoke-check критического пользовательского сценария.
 

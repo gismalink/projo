@@ -5,7 +5,7 @@
 ## Оперативное правило (для команд в чате)
 - Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально на текущей машине.
 - Команда по умолчанию:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run test:update'`
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
 - Если не оговорено иное, использовать именно этот путь для обновления test-окружения.
 - Фраза «деплой в prod/продакшн» также означает запуск **на сервере по SSH** и promotion уже проверенного test-коммита в prod.
 - Команда для promotion в `prod`:

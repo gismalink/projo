@@ -5,7 +5,7 @@
 ## Оперативное правило (для команд в чате)
 - Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально.
 - Команда по умолчанию:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run test:update'`
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
 - Если явно не указано иное, использовать именно этот сценарий обновления test-окружения.
 - Фраза «деплой в prod/продакшн» означает запуск **на сервере по SSH** и promotion того же коммита, который уже прошёл проверку на `test`.
 - Команда по умолчанию для `prod`:
@@ -30,11 +30,11 @@
 ## 3) Release flow
 1. Разработка в `dev` (локально).
 2. Публикация ветки и PR в `master`.
-3. Проверка CI (`verify`, `Audit API dependencies`).
+3. Проверка CI (`check`, `Audit API dependencies`).
 4. Deploy на `test`.
 5. Проверка на `test`:
-   - `npm run verify`,
-   - `SMOKE_API=1 npm run verify`,
+   - `npm run check`,
+   - `SMOKE_API=1 npm run check`,
    - ручной smoke критических сценариев.
 6. Promote того же релизного коммита на `prod`.
 
@@ -43,7 +43,7 @@
 ### Шаг A. Подготовка релиз-кандидата (локально)
 1. Создать feature-ветку от `master` и внести изменения.
 2. Выполнить проверки:
-   - `npm run verify`
+   - `npm run check`
    - `npm run audit:api`
 3. Открыть PR в `master`, дождаться зелёного CI и merge.
 
@@ -68,7 +68,7 @@
 
 ### Упрощённый сценарий (одной SSH-командой)
 - Для обычного обновления test до актуального `master`:
-   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run test:update'`
+   - `ssh mac-mini-projo 'export PATH=/usr/local/bin:$PATH; cd ~/projo && npm run deploy:test'`
 - Важно: в non-interactive SSH на macOS путь к Docker может не подхватываться автоматически, поэтому используется `export PATH=/usr/local/bin:$PATH`.
 
 ### Шаг D. Promote на prod (тот же SHA)

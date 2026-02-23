@@ -19,9 +19,9 @@
     "audit": "npm run audit:api",
     "seed:salaries": "node ./scripts/seed-employee-salaries.mjs",
     "test:e2e:api": "node --test ./scripts/e2e-api-smoke.test.mjs",
-    "test:update": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:-projo/master}\" \"${REPO_DIR:-$HOME/projo}\"",
-    "prod:promote": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-projo/master}\" \"${REPO_DIR:-$HOME/projo}\"",
-    "verify": "bash ./scripts/verify-all.sh",
-    "ci:check": "npm run verify"
+    "deploy:test": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:-projo/master}\" \"${REPO_DIR:-$HOME/projo}\"",
+    "deploy:prod": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-projo/master}\" \"${REPO_DIR:-$HOME/projo}\"",
+    "check": "bash ./scripts/verify-all.sh",
+    "ci": "npm run check"
   }
 }

@@ -43,8 +43,8 @@ Environment templates:
 - Web: `apps/web/.env.example`, `apps/web/.env.test.example`, `apps/web/.env.prod.example`
 
 ## Verification
-- Full check: `npm run verify`
-- Full check + runtime smoke API test: `SMOKE_API=1 npm run verify`
+- Full check: `npm run check`
+- Full check + runtime smoke API test: `SMOKE_API=1 npm run check`
 - API smoke test only: `npm run test:e2e:api`
 
 ## Default bootstrap admin

@@ -72,8 +72,8 @@
 
 ### P3 — Качество и проверка поставки
 1. [ ] Закрепить минимальный набор post-deploy проверок для `test`:
-   - [ ] `npm run verify`,
-   - [ ] `SMOKE_API=1 npm run verify`,
+   - [ ] `npm run check`,
+   - [ ] `SMOKE_API=1 npm run check`,
    - [ ] ручной smoke критического user-flow.
 2. [ ] Добавить release checklist перед `prod`:
    - [ ] backup БД,

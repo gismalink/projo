@@ -10,7 +10,7 @@
 - декомпозиция и hardening глобальных list/header/form стилей.
 
 ## Verification baseline
-- `npm run verify` — **passed** (lint/test/build по всем workspace).
+- `npm run check` — **passed** (lint/test/build по всем workspace).
 - `apps/api` build — **passed**.
 - `apps/web` build — **passed**.
 
