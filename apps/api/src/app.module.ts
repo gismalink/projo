@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { CalendarModule } from './calendar/calendar.module';
@@ -19,6 +19,7 @@ import { TimelineModule } from './timeline/timeline.module';
 import { TeamTemplatesModule } from './team-templates/team-templates.module';
 import { UsersModule } from './users/users.module';
 import { VacationsModule } from './vacations/vacations.module';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 
 @Module({
   imports: [
@@ -61,7 +62,7 @@ import { VacationsModule } from './vacations/vacations.module';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: AppThrottlerGuard,
     },
   ],
 })
