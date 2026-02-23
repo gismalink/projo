@@ -1,0 +1,21 @@
+# dependencies
+**/node_modules
+
+# build outputs
+**/dist
+**/.vite
+**/coverage
+
+# git / tooling
+.git
+.gitignore
+.github
+.vscode
+
+# local env / secrets
+**/.env
+**/.env.*
+
+# misc
+**/*.log
+**/.DS_Store

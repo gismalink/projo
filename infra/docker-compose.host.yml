@@ -2,19 +2,13 @@ name: projo
 
 services:
   projo-api-test:
-    image: node:22-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.host
+      target: api-runtime
+    image: projo-api:test
     container_name: projo-api-test
     restart: unless-stopped
-    working_dir: /tmp/app
-    command: >-
-      sh -lc "set -e;
-      rm -rf /tmp/app;
-      cp -R /app-src /tmp/app;
-      cd /tmp/app;
-      npm ci;
-      npm run prisma:generate -w @projo/api;
-      npx prisma migrate deploy --schema apps/api/prisma/schema.prisma;
-      TS_NODE_PROJECT=apps/api/tsconfig.json TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node -r ts-node/register/transpile-only apps/api/src/main.ts"
     env_file:
       - ../apps/api/.env.test
     depends_on:
@@ -23,29 +17,20 @@ services:
       - public
       - edge_public
       - data_test
-    volumes:
-      - ../:/app-src:ro
 
   projo-web-test:
-    image: node:22-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.host
+      target: web-runtime
+    image: projo-web:test
     container_name: projo-web-test
     restart: unless-stopped
-    working_dir: /tmp/app
-    command: >-
-      sh -lc "set -e;
-      rm -rf /tmp/app;
-      cp -R /app-src /tmp/app;
-      cd /tmp/app;
-      npm ci;
-      npm run build -w @projo/web;
-      npm run preview -w @projo/web -- --host 0.0.0.0 --port 4173"
     env_file:
       - ../apps/web/.env.test
     networks:
       - public
       - edge_public
-    volumes:
-      - ../:/app-src:ro
 
   projo-db-test:
     image: postgres:16
@@ -61,19 +46,13 @@ services:
       - postgres_test_data:/var/lib/postgresql/data
 
   projo-api-prod:
-    image: node:22-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.host
+      target: api-runtime
+    image: projo-api:prod
     container_name: projo-api-prod
     restart: unless-stopped
-    working_dir: /tmp/app
-    command: >-
-      sh -lc "set -e;
-      rm -rf /tmp/app;
-      cp -R /app-src /tmp/app;
-      cd /tmp/app;
-      npm ci;
-      npm run prisma:generate -w @projo/api;
-      npx prisma migrate deploy --schema apps/api/prisma/schema.prisma;
-      TS_NODE_PROJECT=apps/api/tsconfig.json TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' node -r ts-node/register/transpile-only apps/api/src/main.ts"
     env_file:
       - ../apps/api/.env.prod
     depends_on:
@@ -82,29 +61,20 @@ services:
       - public
       - edge_public
       - data_prod
-    volumes:
-      - ../:/app-src:ro
 
   projo-web-prod:
-    image: node:22-alpine
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.host
+      target: web-runtime
+    image: projo-web:prod
     container_name: projo-web-prod
     restart: unless-stopped
-    working_dir: /tmp/app
-    command: >-
-      sh -lc "set -e;
-      rm -rf /tmp/app;
-      cp -R /app-src /tmp/app;
-      cd /tmp/app;
-      npm ci;
-      npm run build -w @projo/web;
-      npm run preview -w @projo/web -- --host 0.0.0.0 --port 4173"
     env_file:
       - ../apps/web/.env.prod
     networks:
       - public
       - edge_public
-    volumes:
-      - ../:/app-src:ro
 
   projo-db-prod:
     image: postgres:16

@@ -34,16 +34,17 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 echo "[deploy-test] recreate test services"
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build projo-api-test projo-web-test
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate projo-api-test projo-web-test
 
 echo "[deploy-test] wait api health"
-for i in {1..30}; do
+for i in {1..180}; do
   if curl -fsS https://test.projo.gismalink.art/api/health >/dev/null; then
     echo "[deploy-test] api health ok"
     break
   fi
 
-  if [[ "$i" -eq 30 ]]; then
+  if [[ "$i" -eq 180 ]]; then
     echo "[deploy-test] api health check failed"
     exit 1
   fi
