@@ -61,6 +61,16 @@
   min-height: 28px;
 }
 
+.role-fields input:disabled {
+  background: var(--ios-surface-soft);
+  color: var(--ios-text-secondary);
+  cursor: not-allowed;
+}
+
+.role-fields input:disabled::placeholder {
+  color: var(--ios-text-secondary);
+}
+
 .role-level-input {
   text-align: center;
 }
@@ -174,6 +184,16 @@
   cursor: pointer;
   @include button.icon-button-chrome(32px, 12px, 0.2rem);
   color: inherit;
+}
+
+.color-picker-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.department-manage-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .template-manage-create {

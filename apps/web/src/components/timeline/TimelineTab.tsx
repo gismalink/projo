@@ -841,10 +841,9 @@ export function TimelineTab(props: TimelineTabProps) {
   const projectErrorsById = useMemo(() => {
     const result = new Map<string, Array<{ key: string; message: string }>>();
     const priorityByKey: Record<string, number> = {
-      'missing-template-roles': 0,
-      'missing-rates': 1,
-      'fact-range': 2,
-      vacations: 3,
+      'missing-rates': 0,
+      'fact-range': 1,
+      vacations: 2,
     };
 
     const hasOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => startA <= endB && endA >= startB;
@@ -854,22 +853,6 @@ export function TimelineTab(props: TimelineTabProps) {
       const detail = projectDetails[row.id];
 
       if (detail) {
-        const templateRoleIds = detail.teamTemplate?.roles.map((entry) => entry.role.id) ?? [];
-        const presentRoleIds = new Set(detail.assignments.map((assignment) => assignment.employee.roleId));
-        const missingRequiredRoles = (detail.teamTemplate?.roles ?? [])
-          .filter((requiredRole) => templateRoleIds.includes(requiredRole.role.id) && !presentRoleIds.has(requiredRole.role.id))
-          .map((requiredRole) => {
-            const shortName = requiredRole.role.shortName?.trim();
-            return shortName && shortName.length > 0 ? shortName : requiredRole.role.name;
-          });
-
-        if (missingRequiredRoles.length > 0) {
-          issues.push({
-            key: 'missing-template-roles',
-            message: `${t.timelineErrorMissingTemplateRoles}: ${missingRequiredRoles.join(', ')}`,
-          });
-        }
-
         const vacationOverlapEmployees = new Set<string>();
 
         for (const assignment of detail.assignments) {

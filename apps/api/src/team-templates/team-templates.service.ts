@@ -7,15 +7,15 @@ import { UpdateTeamTemplateDto } from './dto/update-team-template.dto';
 const DEFAULT_TEAM_TEMPLATES = [
   {
     name: 'Core Team',
-    roleNames: ['PM', 'BACKEND_DEVELOPER', 'FRONTEND_DEVELOPER', 'QA_ENGINEER'],
+    roleNames: ['BACKEND_DEVELOPER', 'FRONTEND_DEVELOPER', 'QA_ENGINEER'],
   },
   {
     name: 'Game Team',
-    roleNames: ['PM', 'UNITY_DEVELOPER', '3D_ARTIST', 'UI_DESIGNER', 'QA_ENGINEER'],
+    roleNames: ['UNITY_DEVELOPER', '3D_ARTIST', 'UI_DESIGNER', 'QA_ENGINEER'],
   },
   {
     name: 'Discovery Team',
-    roleNames: ['PM', 'UX_DESIGNER', 'UI_DESIGNER', 'ANALYST'],
+    roleNames: ['UX_DESIGNER', 'UI_DESIGNER', 'ANALYST'],
   },
 ];
 

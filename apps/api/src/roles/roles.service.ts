@@ -6,10 +6,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
 const DEFAULT_ROLES = [
-  { name: 'ADMIN', shortName: 'ADMIN', description: 'System administrator', level: 1, colorHex: DEFAULT_ROLE_COLOR_HEX },
   { name: 'PM', shortName: 'PM', description: 'Project manager', level: 2, colorHex: DEFAULT_ROLE_COLOR_HEX },
-  { name: 'VIEWER', shortName: 'VIEW', description: 'Read-only user', level: 3, colorHex: DEFAULT_ROLE_COLOR_HEX },
-  { name: 'FINANCE', shortName: 'FIN', description: 'Finance visibility role', level: 3, colorHex: DEFAULT_ROLE_COLOR_HEX },
   { name: 'UNITY_DEVELOPER', shortName: 'UNITY', description: 'Unity developer', level: 3, colorHex: '#9B8AFB' },
   { name: 'UI_DESIGNER', shortName: 'UI', description: 'UI designer', level: 3, colorHex: '#46B7D6' },
   { name: 'UX_DESIGNER', shortName: 'UX', description: 'UX designer', level: 3, colorHex: '#31B28D' },
