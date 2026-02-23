@@ -16,7 +16,7 @@ export class TimelineController {
   constructor(private readonly timelineService: TimelineService) {}
 
   @Get('year')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   getYear(@Req() req: AuthenticatedRequest, @Query('year', new ParseIntPipe()) year: number) {
     return this.timelineService.getYearTimeline(req.user.workspaceId, year);
   }

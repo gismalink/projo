@@ -77,7 +77,6 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
             name: state.roleName,
             shortName: state.roleShortName || undefined,
             description: state.roleDescription,
-            level: state.roleLevel,
             colorHex: '#6E7B8A',
           },
           state.token as string,
@@ -169,6 +168,22 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     });
   }
 
+  async function handleSeedDemoWorkspace() {
+    if (!state.token) return;
+    const ok = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.seedDemoWorkspace(state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiSeedDemoWorkspaceFailed,
+      errorText,
+      pushToast,
+    });
+    if (ok) {
+      pushToast(t.uiSeedDemoWorkspaceSuccess);
+    }
+  }
+
   async function handleCreateSkill(event: FormEvent) {
     event.preventDefault();
     if (!state.token) return;
@@ -253,6 +268,27 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     } catch (error) {
       pushToast(resolveErrorMessage(error, t.uiCreateEmployeeFailed, errorText));
     }
+  }
+
+  async function handleDeleteEmployee(employeeId: string) {
+    if (!state.token) return false;
+
+    const deleted = await runWithErrorToastVoid({
+      operation: async () => {
+        await api.deleteEmployee(employeeId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiDeleteEmployeeFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (deleted && state.editEmployeeId === employeeId) {
+      state.setIsEmployeeModalOpen(false);
+      state.setEditEmployeeId('');
+    }
+
+    return deleted;
   }
 
   async function handleAutoSaveEmployeeProfile(payload: {
@@ -590,8 +626,10 @@ export function createPersonnelHandlers({ state, t, errorText, pushToast, refres
     handleCreateDefaultRoles,
     handleCreateDefaultDepartments,
     handleCreateDefaultTeamTemplates,
+    handleSeedDemoWorkspace,
     handleCreateSkill,
     handleCreateEmployee,
+    handleDeleteEmployee,
     handleAutoSaveEmployeeProfile,
     handleCreateVacationFromEmployeeModal,
     handleUpdateVacationFromEmployeeModal,

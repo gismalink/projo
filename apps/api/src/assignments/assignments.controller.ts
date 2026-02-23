@@ -18,25 +18,25 @@ export class AssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}
 
   @Post()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR)
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateAssignmentDto) {
     return this.assignmentsService.create(req.user.workspaceId, dto);
   }
 
   @Get()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {
     return this.assignmentsService.findAll(req.user.workspaceId);
   }
 
   @Get(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findOne(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.assignmentsService.findOne(req.user.workspaceId, id);
   }
 
   @Patch(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR)
   update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateAssignmentDto) {
     return this.assignmentsService.update(req.user.workspaceId, id, dto);
   }

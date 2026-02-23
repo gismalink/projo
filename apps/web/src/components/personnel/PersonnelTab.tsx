@@ -28,6 +28,7 @@ type PersonnelTabProps = {
   toggleRoleFilter: (roleName: string) => void;
   clearRoleFilters: () => void;
   openEmployeeModal: (employee: Employee) => void;
+  deleteEmployee: (employeeId: string) => Promise<boolean>;
   openEmployeeCreateModal: () => void;
   openEmployeeImportModal: () => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
@@ -52,6 +53,7 @@ export function PersonnelTab(props: PersonnelTabProps) {
     toggleRoleFilter,
     clearRoleFilters,
     openEmployeeModal,
+    deleteEmployee,
     openEmployeeCreateModal,
     openEmployeeImportModal,
     roleColorOrDefault,
@@ -219,6 +221,18 @@ export function PersonnelTab(props: PersonnelTabProps) {
                           onClick={() => openEmployeeModal(employee)}
                         >
                           <Icon name="edit" />
+                        </button>
+                        <button
+                          type="button"
+                          className="create-role-icon-btn team-icon-btn"
+                          aria-label={t.deleteEmployee}
+                          data-tooltip={t.deleteEmployee}
+                          onClick={() => {
+                            if (!window.confirm(t.confirmDeleteEmployee)) return;
+                            void deleteEmployee(employee.id);
+                          }}
+                        >
+                          <Icon name="trash" />
                         </button>
                       </div>
                     </div>

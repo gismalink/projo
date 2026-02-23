@@ -43,26 +43,16 @@ export class EmployeesService {
 
   private async ensureRoleExists(workspaceId: string, roleId: string) {
     const scope = await this.getWorkspaceScope(workspaceId);
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id: roleId,
+        ...(scope.companyId ? { companyId: scope.companyId } : { companyId: null }),
+      },
       select: { id: true },
     });
 
     if (!role) {
       throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
-    }
-
-    if (scope.companyId) {
-      const scoped = await this.prisma.role.findFirst({
-        where: {
-          id: roleId,
-          OR: [{ companyId: scope.companyId }, { companyId: null }],
-        },
-        select: { id: true },
-      });
-      if (!scoped) {
-        throw new NotFoundException(ErrorCode.ROLE_NOT_FOUND);
-      }
     }
   }
 
@@ -74,11 +64,7 @@ export class EmployeesService {
     const department = await this.prisma.department.findFirst({
       where: {
         id: departmentId,
-        ...(scope.companyId
-          ? {
-              OR: [{ companyId: scope.companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(scope.companyId ? { companyId: scope.companyId } : { companyId: null }),
       },
       select: { id: true },
     });
@@ -273,6 +259,16 @@ export class EmployeesService {
 
   async remove(workspaceId: string, id: string) {
     await this.findOne(workspaceId, id);
+
+    const [membersCount, assignmentsCount] = await Promise.all([
+      this.prisma.projectMember.count({ where: { employeeId: id } }),
+      this.prisma.projectAssignment.count({ where: { employeeId: id } }),
+    ]);
+
+    if (membersCount > 0 || assignmentsCount > 0) {
+      throw new ConflictException(ErrorCode.EMPLOYEE_IN_USE);
+    }
+
     return this.prisma.employee.delete({ where: { id } });
   }
 
@@ -286,19 +282,11 @@ export class EmployeesService {
 
     const [roles, departments] = await Promise.all([
       this.prisma.role.findMany({
-        where: scope.companyId
-          ? {
-              OR: [{ companyId: scope.companyId }, { companyId: null }],
-            }
-          : { companyId: null },
+        where: scope.companyId ? { companyId: scope.companyId } : { companyId: null },
         select: { id: true, name: true },
       }),
       this.prisma.department.findMany({
-        where: scope.companyId
-          ? {
-              OR: [{ companyId: scope.companyId }, { companyId: null }],
-            }
-          : { companyId: null },
+        where: scope.companyId ? { companyId: scope.companyId } : { companyId: null },
         select: { id: true, name: true },
       }),
     ]);

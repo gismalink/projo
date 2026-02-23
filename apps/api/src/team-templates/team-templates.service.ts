@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ErrorCode } from '../common/error-codes';
 import { PrismaService } from '../common/prisma.service';
 import { CreateTeamTemplateDto } from './dto/create-team-template.dto';
@@ -7,15 +7,15 @@ import { UpdateTeamTemplateDto } from './dto/update-team-template.dto';
 const DEFAULT_TEAM_TEMPLATES = [
   {
     name: 'Core Team',
-    roleNames: ['PM', 'BACKEND_DEVELOPER', 'FRONTEND_DEVELOPER', 'QA_ENGINEER'],
+    roleNames: ['BACKEND_DEVELOPER', 'FRONTEND_DEVELOPER', 'QA_ENGINEER'],
   },
   {
     name: 'Game Team',
-    roleNames: ['PM', 'UNITY_DEVELOPER', '3D_ARTIST', 'UI_DESIGNER', 'QA_ENGINEER'],
+    roleNames: ['UNITY_DEVELOPER', '3D_ARTIST', 'UI_DESIGNER', 'QA_ENGINEER'],
   },
   {
     name: 'Discovery Team',
-    roleNames: ['PM', 'UX_DESIGNER', 'UI_DESIGNER', 'ANALYST'],
+    roleNames: ['UX_DESIGNER', 'UI_DESIGNER', 'ANALYST'],
   },
 ];
 
@@ -44,11 +44,7 @@ export class TeamTemplatesService {
         id: {
           in: uniqueRoleIds,
         },
-        ...(companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(companyId ? { companyId } : { companyId: null }),
       },
     });
 
@@ -76,6 +72,9 @@ export class TeamTemplatesService {
           },
         },
         include: {
+          _count: {
+            select: { projects: true },
+          },
           roles: {
             orderBy: { position: 'asc' },
             include: {
@@ -90,11 +89,7 @@ export class TeamTemplatesService {
   async createDefaultTemplatesForWorkspace(workspaceId: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     const availableRoles = await this.prisma.role.findMany({
-      where: companyId
-        ? {
-            OR: [{ companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+      where: companyId ? { companyId } : { companyId: null },
       select: {
         id: true,
         name: true,
@@ -169,13 +164,12 @@ export class TeamTemplatesService {
   async findAll(workspaceId: string) {
     const companyId = await this.getWorkspaceCompanyId(workspaceId);
     return this.prisma.projectTeamTemplate.findMany({
-      where: companyId
-        ? {
-            OR: [{ companyId }, { companyId: null }],
-          }
-        : { companyId: null },
+      where: companyId ? { companyId } : { companyId: null },
       orderBy: { name: 'asc' },
       include: {
+        _count: {
+          select: { projects: true },
+        },
         roles: {
           orderBy: { position: 'asc' },
           include: {
@@ -191,13 +185,12 @@ export class TeamTemplatesService {
     const template = await this.prisma.projectTeamTemplate.findFirst({
       where: {
         id,
-        ...(companyId
-          ? {
-              OR: [{ companyId }, { companyId: null }],
-            }
-          : { companyId: null }),
+        ...(companyId ? { companyId } : { companyId: null }),
       },
       include: {
+        _count: {
+          select: { projects: true },
+        },
         roles: {
           orderBy: { position: 'asc' },
           include: {
@@ -240,6 +233,9 @@ export class TeamTemplatesService {
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         },
         include: {
+          _count: {
+            select: { projects: true },
+          },
           roles: {
             orderBy: { position: 'asc' },
             include: {
@@ -257,6 +253,23 @@ export class TeamTemplatesService {
     if (companyId && template.companyId !== companyId) {
       throw new NotFoundException(ErrorCode.PROJECT_TEAM_TEMPLATE_NOT_FOUND);
     }
+
+    const isGlobalTemplate = template.companyId === null;
+    const projectRefs = await this.prisma.project.count({
+      where: isGlobalTemplate
+        ? {
+            teamTemplateId: id,
+          }
+        : {
+            teamTemplateId: id,
+            workspace: companyId ? { companyId } : { companyId: null },
+          },
+    });
+
+    if (projectRefs > 0) {
+      throw new ConflictException(ErrorCode.PROJECT_TEAM_TEMPLATE_IN_USE);
+    }
+
     return this.prisma.projectTeamTemplate.delete({ where: { id } });
   }
 }

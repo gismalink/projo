@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, GradeItem, ProjectMemberItem } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
+import { TooltipPortal } from '../components/TooltipPortal';
 import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { AccountModal } from '../components/modals/AccountModal';
 import { AuthGate } from '../components/modals/AuthGate';
@@ -57,6 +58,9 @@ export function App() {
     errorText: ERROR_TEXT[lang],
   });
 
+  const previousTokenRef = useRef<string | null>(null);
+  const companyTabReturnRef = useRef<{ isProjectHomeOpen: boolean; activeTab: string } | null>(null);
+
   useEffect(() => {
     if (app.token) return;
     void app.bootstrapSsoSession();
@@ -96,16 +100,30 @@ export function App() {
       setIsCompanyModalOpen(false);
       setProjectSettingsProjectId('');
       setProjectSettingsNameDraft('');
+      previousTokenRef.current = null;
       return;
     }
 
-    setIsProjectHomeOpen(true);
+    // `token` changes not only on login/logout but also on company/project switching
+    // (because the API returns a new access token with updated workspace context).
+    // We only want to auto-open the project list on the first login (null -> token).
+    // Otherwise company tabs would unexpectedly jump back to the project list.
+    if (!previousTokenRef.current) {
+      setIsProjectHomeOpen(true);
+    }
     void app.loadMyCompanies();
     void app.loadMyProjects();
+
+    previousTokenRef.current = app.token;
   }, [app.token]);
 
   const currentCompany = app.companies.find((item) => item.id === app.activeCompanyId) || null;
   const currentCompanyName = currentCompany?.name || '-';
+
+  const isCompanyAdminTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction'].includes(app.activeTab);
+  const headerContext = isCompanyAdminTabOpen && companyTabReturnRef.current ? companyTabReturnRef.current : null;
+  const headerIsProjectHomeOpen = headerContext ? headerContext.isProjectHomeOpen : isProjectHomeOpen;
+  const headerActiveTab = headerContext ? headerContext.activeTab : app.activeTab;
   const isCompanyOwner = Boolean(currentCompany?.isOwner);
   const canRenameCompany = Boolean(currentCompany?.isOwner);
   const myCompanies = app.companies.filter((item) => item.isOwner);
@@ -126,9 +144,10 @@ export function App() {
       : null) || currentProjectAccess;
   const editingProjectId = projectSettingsProjectId || app.activeProjectSpaceId;
   const isOwner = Boolean(currentProjectAccess?.isOwner);
-  const isEditor = app.currentUserRole === 'PM';
+  const isEditor = app.currentUserRole === 'EDITOR';
   const canUseCompanyAdminTabs = isCompanyOwner;
-  const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'PM';
+  const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
+  const canSeedDemoWorkspace = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
   const projectMemberSearchValue = projectMemberSearch.trim().toLowerCase();
@@ -202,7 +221,35 @@ export function App() {
     setIsProjectHomeOpen(false);
   };
 
-  const handleOpenGlobalTab = (tab: 'timeline' | 'personnel' | 'roles' | 'instruction') => {
+  const openCompanyPlans = () => {
+    companyTabReturnRef.current = null;
+    setIsProjectHomeOpen(true);
+    app.setActiveTab('timeline');
+  };
+
+  const toggleCompanyTab = (tab: 'personnel' | 'roles' | 'instruction') => {
+    const isAlreadyOpen = !isProjectHomeOpen && app.activeTab === tab;
+    if (isAlreadyOpen) {
+      const back = companyTabReturnRef.current;
+      companyTabReturnRef.current = null;
+      if (back) {
+        setIsProjectHomeOpen(back.isProjectHomeOpen);
+        app.setActiveTab(back.activeTab as never);
+        return;
+      }
+
+      openCompanyPlans();
+      return;
+    }
+
+    const isCompanyTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction'].includes(app.activeTab);
+    if (!isCompanyTabOpen && !companyTabReturnRef.current) {
+      companyTabReturnRef.current = {
+        isProjectHomeOpen,
+        activeTab: app.activeTab,
+      };
+    }
+
     if (isProjectHomeOpen) {
       setIsProjectHomeOpen(false);
     }
@@ -241,6 +288,12 @@ export function App() {
 
   const handleCreateProjectSpaceCard = async () => {
     await app.handleCreateProjectSpace(buildUnnamedProjectName());
+    setIsProjectHomeOpen(false);
+  };
+
+  const handleCreateDemoProjectSpaceCard = async () => {
+    await app.handleCreateProjectSpace('Demo plan');
+    await app.handleSeedDemoWorkspace();
     setIsProjectHomeOpen(false);
   };
 
@@ -413,13 +466,13 @@ export function App() {
     <main className="container">
       <div className="section-header">
         <div>
-          {app.token && !isProjectHomeOpen ? (
+          {app.token && headerActiveTab === 'timeline' && !headerIsProjectHomeOpen ? (
             <div className="project-top-panel">
               <div className="project-top-main">
                 <button
                   type="button"
                   className="icon-btn header-btn header-icon-btn"
-                  onClick={() => setIsProjectHomeOpen(true)}
+                  onClick={() => openCompanyPlans()}
                   aria-label={t.projectList}
                   data-tooltip={t.projectList}
                 >
@@ -509,8 +562,12 @@ export function App() {
             <>
               <button
                 type="button"
-                className={app.activeTab === 'personnel' && !isProjectHomeOpen ? 'icon-btn active header-btn header-icon-btn' : 'icon-btn header-btn header-icon-btn'}
-                onClick={() => handleOpenGlobalTab('personnel')}
+                className={
+                  !isProjectHomeOpen && app.activeTab === 'personnel'
+                    ? 'icon-btn active header-btn header-icon-btn'
+                    : 'icon-btn header-btn header-icon-btn'
+                }
+                onClick={() => toggleCompanyTab('personnel')}
                 aria-label={t.tabPersonnel}
                 data-tooltip={t.tabPersonnel}
               >
@@ -518,8 +575,12 @@ export function App() {
               </button>
               <button
                 type="button"
-                className={app.activeTab === 'roles' && !isProjectHomeOpen ? 'icon-btn active header-btn header-icon-btn' : 'icon-btn header-btn header-icon-btn'}
-                onClick={() => handleOpenGlobalTab('roles')}
+                className={
+                  !isProjectHomeOpen && app.activeTab === 'roles'
+                    ? 'icon-btn active header-btn header-icon-btn'
+                    : 'icon-btn header-btn header-icon-btn'
+                }
+                onClick={() => toggleCompanyTab('roles')}
                 aria-label={t.tabRoles}
                 data-tooltip={t.tabRoles}
               >
@@ -527,8 +588,12 @@ export function App() {
               </button>
               <button
                 type="button"
-                className={app.activeTab === 'instruction' && !isProjectHomeOpen ? 'icon-btn active header-btn header-icon-btn' : 'icon-btn header-btn header-icon-btn'}
-                onClick={() => handleOpenGlobalTab('instruction')}
+                className={
+                  !isProjectHomeOpen && app.activeTab === 'instruction'
+                    ? 'icon-btn active header-btn header-icon-btn'
+                    : 'icon-btn header-btn header-icon-btn'
+                }
+                onClick={() => toggleCompanyTab('instruction')}
                 aria-label={t.tabInstruction}
                 data-tooltip={t.tabInstruction}
               >
@@ -560,6 +625,7 @@ export function App() {
             </select>
           </div>
         </div>
+        <TooltipPortal />
       </div>
 
       {!app.token ? (
@@ -612,7 +678,7 @@ export function App() {
                               >
                                 <Icon name="copy" />
                               </button>
-                              {item.isOwner || item.role === 'PM' ? (
+                              {item.isOwner || item.role === 'EDITOR' ? (
                                 <button
                                   type="button"
                                   className="icon-btn"
@@ -632,6 +698,19 @@ export function App() {
                           <span>{item.role}</span>
                         </div>
                       ))}
+                      {canSeedDemoWorkspace ? (
+                        <button
+                          type="button"
+                          className="project-space-card project-space-card-create"
+                          onClick={() => void handleCreateDemoProjectSpaceCard()}
+                          aria-label={t.createDemoProject}
+                          data-tooltip={t.createDemoProject}
+                        >
+                          <span className="project-space-card-create-plus">
+                            <Icon name="copy" />
+                          </span>
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="project-space-card project-space-card-create"
@@ -654,7 +733,7 @@ export function App() {
                           <div key={item.id} className="project-space-card" onClick={() => void handleOpenProject(item.id)}>
                             <div className="project-space-card-topline">
                               <strong>{item.name}</strong>
-                              {item.isOwner || item.role === 'PM' ? (
+                              {item.isOwner || item.role === 'EDITOR' ? (
                                 <button
                                   type="button"
                                   className="icon-btn"
@@ -751,6 +830,7 @@ export function App() {
                 app.setVacationType(DEFAULT_VACATION_TYPE);
                 app.setIsEmployeeModalOpen(true);
               }}
+              deleteEmployee={(employeeId) => app.handleDeleteEmployee(employeeId)}
               openEmployeeCreateModal={() => {
                 app.setEditEmployeeId('');
                 app.setEmployeeFullName('');
@@ -797,6 +877,7 @@ export function App() {
 
               {canUseCompanyAdminTabs && app.activeTab === 'roles' ? (
             <RolesTab
+              key={app.activeCompanyId}
               t={t}
               roles={app.roles}
               departments={app.departments}
@@ -805,7 +886,6 @@ export function App() {
               roleName={app.roleName}
               roleShortName={app.roleShortName}
               roleDescription={app.roleDescription}
-              roleLevel={app.roleLevel}
               onCreateRole={app.handleCreateRole}
               onUpdateRole={app.handleUpdateRole}
               onDeleteRole={app.handleDeleteRole}
@@ -813,7 +893,6 @@ export function App() {
               setRoleName={app.setRoleName}
               setRoleShortName={app.setRoleShortName}
               setRoleDescription={app.setRoleDescription}
-              setRoleLevel={app.setRoleLevel}
               roleColorOrDefault={roleColorOrDefault}
               onCreateDefaultDepartments={app.handleCreateDefaultDepartments}
               onCreateDepartment={app.handleCreateDepartment}
@@ -895,6 +974,8 @@ export function App() {
               locale={locale}
               months={MONTHS_BY_LANG[lang]}
               canManageTimeline={canManageTimeline}
+              canSeedDemoWorkspace={canSeedDemoWorkspace}
+              onSeedDemoWorkspace={app.handleSeedDemoWorkspace}
               selectedYear={app.selectedYear}
               assignments={app.assignments}
               vacations={app.vacations}
@@ -920,7 +1001,9 @@ export function App() {
               onYearChange={app.handleYearChange}
               onDeleteAssignment={app.handleDeleteAssignment}
               onAdjustAssignmentPlan={app.handleAdjustAssignmentPlan}
-              onUpdateAssignmentCurve={app.handleUpdateAssignmentCurve}
+              onUpdateAssignmentCurve={async (projectId, assignmentId, loadProfile) => {
+                return (await app.handleUpdateAssignmentCurve(projectId, assignmentId, loadProfile)) ?? false;
+              }}
               onMoveProject={app.handleMoveProject}
               onAdjustProjectPlan={app.handleAdjustProjectPlan}
               timelineStyle={timelineStyle}

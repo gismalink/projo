@@ -3,7 +3,7 @@
 
 .role-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 40px 32px;
+  grid-template-columns: minmax(0, 1fr) 32px 56px 32px;
   align-items: flex-start;
   gap: 0.55rem;
   padding-bottom: 0.15rem;
@@ -22,7 +22,7 @@
 
 .role-table-head {
   display: grid;
-  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px 40px 32px;
+  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 32px 56px 32px;
   gap: 0.32rem;
   font-size: 0.72rem;
   color: var(--ios-text-secondary);
@@ -50,7 +50,7 @@
 
 .role-fields {
   display: grid;
-  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) 78px;
+  grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr);
   gap: 0.32rem;
   width: 100%;
   align-items: end;
@@ -61,14 +61,30 @@
   min-height: 28px;
 }
 
-.role-level-input {
-  text-align: center;
+.role-fields input:disabled {
+  background: var(--ios-surface-soft);
+  color: var(--ios-text-secondary);
+  cursor: not-allowed;
+}
+
+.role-fields input:disabled::placeholder {
+  color: var(--ios-text-secondary);
+}
+
+
+.role-usage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 28px;
+  color: var(--ios-text-secondary);
 }
 
 .role-color-editor {
   display: flex;
-  width: 40px;
-  flex: 0 0 40px;
+  width: 32px;
+  flex: 0 0 32px;
   position: relative;
 }
 
@@ -172,8 +188,18 @@
 
 .color-picker-trigger {
   cursor: pointer;
-  @include button.icon-button-chrome(40px, 12px, 0.2rem);
+  @include button.icon-button-chrome(32px, 12px, 0.2rem);
   color: inherit;
+}
+
+.color-picker-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.department-manage-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .template-manage-create {
@@ -205,6 +231,8 @@
   border: 1px solid var(--ios-border);
   border-radius: 10px;
   background: var(--ios-surface-soft);
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .template-manage-header {
@@ -212,12 +240,18 @@
   grid-template-columns: 1fr auto;
   gap: 0.35rem;
   align-items: center;
+  min-width: 0;
+}
+
+.template-manage-header .department-manage-input {
+  min-width: 0;
 }
 
 .template-role-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.24rem;
+  min-width: 0;
 }
 
 .template-role-chip {

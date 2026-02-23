@@ -1,5 +1,6 @@
 type CompanyLoadCardProps = {
   t: Record<string, string>;
+  title: string;
   companyLoad: { values: number[]; max: number };
   companyLoadScaleMax: number;
   todayPosition: string | null;
@@ -12,12 +13,12 @@ type CompanyLoadCardProps = {
 };
 
 export function CompanyLoadCard(props: CompanyLoadCardProps) {
-  const { t, companyLoad, companyLoadScaleMax, todayPosition, dragStepDays, dayStep, dayMarkers, calendarSegments, months, selectedYear } = props;
+  const { t, title, companyLoad, companyLoadScaleMax, todayPosition, dragStepDays, dayStep, dayMarkers, calendarSegments, months, selectedYear } = props;
 
   return (
     <section className="company-load-card">
       <div className="section-header">
-        <h3>{t.companyLoad}</h3>
+        <h3>{title}</h3>
         <span className="muted">max {companyLoad.max.toFixed(0)}%</span>
       </div>
       <div className="company-load-chart">

@@ -15,8 +15,13 @@
   padding: 0.22rem 0.4rem;
   font-size: 0.68rem;
   line-height: 1.2;
-  white-space: nowrap;
-  z-index: 30;
+  white-space: normal;
+  text-align: center;
+  max-width: min(260px, 80vw);
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  z-index: 9999;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
@@ -35,8 +40,13 @@
   padding: 0.22rem 0.4rem;
   font-size: 0.68rem;
   line-height: 1.2;
-  white-space: nowrap;
-  z-index: 30;
+  white-space: normal;
+  text-align: center;
+  max-width: min(260px, 80vw);
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  z-index: 9999;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { CalendarModule } from './calendar/calendar.module';
@@ -14,10 +14,12 @@ import { PrismaModule } from './common/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RolesModule } from './roles/roles.module';
 import { SkillsModule } from './skills/skills.module';
+import { DemoModule } from './demo/demo.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { TeamTemplatesModule } from './team-templates/team-templates.module';
 import { UsersModule } from './users/users.module';
 import { VacationsModule } from './vacations/vacations.module';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 
 @Module({
   imports: [
@@ -25,17 +27,17 @@ import { VacationsModule } from './vacations/vacations.module';
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60_000,
+        ttl: 60,
         limit: 600,
       },
       {
         name: 'auth',
-        ttl: 60_000,
+        ttl: 60,
         limit: 120,
       },
       {
         name: 'login',
-        ttl: 60_000,
+        ttl: 60,
         limit: 15,
       },
     ]),
@@ -55,11 +57,12 @@ import { VacationsModule } from './vacations/vacations.module';
     TeamTemplatesModule,
     VacationsModule,
     HealthModule,
+    DemoModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: AppThrottlerGuard,
     },
   ],
 })

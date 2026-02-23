@@ -74,6 +74,8 @@ type ProjectAssignmentsCardProps = {
   vacationsByEmployeeId: Map<string, Array<{ startDate: string; endDate: string }>>;
   isoToInputDate: (value: string) => string;
   highlightedEmployeeId?: string;
+  filterEmployeeId?: string;
+  filterEmployeeIds?: string[];
 };
 
 type CurvePoint = {
@@ -110,6 +112,8 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     vacationsByEmployeeId,
     isoToInputDate,
     highlightedEmployeeId,
+    filterEmployeeId,
+    filterEmployeeIds,
   } = props;
 
   const [curveDraftByAssignmentId, setCurveDraftByAssignmentId] = useState<Record<string, CurvePoint[]>>({});
@@ -169,17 +173,23 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
     curveDraftByAssignmentIdRef.current = curveDraftByAssignmentId;
   }, [curveDraftByAssignmentId]);
 
-  const sortedAssignments = useMemo(
-    () =>
-      [...detail.assignments].sort((left, right) => {
-        const startDelta = new Date(left.assignmentStartDate).getTime() - new Date(right.assignmentStartDate).getTime();
-        if (startDelta !== 0) return startDelta;
-        const nameDelta = left.employee.fullName.localeCompare(right.employee.fullName);
-        if (nameDelta !== 0) return nameDelta;
-        return left.id.localeCompare(right.id);
-      }),
-    [detail.assignments],
-  );
+  const sortedAssignments = useMemo(() => {
+    const employeeIdAllowlist = Array.isArray(filterEmployeeIds) && filterEmployeeIds.length > 0 ? new Set(filterEmployeeIds) : null;
+
+    const filtered = filterEmployeeId
+      ? detail.assignments.filter((assignment) => assignment.employeeId === filterEmployeeId)
+      : employeeIdAllowlist
+        ? detail.assignments.filter((assignment) => employeeIdAllowlist.has(assignment.employeeId))
+        : detail.assignments;
+
+    return [...filtered].sort((left, right) => {
+      const startDelta = new Date(left.assignmentStartDate).getTime() - new Date(right.assignmentStartDate).getTime();
+      if (startDelta !== 0) return startDelta;
+      const nameDelta = left.employee.fullName.localeCompare(right.employee.fullName);
+      if (nameDelta !== 0) return nameDelta;
+      return left.id.localeCompare(right.id);
+    });
+  }, [detail.assignments, filterEmployeeId, filterEmployeeIds]);
 
   const toUtcDayTimestamp = (value: string) => {
     const parsed = new Date(value);

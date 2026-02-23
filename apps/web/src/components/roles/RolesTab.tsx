@@ -10,7 +10,6 @@ type UpdateRolePayload = {
   name?: string;
   shortName?: string;
   description?: string;
-  level?: number;
   colorHex?: string;
 };
 
@@ -23,7 +22,6 @@ type RolesTabProps = {
   roleName: string;
   roleShortName: string;
   roleDescription: string;
-  roleLevel: number;
   onCreateRole: (event: FormEvent) => Promise<void>;
   onUpdateRole: (roleId: string, payload: UpdateRolePayload) => Promise<void>;
   onDeleteRole: (roleId: string) => Promise<void>;
@@ -31,7 +29,6 @@ type RolesTabProps = {
   setRoleName: (value: string) => void;
   setRoleShortName: (value: string) => void;
   setRoleDescription: (value: string) => void;
-  setRoleLevel: (value: number) => void;
   roleColorOrDefault: (colorHex?: string | null) => string;
   onCreateDefaultDepartments: () => Promise<void>;
   onCreateDepartment: (name: string, colorHex: string) => Promise<void>;
@@ -51,7 +48,6 @@ type RoleDraft = {
   name: string;
   shortName: string;
   description: string;
-  level: number;
   colorHex: string;
 };
 
@@ -75,7 +71,6 @@ export function RolesTab(props: RolesTabProps) {
     roleName,
     roleShortName,
     roleDescription,
-    roleLevel,
     onCreateRole,
     onUpdateRole,
     onDeleteRole,
@@ -83,7 +78,6 @@ export function RolesTab(props: RolesTabProps) {
     setRoleName,
     setRoleShortName,
     setRoleDescription,
-    setRoleLevel,
     roleColorOrDefault,
     onCreateDefaultDepartments,
     onCreateDepartment,
@@ -130,7 +124,6 @@ export function RolesTab(props: RolesTabProps) {
           name: current?.name ?? role.name,
           shortName: current?.shortName ?? (role.shortName ?? ''),
           description: current?.description ?? role.description,
-          level: current?.level ?? role.level,
           colorHex: current?.colorHex ?? roleColorOrDefault(role.colorHex),
         };
       }
@@ -218,7 +211,6 @@ export function RolesTab(props: RolesTabProps) {
         name: draft.name,
         shortName: normalizedShortName,
         description: draft.description,
-        level: draft.level,
       };
       if (normalizedColorHex) {
         payload.colorHex = normalizedColorHex;
@@ -228,7 +220,6 @@ export function RolesTab(props: RolesTabProps) {
         role.name === payload.name &&
         (role.shortName ?? '') === payload.shortName &&
         role.description === payload.description &&
-        role.level === payload.level &&
         roleColorOrDefault(role.colorHex) === (payload.colorHex ?? roleColorOrDefault(role.colorHex));
 
       if (unchanged) return;
@@ -242,7 +233,6 @@ export function RolesTab(props: RolesTabProps) {
         name: '',
         shortName: '',
         description: '',
-        level: 1,
         colorHex: roleColorOrDefault(),
       };
       const next = { ...current, ...patch };
@@ -428,39 +418,49 @@ export function RolesTab(props: RolesTabProps) {
           <span>{t.name}</span>
           <span>{t.shortName}</span>
           <span>{t.description}</span>
-          <span>{t.level}</span>
           <span>{t.color}</span>
-          <span>{t.actions}</span>
+          <span>
+            <Icon name="users" size={14} />
+          </span>
+          <span>
+            <Icon name="trash" size={14} />
+          </span>
         </div>
         <ul className="roles-list">
-          {roles.map((role) => (
+          {roles.map((role) => {
+            const isReadOnly = false;
+            const employeesCount = role._count?.employees ?? 0;
+            const templatesCount = role._count?.templateRoles ?? 0;
+            const costRatesCount = role._count?.costRates ?? 0;
+            const isDeleteLocked = employeesCount > 0 || templatesCount > 0 || costRatesCount > 0;
+            const deleteTooltip = employeesCount > 0
+              ? t.cannotDeleteEmployeesInUse
+              : templatesCount > 0
+                ? t.cannotDeleteTemplatesInUse
+                : costRatesCount > 0
+                  ? t.cannotDeleteCostRatesInUse
+                  : t.deleteRole;
+
+            return (
             <li key={role.id} className="role-row">
               <div className="role-fields">
                 <input
                   aria-label={t.name}
                   value={roleDrafts[role.id]?.name ?? role.name}
                   onChange={(event) => updateRoleDraft(role.id, { name: event.target.value })}
+                  disabled={isReadOnly}
                 />
                 <input
                   aria-label={t.shortName}
                   value={roleDrafts[role.id]?.shortName ?? (role.shortName ?? '')}
                   onChange={(event) => updateRoleDraft(role.id, { shortName: event.target.value })}
+                  disabled={isReadOnly}
                 />
                 <input
                   aria-label={t.description}
                   value={roleDrafts[role.id]?.description ?? role.description}
                   onChange={(event) => updateRoleDraft(role.id, { description: event.target.value })}
-                />
-                <input
-                  aria-label={t.level}
-                  className="role-level-input"
-                  type="number"
-                  min={1}
-                  value={roleDrafts[role.id]?.level ?? role.level}
-                  onChange={(event) => {
-                    const nextLevel = Number(event.target.value);
-                    updateRoleDraft(role.id, { level: Number.isFinite(nextLevel) && nextLevel > 0 ? nextLevel : 1 });
-                  }}
+                  disabled={isReadOnly}
                 />
               </div>
               <div className="role-color-editor">
@@ -473,18 +473,27 @@ export function RolesTab(props: RolesTabProps) {
                       copyLabel={t.copyHex}
                       fallbackHex={roleColorOrDefault(role.colorHex)}
                       onChange={(nextHex) => updateRoleDraft(role.id, { colorHex: nextHex })}
+                      disabled={isReadOnly}
+                      disabledTitle={undefined}
                     />
                   );
                 })()}
               </div>
+              <div className="role-usage" title={`${employeesCount}`}
+                aria-label={`${employeesCount}`}
+              >
+                <Icon name="users" size={14} />
+                <span className="muted">{employeesCount}</span>
+              </div>
               <button
                 type="button"
-                className="department-manage-action"
-                disabled={!role.companyId}
+                className={isDeleteLocked ? 'department-manage-action is-locked' : 'department-manage-action'}
+                aria-disabled={isDeleteLocked ? 'true' : undefined}
+                data-tooltip={deleteTooltip}
+                title={deleteTooltip}
                 aria-label={t.deleteRole}
-                data-tooltip={t.deleteRole}
                 onClick={() => {
-                  if (!role.companyId) return;
+                  if (isReadOnly || isDeleteLocked) return;
                   if (!window.confirm(t.confirmDeleteRole)) return;
                   void onDeleteRole(role.id);
                 }}
@@ -492,7 +501,8 @@ export function RolesTab(props: RolesTabProps) {
                 <Icon name="x" />
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
 
         <hr className="separator" />
@@ -529,6 +539,8 @@ export function RolesTab(props: RolesTabProps) {
             />
             <div className="department-manage-list">
               {departments.map((department) => {
+                const employeesCount = department._count?.employees ?? 0;
+                const isDeleteLocked = employeesCount > 0;
                 const draft = departmentDrafts[department.id] ?? {
                   name: department.name,
                   colorHex: roleColorOrDefault(department.colorHex),
@@ -547,8 +559,9 @@ export function RolesTab(props: RolesTabProps) {
                     fallbackHex={roleColorOrDefault(department.colorHex)}
                     colorLabel={t.color}
                     copyHexLabel={t.copyHex}
-                    actionTitle={t.deleteDepartment}
                     actionLabel={t.deleteDepartment}
+                    actionLocked={isDeleteLocked}
+                    actionTitle={isDeleteLocked ? t.cannotDeleteEmployeesInUse : t.deleteDepartment}
                     onNameChange={(value) => updateDepartmentDraft(department.id, { name: value })}
                     onColorChange={(value) => updateDepartmentDraft(department.id, { colorHex: value })}
                     onAction={() => {
@@ -608,6 +621,8 @@ export function RolesTab(props: RolesTabProps) {
             </div>
             <div className="department-manage-list template-manage-list">
               {teamTemplates.map((template) => {
+                const projectsCount = template._count?.projects ?? 0;
+                const isDeleteLocked = projectsCount > 0;
                 const draft = teamTemplateDrafts[template.id] ?? {
                   name: template.name,
                   roleIds: template.roles.map((item) => item.roleId),
@@ -624,10 +639,13 @@ export function RolesTab(props: RolesTabProps) {
                       />
                       <button
                         type="button"
-                        className="department-manage-action"
+                        className={isDeleteLocked ? 'department-manage-action is-locked' : 'department-manage-action'}
+                        aria-disabled={isDeleteLocked ? 'true' : undefined}
+                        data-tooltip={isDeleteLocked ? t.cannotDeleteProjectsInUse : t.deleteTeamTemplate}
+                        title={isDeleteLocked ? t.cannotDeleteProjectsInUse : t.deleteTeamTemplate}
                         aria-label={t.deleteTeamTemplate}
-                        data-tooltip={t.deleteTeamTemplate}
                         onClick={() => {
+                          if (isDeleteLocked) return;
                           if (!window.confirm(t.confirmDeleteTeamTemplate)) return;
                           void onDeleteTeamTemplate(template.id);
                         }}
@@ -687,6 +705,8 @@ export function RolesTab(props: RolesTabProps) {
             />
             <div className="department-manage-list">
               {grades.map((grade) => {
+                const employeesCount = grade._count?.employees ?? 0;
+                const isDeleteLocked = employeesCount > 0;
                 const draft = gradeDrafts[grade.id] ?? {
                   name: grade.name,
                   colorHex: roleColorOrDefault(grade.colorHex),
@@ -705,11 +725,14 @@ export function RolesTab(props: RolesTabProps) {
                     fallbackHex={roleColorOrDefault(grade.colorHex)}
                     colorLabel={t.color}
                     copyHexLabel={t.copyHex}
-                    actionTitle={t.deleteGrade}
                     actionLabel={t.deleteGrade}
+                    actionLocked={isDeleteLocked}
+                    actionTitle={isDeleteLocked ? t.cannotDeleteEmployeesInUse : t.deleteGrade}
                     onNameChange={(value) => updateGradeDraft(grade.id, { name: value })}
                     onColorChange={(value) => updateGradeDraft(grade.id, { colorHex: value })}
-                    onAction={() => onDeleteGrade(grade.id)}
+                    onAction={() => {
+                      onDeleteGrade(grade.id);
+                    }}
                   />
                 );
               })}
@@ -739,10 +762,6 @@ export function RolesTab(props: RolesTabProps) {
               <label>
                 {t.description}
                 <input value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
-              </label>
-              <label>
-                {t.level}
-                <input type="number" min={1} value={roleLevel} onChange={(e) => setRoleLevel(Number(e.target.value))} />
               </label>
               <button type="submit">{t.createRole}</button>
             </form>

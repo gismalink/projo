@@ -45,7 +45,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ login: { limit: 15, ttl: 60_000 } })
+  @Throttle({ login: { limit: 15, ttl: 60 } })
   login(@Body() dto: LoginDto) {
     this.assertLocalAuthEnabled();
     return this.authService.login(dto.email, dto.password);

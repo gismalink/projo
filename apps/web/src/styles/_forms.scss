@@ -67,10 +67,15 @@ button {
   transition: background-color 0.18s ease, transform 0.18s ease;
 }
 
-button:hover {
+button:hover:not(:disabled):not([aria-disabled='true']) {
   background: var(--ios-accent-pressed);
 }
 
-button:active {
-  transform: translateY(1px);
+button:active:not(:disabled):not([aria-disabled='true']) {
+  transform: scale(0.97);
+}
+
+button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
 }

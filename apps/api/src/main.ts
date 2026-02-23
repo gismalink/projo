@@ -7,6 +7,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Important for correct rate-limiting and logging behind reverse proxies (Caddy/edge).
+  // Makes Express derive req.ip from X-Forwarded-For.
+  // We trust a single hop proxy in front of the API container.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   const parseAllowedOrigins = (value: string | undefined) => {
     if (!value) {
       return ['http://localhost:5173', 'http://127.0.0.1:5173'];

@@ -4,7 +4,7 @@ export const APP_ROLES_KEY = 'app_roles';
 
 export enum AppRoleValue {
   ADMIN = 'ADMIN',
-  PM = 'PM',
+  EDITOR = 'EDITOR',
   VIEWER = 'VIEWER',
   FINANCE = 'FINANCE',
 }

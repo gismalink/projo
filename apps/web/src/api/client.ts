@@ -145,7 +145,6 @@ export type CreateRolePayload = {
   name: string;
   shortName?: string;
   description?: string;
-  level?: number;
   colorHex?: string;
 };
 
@@ -203,6 +202,7 @@ export type TeamTemplateItem = {
   id: string;
   name: string;
   roles: TeamTemplateRoleItem[];
+  _count?: { projects: number };
 };
 
 export type CreateTeamTemplatePayload = {
@@ -216,6 +216,7 @@ export type GradeItem = {
   id: string;
   name: string;
   colorHex?: string | null;
+  _count?: { employees: number };
   createdAt: string;
   updatedAt: string;
 };
@@ -389,6 +390,21 @@ export type ProjectDetail = {
       role: { name: string };
     };
   }>;
+  members: Array<{
+    id: string;
+    projectId: string;
+    employeeId: string;
+    employee: {
+      id: string;
+      fullName: string;
+      email: string;
+      grade?: string | null;
+      roleId: string;
+      defaultCapacityHoursPerDay?: string | number | null;
+      role: { name: string };
+      department?: { id: string; name: string } | null;
+    };
+  }>;
 };
 
 export type CalendarDayItem = {
@@ -557,6 +573,7 @@ export const api = {
     request('/employees', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateEmployee: (employeeId: string, payload: UpdateEmployeePayload, token: string) =>
     request(`/employees/${employeeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  deleteEmployee: (employeeId: string, token: string) => request(`/employees/${employeeId}`, { method: 'DELETE' }, token),
   createDepartment: (payload: CreateDepartmentPayload, token: string) =>
     request('/departments', { method: 'POST', body: JSON.stringify(payload) }, token),
   createDefaultDepartments: (token: string) =>
@@ -574,6 +591,7 @@ export const api = {
   createGrade: (payload: CreateGradePayload, token: string) =>
     request<GradeItem>('/grades', { method: 'POST', body: JSON.stringify(payload) }, token),
   createDefaultGrades: (token: string) => request<DefaultsCreateResult>('/grades/defaults', { method: 'POST' }, token),
+  seedDemoWorkspace: (token: string) => request('/demo/seed', { method: 'POST' }, token),
   updateGrade: (gradeId: string, payload: UpdateGradePayload, token: string) =>
     request<GradeItem>(`/grades/${gradeId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   deleteGrade: (gradeId: string, token: string) => request(`/grades/${gradeId}`, { method: 'DELETE' }, token),

@@ -9,7 +9,7 @@ datasource db {
 
 enum AppRole {
   ADMIN
-  PM
+  EDITOR
   VIEWER
   FINANCE
 }
@@ -89,7 +89,6 @@ model Role {
   name        String
   shortName   String?  @db.VarChar(20)
   description String?
-  level       Int?
   colorHex    String?  @db.VarChar(7)
   employees   Employee[]
   costRates   CostRate[]

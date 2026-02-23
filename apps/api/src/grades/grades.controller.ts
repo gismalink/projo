@@ -30,7 +30,7 @@ export class GradesController {
   }
 
   @Get()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {
     return this.gradesService.findAll(req.user.workspaceId);
   }

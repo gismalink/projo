@@ -19,6 +19,7 @@ type IconName =
   | 'clock'
   | 'coins'
   | 'alert'
+  | 'trash'
   | 'door'
   | 'grid'
   | 'settings';
@@ -158,6 +159,16 @@ export function Icon({ name, size = 16, className }: IconProps) {
           <path {...common} d="M12 4 3.8 18h16.4L12 4z" />
           <path {...common} d="M12 9v4" />
           <path {...common} d="M12 16h.01" />
+        </>
+      ) : null}
+
+      {name === 'trash' ? (
+        <>
+          <path {...common} d="M4 7h16" />
+          <path {...common} d="M9 7V5.6c0-.9.7-1.6 1.6-1.6h2.8c.9 0 1.6.7 1.6 1.6V7" />
+          <path {...common} d="M7 7l1 14h8l1-14" />
+          <path {...common} d="M10 11v6" />
+          <path {...common} d="M14 11v6" />
         </>
       ) : null}
 

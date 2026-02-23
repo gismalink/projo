@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AssignmentItem,
   CalendarDayItem,
@@ -36,6 +36,21 @@ const getShouldUseDefaultLoginCredentials = () => {
 
 const SHOULD_USE_DEFAULT_LOGIN_CREDENTIALS = getShouldUseDefaultLoginCredentials();
 
+const ACTIVE_TAB_STORAGE_KEY = 'projo.activeTab';
+
+const resolveInitialActiveTab = (): ActiveTab => {
+  if (typeof window === 'undefined') return 'timeline';
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (raw === 'timeline' || raw === 'personnel' || raw === 'roles' || raw === 'instruction') {
+      return raw;
+    }
+  } catch {
+    // ignore storage failures
+  }
+  return 'timeline';
+};
+
 export function useAppState() {
   const [email, setEmail] = useState(SHOULD_USE_DEFAULT_LOGIN_CREDENTIALS ? WEB_DEFAULT_LOGIN_EMAIL : '');
   const [password, setPassword] = useState(SHOULD_USE_DEFAULT_LOGIN_CREDENTIALS ? WEB_DEFAULT_LOGIN_PASSWORD : '');
@@ -51,9 +66,18 @@ export function useAppState() {
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState<string>('');
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => resolveInitialActiveTab());
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+    } catch {
+      // ignore storage failures
+    }
+  }, [activeTab]);
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [skills, setSkills] = useState<SkillItem[]>([]);
@@ -61,7 +85,6 @@ export function useAppState() {
   const [roleName, setRoleName] = useState<string>(DEFAULT_ROLE_FORM.name);
   const [roleShortName, setRoleShortName] = useState<string>(DEFAULT_ROLE_FORM.shortName);
   const [roleDescription, setRoleDescription] = useState<string>(DEFAULT_ROLE_FORM.description);
-  const [roleLevel, setRoleLevel] = useState<number>(DEFAULT_ROLE_FORM.level);
   const [skillName, setSkillName] = useState<string>(DEFAULT_SKILL_FORM.name);
   const [skillDescription, setSkillDescription] = useState<string>(DEFAULT_SKILL_FORM.description);
 
@@ -156,7 +179,6 @@ export function useAppState() {
     roleName,
     roleShortName,
     roleDescription,
-    roleLevel,
     skillName,
     skillDescription,
     departments,
@@ -241,7 +263,6 @@ export function useAppState() {
     setRoleName,
     setRoleShortName,
     setRoleDescription,
-    setRoleLevel,
     setSkillName,
     setSkillDescription,
     setDepartments,

@@ -24,13 +24,13 @@ export class VacationsController {
   }
 
   @Get()
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findAll(@Req() req: AuthenticatedRequest) {
     return this.vacationsService.findAll(req.user.workspaceId);
   }
 
   @Get(':id')
-  @Roles(AppRoleValue.ADMIN, AppRoleValue.PM, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR, AppRoleValue.VIEWER, AppRoleValue.FINANCE)
   findOne(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.vacationsService.findOne(req.user.workspaceId, id);
   }

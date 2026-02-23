@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateRoleDto {
   @IsString()
@@ -13,11 +13,6 @@ export class CreateRoleDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  level?: number;
 
   @IsOptional()
   @IsString()

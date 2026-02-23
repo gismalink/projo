@@ -7,6 +7,8 @@ type TimelineToolbarProps = {
   onOpenProjectModal: () => void;
   onYearChange: (nextYear: number) => Promise<void>;
   onDragStepDaysChange: (next: 1 | 7 | 30) => void;
+  canSeedDemoWorkspace: boolean;
+  onSeedDemoWorkspace: () => Promise<void>;
 };
 
 export function TimelineToolbar(props: TimelineToolbarProps) {
@@ -17,6 +19,8 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
     onOpenProjectModal,
     onYearChange,
     onDragStepDaysChange,
+    canSeedDemoWorkspace,
+    onSeedDemoWorkspace,
   } = props;
 
   return (
@@ -47,6 +51,19 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
         </div>
       </div>
       <div className="year-switcher">
+        {canSeedDemoWorkspace ? (
+          <button
+            type="button"
+            className="timeline-toolbar-icon-btn"
+            onClick={() => {
+              void onSeedDemoWorkspace();
+            }}
+            aria-label={t.createDemoProject}
+            data-tooltip={t.createDemoProject}
+          >
+            <Icon name="copy" />
+          </button>
+        ) : null}
         <button
           type="button"
           className="timeline-toolbar-icon-btn"

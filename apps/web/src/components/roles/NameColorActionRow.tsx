@@ -12,6 +12,7 @@ type NameColorActionRowProps = {
   onColorChange: (value: string) => void;
   onAction: () => void;
   actionDisabled?: boolean;
+  actionLocked?: boolean;
   rowClassName: string;
   actionClassName: string;
   actionIcon: 'plus' | 'x';
@@ -31,6 +32,7 @@ export function NameColorActionRow({
   onColorChange,
   onAction,
   actionDisabled = false,
+  actionLocked = false,
   rowClassName,
   actionClassName,
   actionIcon,
@@ -58,9 +60,14 @@ export function NameColorActionRow({
       </div>
       <button
         type="button"
-        className={actionClassName}
+        className={actionLocked ? `${actionClassName} is-locked` : actionClassName}
         disabled={actionDisabled}
-        onClick={onAction}
+        aria-disabled={actionLocked ? 'true' : undefined}
+        data-tooltip={actionTitle}
+        onClick={() => {
+          if (actionDisabled || actionLocked) return;
+          onAction();
+        }}
         title={actionTitle}
         aria-label={actionLabel}
       >

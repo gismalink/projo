@@ -32,6 +32,7 @@
 2. Публикация ветки и PR в default branch (`main`).
 3. Проверка CI (`check`, `Audit API dependencies`).
 4. Deploy на `test`.
+   - Примечание: для быстрых итераций (без выката в `prod`) допустимо не обновлять `test`, если поведение полностью проверено локально.
 5. Проверка на `test`:
    - `npm run check`,
    - `SMOKE_API=1 npm run check`,

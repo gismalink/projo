@@ -43,9 +43,75 @@ type WorkspaceProjectStatsItem = {
   totalAllocationPercent: number;
 };
 
+const COMPANY_HOME_WORKSPACE_PREFIX = '__company_home__:';
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private companyHomeWorkspaceName(companyId: string) {
+    return `${COMPANY_HOME_WORKSPACE_PREFIX}${companyId}`;
+  }
+
+  private isCompanyHomeWorkspaceName(name: string) {
+    return name.startsWith(COMPANY_HOME_WORKSPACE_PREFIX);
+  }
+
+  private async ensureCompanyHomeWorkspace(
+    tx: Prisma.TransactionClient,
+    ownerUserId: string,
+    companyId: string,
+    role: AppRole,
+  ): Promise<{ id: string }> {
+    const homeName = this.companyHomeWorkspaceName(companyId);
+
+    const existing = await tx.workspace.findFirst({
+      where: {
+        ownerUserId,
+        companyId,
+        name: homeName,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await tx.workspaceMember.upsert({
+        where: {
+          workspaceId_userId: {
+            workspaceId: existing.id,
+            userId: ownerUserId,
+          },
+        },
+        update: {},
+        create: {
+          workspaceId: existing.id,
+          userId: ownerUserId,
+          role,
+        },
+      });
+
+      return existing;
+    }
+
+    const created = await tx.workspace.create({
+      data: {
+        ownerUserId,
+        companyId,
+        name: homeName,
+      },
+      select: { id: true },
+    });
+
+    await tx.workspaceMember.create({
+      data: {
+        workspaceId: created.id,
+        userId: ownerUserId,
+        role,
+      },
+    });
+
+    return created;
+  }
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
@@ -164,30 +230,28 @@ export class UsersService {
 
     if (!userWithMemberships.workspaceMemberships.length) {
       const companyId = await this.ensureOwnerCompanyId(userWithMemberships.id, userWithMemberships.fullName);
-      const workspace = await this.prisma.workspace.create({
-        data: {
-          name: this.workspaceNameForUser(userWithMemberships.fullName),
-          ownerUserId: userWithMemberships.id,
-          companyId,
-        },
+      const workspace = await this.prisma.$transaction(async (tx) => {
+        const home = await this.ensureCompanyHomeWorkspace(tx, userWithMemberships.id, companyId, userWithMemberships.appRole);
+        await tx.user.update({
+          where: { id: userWithMemberships.id },
+          data: { activeWorkspaceId: home.id },
+        });
+        return home;
       });
 
-      const membership = await this.prisma.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: userWithMemberships.id,
-          role: userWithMemberships.appRole,
+      const membership = await this.prisma.workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId: workspace.id,
+            userId: userWithMemberships.id,
+          },
         },
-      });
-
-      await this.prisma.user.update({
-        where: { id: userWithMemberships.id },
-        data: { activeWorkspaceId: workspace.id },
+        select: { role: true },
       });
 
       return {
         workspaceId: workspace.id,
-        workspaceRole: membership.role,
+        workspaceRole: membership?.role ?? userWithMemberships.appRole,
       };
     }
 
@@ -327,6 +391,9 @@ export class UsersService {
 
     const unique = new Map<string, ProjectMembershipItem>();
     for (const membership of memberships) {
+      if (this.isCompanyHomeWorkspaceName(membership.workspace.name)) {
+        continue;
+      }
       unique.set(membership.workspace.id, {
         workspaceId: membership.workspace.id,
         workspaceName: membership.workspace.name,
@@ -404,6 +471,14 @@ export class UsersService {
       companyIds.add(companyId);
     }
 
+    const ownedCompanyIds = await this.prisma.company.findMany({
+      where: { ownerUserId: userId },
+      select: { id: true },
+    });
+    for (const item of ownedCompanyIds) {
+      companyIds.add(item.id);
+    }
+
     const activeCompanyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
 
     const companies = await this.prisma.company.findMany({
@@ -454,24 +529,7 @@ export class UsersService {
         },
       });
 
-      const workspace = await tx.workspace.create({
-        data: {
-          ownerUserId,
-          companyId: company.id,
-          name: `${trimmedName} plan`,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      await tx.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: ownerUserId,
-          role: AppRole.ADMIN,
-        },
-      });
+      const workspace = await this.ensureCompanyHomeWorkspace(tx, ownerUserId, company.id, AppRole.ADMIN);
 
       await tx.user.update({
         where: { id: ownerUserId },
@@ -549,24 +607,7 @@ export class UsersService {
     }
 
     const created = await this.prisma.$transaction(async (tx) => {
-      const workspace = await tx.workspace.create({
-        data: {
-          ownerUserId: userId,
-          companyId: company.id,
-          name: `${company.name} plan`,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      await tx.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId,
-          role: AppRole.ADMIN,
-        },
-      });
+      const workspace = await this.ensureCompanyHomeWorkspace(tx, userId, company.id, AppRole.ADMIN);
 
       await tx.user.update({
         where: { id: userId },
@@ -583,7 +624,17 @@ export class UsersService {
 
   async createProjectSpace(userId: string, name: string) {
     const trimmedName = name.trim();
-    const companyId = await this.ensureOwnerCompanyId(userId);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        activeWorkspaceId: true,
+        fullName: true,
+      },
+    });
+
+    const companyId = user?.activeWorkspaceId
+      ? await this.ensureWorkspaceCompanyId(user.activeWorkspaceId)
+      : await this.ensureOwnerCompanyId(userId, user?.fullName);
     const workspace = await this.prisma.workspace.create({
       data: {
         name: trimmedName,
@@ -815,6 +866,7 @@ export class UsersService {
       select: {
         id: true,
         ownerUserId: true,
+        companyId: true,
       },
     });
 
@@ -823,36 +875,44 @@ export class UsersService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      const fallbackWorkspace = await tx.workspace.findFirst({
-        where: {
-          ownerUserId,
-          id: {
-            not: workspaceId,
-          },
-        },
-        select: {
-          id: true,
-        },
-        orderBy: [{ createdAt: 'asc' }],
-      });
+      const companyId = workspace.companyId ?? (await this.ensureOwnerCompanyId(ownerUserId));
 
-      if (fallbackWorkspace) {
-        await tx.employee.updateMany({
+      const fallbackWorkspace =
+        (await tx.workspace.findFirst({
           where: {
-            workspaceId,
+            ownerUserId,
+            companyId,
+            name: this.companyHomeWorkspaceName(companyId),
+            id: { not: workspaceId },
           },
-          data: {
-            workspaceId: fallbackWorkspace.id,
+          select: { id: true },
+        })) ??
+        (await tx.workspace.findFirst({
+          where: {
+            ownerUserId,
+            companyId,
+            id: { not: workspaceId },
           },
-        });
-      }
+          select: { id: true },
+          orderBy: [{ createdAt: 'asc' }],
+        })) ??
+        (await this.ensureCompanyHomeWorkspace(tx, ownerUserId, companyId, AppRole.ADMIN));
+
+      await tx.employee.updateMany({
+        where: {
+          workspaceId,
+        },
+        data: {
+          workspaceId: fallbackWorkspace.id,
+        },
+      });
 
       await tx.user.updateMany({
         where: {
           activeWorkspaceId: workspaceId,
         },
         data: {
-          activeWorkspaceId: fallbackWorkspace?.id ?? null,
+          activeWorkspaceId: fallbackWorkspace.id,
         },
       });
 

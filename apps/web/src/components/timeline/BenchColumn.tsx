@@ -1,4 +1,5 @@
 import { DEFAULT_FALLBACK_COLOR_HEX } from '../../constants/app.constants';
+import { Icon } from '../Icon';
 
 type BenchMember = {
   id: string;
@@ -20,8 +21,10 @@ type BenchColumnProps = {
   benchGroups: BenchGroup[];
   canDragMembers: boolean;
   selectedEmployeeId: string;
+  selectedDepartmentName: string;
   hoveredEmployeeId: string;
   onToggleEmployeeFilter: (employeeId: string) => void;
+  onToggleDepartmentFilter: (departmentName: string) => void;
   onHoverEmployee: (employeeId: string) => void;
   onMemberDragStart: (employeeId: string) => void;
   onMemberDragEnd: () => void;
@@ -33,8 +36,10 @@ export function BenchColumn(props: BenchColumnProps) {
     benchGroups,
     canDragMembers,
     selectedEmployeeId,
+    selectedDepartmentName,
     hoveredEmployeeId,
     onToggleEmployeeFilter,
+    onToggleDepartmentFilter,
     onHoverEmployee,
     onMemberDragStart,
     onMemberDragEnd,
@@ -60,45 +65,72 @@ export function BenchColumn(props: BenchColumnProps) {
       {benchGroups.length === 0 ? (
         <p className="muted">—</p>
       ) : (
-        benchGroups.map((group) => (
-          <section key={group.departmentName} className="bench-group">
-            <h4>{group.departmentName}</h4>
-            <div className="bench-members">
-              {group.members.map((member) => (
-                <button
-                  type="button"
-                  key={member.id}
-                  className={selectedEmployeeId === member.id || hoveredEmployeeId === member.id ? 'bench-member active' : 'bench-member'}
-                  draggable={canDragMembers}
-                  title={`${member.fullName}${member.grade ? ` · ${member.grade}` : ''} · ${member.roleName} · ${member.annualLoadPercent}%`}
-                  onClick={() => onToggleEmployeeFilter(member.id)}
-                  onMouseEnter={() => onHoverEmployee(member.id)}
-                  onMouseLeave={() => onHoverEmployee('')}
-                  onDragStart={() => {
-                    if (!canDragMembers) return;
-                    onMemberDragStart(member.id);
-                  }}
-                  onDragEnd={onMemberDragEnd}
-                >
-                  <span className="bench-member-head">
-                    <strong>{toInitials(member.fullName)}</strong>
-                    <span className="bench-member-load">{`${member.annualLoadPercent}%`}</span>
+        benchGroups.map((group) => {
+          const isDepartmentSelected = selectedDepartmentName === group.departmentName;
+          return (
+            <section key={group.departmentName} className={isDepartmentSelected ? 'bench-group selected' : 'bench-group'}>
+              <button
+                type="button"
+                className="bench-group-title"
+                onClick={() => onToggleDepartmentFilter(group.departmentName)}
+                aria-label={group.departmentName}
+              >
+                <span className="bench-group-title-text">{group.departmentName}</span>
+                {isDepartmentSelected ? (
+                  <span className="bench-group-selected" aria-hidden="true">
+                    <Icon name="check" size={12} />
                   </span>
-                  <span className="bench-member-meta">
-                    <span className="timeline-role-chip" style={{ background: member.roleColorHex }}>
-                      {member.roleName}
-                    </span>
-                    {member.grade ? (
-                      <span className="timeline-role-chip" style={{ background: member.gradeColorHex ?? DEFAULT_FALLBACK_COLOR_HEX }}>
-                        {member.grade}
+                ) : null}
+              </button>
+              <div className="bench-members">
+              {group.members.map((member) => {
+                const isSelected = selectedEmployeeId === member.id;
+                const isActive = isSelected || hoveredEmployeeId === member.id;
+
+                return (
+                  <button
+                    type="button"
+                    key={member.id}
+                    className={isActive ? 'bench-member active' : 'bench-member'}
+                    draggable={canDragMembers}
+                    title={`${member.fullName}${member.grade ? ` · ${member.grade}` : ''} · ${member.roleName} · ${member.annualLoadPercent}%`}
+                    onClick={() => onToggleEmployeeFilter(member.id)}
+                    onMouseEnter={() => onHoverEmployee(member.id)}
+                    onMouseLeave={() => onHoverEmployee('')}
+                    onDragStart={() => {
+                      if (!canDragMembers) return;
+                      onMemberDragStart(member.id);
+                    }}
+                    onDragEnd={onMemberDragEnd}
+                  >
+                    <span className="bench-member-head">
+                      <strong>{toInitials(member.fullName)}</strong>
+                      <span className="bench-member-load-wrap">
+                        <span className="bench-member-load">{`${member.annualLoadPercent}%`}</span>
+                        {isSelected ? (
+                          <span className="bench-member-selected" aria-hidden="true">
+                            <Icon name="check" size={14} />
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        ))
+                    </span>
+                    <span className="bench-member-meta">
+                      <span className="timeline-role-chip" style={{ background: member.roleColorHex }}>
+                        {member.roleName}
+                      </span>
+                      {member.grade ? (
+                        <span className="timeline-role-chip" style={{ background: member.gradeColorHex ?? DEFAULT_FALLBACK_COLOR_HEX }}>
+                          {member.grade}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+              </div>
+            </section>
+          );
+        })
       )}
     </aside>
   );

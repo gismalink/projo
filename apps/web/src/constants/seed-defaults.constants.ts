@@ -6,7 +6,6 @@ export const DEFAULT_ROLE_FORM = {
   name: 'Analyst',
   shortName: 'ANLST',
   description: 'Business analyst role',
-  level: 3,
 } as const;
 
 export const DEFAULT_SKILL_FORM = {

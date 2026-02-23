@@ -48,6 +48,19 @@ body.timeline-no-select * {
   -webkit-user-drag: none;
 }
 
+body,
+body * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -128,20 +141,22 @@ body.timeline-no-select * {
   border-color: var(--ios-accent);
 }
 
-button[data-tooltip] {
-  position: relative;
-}
+body:not(.tooltip-portal-enabled) {
+  button[data-tooltip] {
+    position: relative;
+  }
 
-button[data-tooltip]::after,
-.icon-btn[data-tooltip]::after {
-  @include tooltip.tooltip-below;
-}
+  button[data-tooltip]::after,
+  .icon-btn[data-tooltip]::after {
+    @include tooltip.tooltip-below;
+  }
 
-button[data-tooltip]:hover::after,
-button[data-tooltip]:focus-visible::after,
-.icon-btn[data-tooltip]:hover::after,
-.icon-btn[data-tooltip]:focus-visible::after {
-  @include tooltip.tooltip-visible;
+  button[data-tooltip]:hover::after,
+  button[data-tooltip]:focus-visible::after,
+  .icon-btn[data-tooltip]:hover::after,
+  .icon-btn[data-tooltip]:focus-visible::after {
+    @include tooltip.tooltip-visible;
+  }
 }
 
 .project-space-grid {
@@ -207,13 +222,15 @@ button[data-tooltip]:focus-visible::after,
   padding: 0.1rem 0.34rem;
 }
 
-.project-space-card-stat[data-tooltip]::after {
-  @include tooltip.tooltip-above;
-}
+body:not(.tooltip-portal-enabled) {
+  .project-space-card-stat[data-tooltip]::after {
+    @include tooltip.tooltip-above;
+  }
 
-.project-space-card-stat[data-tooltip]:hover::after,
-.project-space-card-stat[data-tooltip]:focus-visible::after {
-  @include tooltip.tooltip-visible;
+  .project-space-card-stat[data-tooltip]:hover::after,
+  .project-space-card-stat[data-tooltip]:focus-visible::after {
+    @include tooltip.tooltip-visible;
+  }
 }
 
 .project-space-card-create {
@@ -223,13 +240,15 @@ button[data-tooltip]:focus-visible::after,
   position: relative;
 }
 
-.project-space-card-create[data-tooltip]::after {
-  @include tooltip.tooltip-above;
-}
+body:not(.tooltip-portal-enabled) {
+  .project-space-card-create[data-tooltip]::after {
+    @include tooltip.tooltip-above;
+  }
 
-.project-space-card-create[data-tooltip]:hover::after,
-.project-space-card-create[data-tooltip]:focus-visible::after {
-  @include tooltip.tooltip-visible;
+  .project-space-card-create[data-tooltip]:hover::after,
+  .project-space-card-create[data-tooltip]:focus-visible::after {
+    @include tooltip.tooltip-visible;
+  }
 }
 
 .project-space-card-create-plus {

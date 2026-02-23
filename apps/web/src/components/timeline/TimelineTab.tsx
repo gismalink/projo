@@ -33,6 +33,8 @@ type TimelineTabProps = {
     department?: { name: string } | null;
   }>;
   roles: Array<{ name: string; shortName?: string | null; colorHex?: string | null }>;
+  canSeedDemoWorkspace: boolean;
+  onSeedDemoWorkspace: () => Promise<void>;
   teamTemplates: Array<{ id: string; name: string }>;
   grades: GradeItem[];
   sortedTimeline: ProjectTimelineRow[];
@@ -81,6 +83,8 @@ export function TimelineTab(props: TimelineTabProps) {
     locale,
     months,
     canManageTimeline,
+    canSeedDemoWorkspace,
+    onSeedDemoWorkspace,
     selectedYear,
     assignments,
     vacations,
@@ -143,7 +147,10 @@ export function TimelineTab(props: TimelineTabProps) {
   const [draggedBenchEmployeeId, setDraggedBenchEmployeeId] = useState<string | null>(null);
   const [hoverProjectDropId, setHoverProjectDropId] = useState<string | null>(null);
   const [selectedBenchEmployeeId, setSelectedBenchEmployeeId] = useState<string>('');
+  const [selectedBenchDepartmentName, setSelectedBenchDepartmentName] = useState<string>('');
   const [hoveredBenchEmployeeId, setHoveredBenchEmployeeId] = useState<string>('');
+  const filterBenchEmployeeId = selectedBenchEmployeeId;
+  const filterBenchDepartmentName = filterBenchEmployeeId ? '' : selectedBenchDepartmentName;
   const highlightedBenchEmployeeId = hoveredBenchEmployeeId || selectedBenchEmployeeId;
 
   const expandedSet = new Set(expandedProjectIds);
@@ -224,7 +231,18 @@ export function TimelineTab(props: TimelineTabProps) {
       return day !== 0 && day !== 6;
     };
 
+    const filterEmployeeIdSet = filterBenchEmployeeId
+      ? new Set([filterBenchEmployeeId])
+      : filterBenchDepartmentName
+        ? new Set(
+            employees
+              .filter((employee) => (employee.department?.name ?? t.unassignedDepartment) === filterBenchDepartmentName)
+              .map((employee) => employee.id),
+          )
+        : null;
+
     for (const assignment of assignments) {
+      if (filterEmployeeIdSet && !filterEmployeeIdSet.has(assignment.employeeId)) continue;
       const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
 
       const start = new Date(assignment.assignmentStartDate);
@@ -245,7 +263,7 @@ export function TimelineTab(props: TimelineTabProps) {
       }
     }
 
-    const employeeCapacity = Math.max(1, employees.length);
+    const employeeCapacity = Math.max(1, filterEmployeeIdSet ? filterEmployeeIdSet.size : employees.length);
     const dailyUtilization = rawTotals.map((value) => value / employeeCapacity);
 
     const values: number[] = [];
@@ -285,7 +303,22 @@ export function TimelineTab(props: TimelineTabProps) {
 
     const max = Math.max(1, ...values);
     return { values, max };
-  }, [assignments, selectedYear, employees.length, dragStepDays, calendarDayByIso]);
+  }, [assignments, selectedYear, employees, dragStepDays, calendarDayByIso, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
+
+  const companyLoadTitle = useMemo(() => {
+    if (filterBenchEmployeeId) {
+      const employeeName = employees.find((employee) => employee.id === filterBenchEmployeeId)?.fullName ?? '';
+      const prefix = t.companyLoadEmployeePrefix ?? t.companyLoad;
+      return employeeName ? `${prefix} "${employeeName}"` : prefix;
+    }
+
+    if (filterBenchDepartmentName) {
+      const prefix = t.companyLoadDepartmentPrefix ?? t.companyLoad;
+      return `${prefix} "${filterBenchDepartmentName}"`;
+    }
+
+    return t.companyLoad;
+  }, [employees, filterBenchDepartmentName, filterBenchEmployeeId, t.companyLoad, t.companyLoadDepartmentPrefix, t.companyLoadEmployeePrefix]);
 
   const companyLoadScaleMax = Math.max(100, Math.ceil(companyLoad.max / 25) * 25);
   const companyDayMarkers = dragStepDays === 30 ? [] : dayMarkers;
@@ -562,6 +595,14 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [employees, roleLabelByName]);
 
+  const employeeDepartmentById = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const employee of employees) {
+      result.set(employee.id, employee.department?.name ?? t.unassignedDepartment);
+    }
+    return result;
+  }, [employees, t.unassignedDepartment]);
+
   const assignmentsByProjectId = useMemo(() => {
     const result = new Map<string, AssignmentItem[]>();
     for (const assignment of assignments) {
@@ -575,7 +616,70 @@ export function TimelineTab(props: TimelineTabProps) {
     return result;
   }, [assignments]);
 
-  const visibleTimelineRows = sortedTimeline;
+  const visibleTimelineRows = useMemo(() => {
+    if (!filterBenchEmployeeId && !filterBenchDepartmentName) return sortedTimeline;
+
+    return sortedTimeline.filter((row) => {
+      const detail = projectDetails[row.id];
+
+      if (filterBenchEmployeeId) {
+        // Prefer canonical membership/assignment data from project detail.
+        if (detail) {
+          const isMember = Array.isArray(detail.members) && detail.members.some((member) => member.employeeId === filterBenchEmployeeId);
+          if (isMember) return true;
+          return Array.isArray(detail.assignments) && detail.assignments.some((assignment) => assignment.employeeId === filterBenchEmployeeId);
+        }
+
+        // Fallback while details are loading.
+        const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+        return projectAssignments.some((assignment) => assignment.employeeId === filterBenchEmployeeId);
+      }
+
+      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+      return projectAssignments.some((assignment) => employeeDepartmentById.get(assignment.employeeId) === filterBenchDepartmentName);
+    });
+  }, [assignmentsByProjectId, employeeDepartmentById, filterBenchDepartmentName, filterBenchEmployeeId, projectDetails, sortedTimeline]);
+
+  const filteredEmployeeIds = useMemo(() => {
+    if (filterBenchEmployeeId) return [filterBenchEmployeeId];
+    if (!filterBenchDepartmentName) return [] as string[];
+    return employees
+      .filter((employee) => (employee.department?.name ?? t.unassignedDepartment) === filterBenchDepartmentName)
+      .map((employee) => employee.id);
+  }, [employees, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
+
+  const forcedExpandedProjectIdSet = useMemo(() => {
+    if (!highlightedBenchEmployeeId && !filterBenchDepartmentName) return new Set<string>();
+
+    const allowedEmployeeIds = new Set(filteredEmployeeIds);
+    const result = new Set<string>();
+
+    for (const row of visibleTimelineRows) {
+      const detail = projectDetails[row.id];
+      const projectAssignments = assignmentsByProjectId.get(row.id) ?? [];
+
+      if (highlightedBenchEmployeeId) {
+        const matchesHighlight = detail
+          ? (Array.isArray(detail.members) && detail.members.some((member) => member.employeeId === highlightedBenchEmployeeId)) ||
+            (Array.isArray(detail.assignments) && detail.assignments.some((assignment) => assignment.employeeId === highlightedBenchEmployeeId))
+          : projectAssignments.some((assignment) => assignment.employeeId === highlightedBenchEmployeeId);
+
+        if (matchesHighlight) result.add(row.id);
+        continue;
+      }
+
+      if (filterBenchDepartmentName) {
+        const matchesDepartment = detail
+          ? (Array.isArray(detail.members) && detail.members.some((member) => allowedEmployeeIds.has(member.employeeId))) ||
+            (Array.isArray(detail.assignments) && detail.assignments.some((assignment) => allowedEmployeeIds.has(assignment.employeeId)))
+          : projectAssignments.some((assignment) => allowedEmployeeIds.has(assignment.employeeId));
+
+        if (matchesDepartment) result.add(row.id);
+      }
+    }
+
+    return result;
+  }, [assignmentsByProjectId, filterBenchDepartmentName, filteredEmployeeIds, highlightedBenchEmployeeId, projectDetails, visibleTimelineRows]);
 
   const projectFactByProjectId = useMemo(() => {
     const result = new Map<string, { style: { left: string; width: string }; startIso: string; endIso: string }>();
@@ -763,10 +867,9 @@ export function TimelineTab(props: TimelineTabProps) {
   const projectErrorsById = useMemo(() => {
     const result = new Map<string, Array<{ key: string; message: string }>>();
     const priorityByKey: Record<string, number> = {
-      'missing-template-roles': 0,
-      'missing-rates': 1,
-      'fact-range': 2,
-      vacations: 3,
+      'missing-rates': 0,
+      'fact-range': 1,
+      vacations: 2,
     };
 
     const hasOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => startA <= endB && endA >= startB;
@@ -776,22 +879,6 @@ export function TimelineTab(props: TimelineTabProps) {
       const detail = projectDetails[row.id];
 
       if (detail) {
-        const templateRoleIds = detail.teamTemplate?.roles.map((entry) => entry.role.id) ?? [];
-        const presentRoleIds = new Set(detail.assignments.map((assignment) => assignment.employee.roleId));
-        const missingRequiredRoles = (detail.teamTemplate?.roles ?? [])
-          .filter((requiredRole) => templateRoleIds.includes(requiredRole.role.id) && !presentRoleIds.has(requiredRole.role.id))
-          .map((requiredRole) => {
-            const shortName = requiredRole.role.shortName?.trim();
-            return shortName && shortName.length > 0 ? shortName : requiredRole.role.name;
-          });
-
-        if (missingRequiredRoles.length > 0) {
-          issues.push({
-            key: 'missing-template-roles',
-            message: `${t.timelineErrorMissingTemplateRoles}: ${missingRequiredRoles.join(', ')}`,
-          });
-        }
-
         const vacationOverlapEmployees = new Set<string>();
 
         for (const assignment of detail.assignments) {
@@ -936,6 +1023,8 @@ export function TimelineTab(props: TimelineTabProps) {
           onOpenProjectModal={onOpenProjectModal}
           onYearChange={onYearChange}
           onDragStepDaysChange={setDragStepDays}
+          canSeedDemoWorkspace={canSeedDemoWorkspace}
+          onSeedDemoWorkspace={onSeedDemoWorkspace}
         />
 
         <div className="timeline-calendar-legend" aria-label={t.calendarLegendLabel}>
@@ -970,6 +1059,7 @@ export function TimelineTab(props: TimelineTabProps) {
               <div className="timeline-year-row">
                 <CompanyLoadCard
                   t={t}
+                  title={companyLoadTitle}
                   companyLoad={companyLoad}
                   companyLoadScaleMax={companyLoadScaleMax}
                   todayPosition={todayPosition}
@@ -993,7 +1083,8 @@ export function TimelineTab(props: TimelineTabProps) {
                   const draggedEmployeeAssigned = draggedBenchEmployeeId
                     ? projectAssignments.some((assignment) => assignment.employeeId === draggedBenchEmployeeId)
                     : false;
-                  const isDimmedBySelection = Boolean(highlightedBenchEmployeeId) && !selectedEmployeeAssigned;
+                  const isDimmedBySelection =
+                    !filterBenchEmployeeId && !filterBenchDepartmentName && Boolean(highlightedBenchEmployeeId) && !selectedEmployeeAssigned;
                   const isDimmedByDrag = Boolean(draggedBenchEmployeeId) && draggedEmployeeAssigned;
                   const isRowDimmed = draggedBenchEmployeeId ? isDimmedByDrag : isDimmedBySelection;
 
@@ -1013,7 +1104,7 @@ export function TimelineTab(props: TimelineTabProps) {
                             endDate: pendingPreview.nextEnd.toISOString(),
                           })
                         : timelineStyle(row);
-                  const isExpanded = expandedSet.has(row.id);
+                  const isExpanded = expandedSet.has(row.id) || forcedExpandedProjectIdSet.has(row.id);
                   const detail = projectDetails[row.id];
                   const tooltipMode =
                     dragState && dragState.projectId === row.id
@@ -1102,6 +1193,8 @@ export function TimelineTab(props: TimelineTabProps) {
                           vacationsByEmployeeId={vacationsByEmployeeId}
                           isoToInputDate={isoToInputDate}
                           highlightedEmployeeId={highlightedBenchEmployeeId || undefined}
+                          filterEmployeeId={filterBenchEmployeeId || undefined}
+                          filterEmployeeIds={filterBenchDepartmentName ? filteredEmployeeIds : undefined}
                         />
                       ) : null}
                     </ProjectTimelineItem>
@@ -1116,10 +1209,26 @@ export function TimelineTab(props: TimelineTabProps) {
             benchGroups={benchGroups}
             canDragMembers={canManageTimeline}
             selectedEmployeeId={selectedBenchEmployeeId}
+            selectedDepartmentName={selectedBenchDepartmentName}
             hoveredEmployeeId={hoveredBenchEmployeeId}
-            onToggleEmployeeFilter={(employeeId) =>
-              setSelectedBenchEmployeeId((prev) => (prev === employeeId ? '' : employeeId))
-            }
+            onToggleEmployeeFilter={(employeeId) => {
+              setSelectedBenchEmployeeId((prev) => {
+                const next = prev === employeeId ? '' : employeeId;
+                if (next) {
+                  setSelectedBenchDepartmentName('');
+                }
+                return next;
+              });
+            }}
+            onToggleDepartmentFilter={(departmentName) => {
+              setSelectedBenchDepartmentName((prev) => {
+                const next = prev === departmentName ? '' : departmentName;
+                if (next) {
+                  setSelectedBenchEmployeeId('');
+                }
+                return next;
+              });
+            }}
             onHoverEmployee={setHoveredBenchEmployeeId}
             onMemberDragStart={setDraggedBenchEmployeeId}
             onMemberDragEnd={() => {

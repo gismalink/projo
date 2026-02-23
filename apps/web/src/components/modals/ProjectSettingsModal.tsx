@@ -106,7 +106,7 @@ export function ProjectSettingsModal(props: ProjectSettingsModalProps) {
                 ) : canInviteParticipants ? (
                   <div className="project-member-actions">
                     <select
-                      value={member.role === 'PM' ? 'editor' : 'viewer'}
+                      value={member.role === 'EDITOR' ? 'editor' : 'viewer'}
                       onChange={(event) => void onUpdateMemberPermission(member.userId, event.target.value as 'viewer' | 'editor')}
                       aria-label={t.permission}
                     >
