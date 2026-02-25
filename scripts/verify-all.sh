@@ -4,6 +4,9 @@ set -euo pipefail
 echo "[verify] lint"
 npm run lint
 
+echo "[verify] typecheck"
+npm run typecheck
+
 echo "[verify] test"
 npm run test
 
