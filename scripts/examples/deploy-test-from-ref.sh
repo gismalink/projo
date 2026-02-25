@@ -12,6 +12,12 @@ REPO_DIR="${2:-$HOME/projo}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 
+if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
+  echo "[deploy-test] blocked by policy: test deploy should use feature branch ref (example: origin/feature/<name>)"
+  echo "[deploy-test] if this is an explicit exception, set ALLOW_TEST_FROM_MAIN=1"
+  exit 1
+fi
+
 cd "$REPO_DIR"
 
 echo "[deploy-test] repo: $REPO_DIR"

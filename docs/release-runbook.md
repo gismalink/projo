@@ -4,9 +4,9 @@
 
 ## Оперативное правило (для команд в чате)
 - Деплой делается **на сервере по SSH**, repo лежит в `~/srv/projo`.
-- `test` допускает деплой конкретного ref/ветки; `prod` — только из `origin/main` после smoke в `test`.
+- `test` деплоим из **feature-ветки** (`origin/feature/<name>`); `prod` — только из `origin/main` после merge и smoke в `test`.
 - Test (пример):
-   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo'`
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo'`
 - Prod (пример):
    - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo'`
 
@@ -28,9 +28,9 @@
 
 ## 3) Release flow
 1. Разработка в `dev` (локально).
-2. Публикация ветки и PR в default branch (`main`).
+2. Создание feature-ветки `feature/<name>` и публикация ветки.
 3. Проверка CI (`check`, `Audit API dependencies`).
-4. Deploy на `test`.
+4. Deploy feature-ветки на `test`.
    - Примечание: для быстрых итераций (без выката в `prod`) допустимо не обновлять `test`, если поведение полностью проверено локально.
 5. Проверка на `test`:
    - `npm run check`,
@@ -55,29 +55,30 @@
 2. Выполнить проверки:
    - `npm run check`
    - `npm run audit:api`
-3. Открыть PR в `main`, дождаться зелёного CI и merge.
+3. Открыть PR в `main` (merge делаем после успешного smoke в `test`).
 
-### Шаг B. Фиксация коммита для promotion
-1. После merge получить SHA релиза:
-   - `git fetch origin`
-   - `git log origin/main -1 --oneline`
-2. (Опционально) поставить тег релиз-кандидата:
-   - `git tag -a rc-YYYYMMDD-HHMM <sha> -m "release candidate"`
-   - `git push origin rc-YYYYMMDD-HHMM`
-
-### Шаг C. Deploy на test (сервер)
-1. Использовать deploy-скрипт (fetch + checkout detached + build + up + health wait):
-   - `./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo`
-3. Проверить test:
+### Шаг B. Deploy на test (сервер, из feature-ветки)
+1. Использовать deploy-скрипт:
+   - `./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo`
+2. Проверить test:
    - `curl -fsS https://test.projo.gismalink.art/api/health`
    - `curl -I https://test.projo.gismalink.art`
    - ручной smoke ключевых сценариев.
 
-### Упрощённый сценарий (одной SSH-командой)
-- Для обычного обновления test до актуального `origin/main`:
-   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo'`
+### Шаг C. Merge и фиксация SHA для prod
+1. После green smoke в `test` сделать merge feature -> `main`.
+2. Получить SHA релиза:
+   - `git fetch origin`
+   - `git log origin/main -1 --oneline`
+3. (Опционально) поставить тег релиз-кандидата:
+   - `git tag -a rc-YYYYMMDD-HHMM <sha> -m "release candidate"`
+   - `git push origin rc-YYYYMMDD-HHMM`
 
-### Шаг D. Promote на prod (тот же SHA)
+### Упрощённый сценарий (одной SSH-командой)
+- Для обновления `test` конкретной feature-веткой:
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo'`
+
+### Шаг D. Promote на prod (из main, тот же SHA)
 1. Promote только из `origin/main` после smoke в `test`:
    - `./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo`
 3. Проверить prod:

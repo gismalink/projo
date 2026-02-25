@@ -5,8 +5,8 @@
 ## Оперативное правило (для команд в чате)
 - Фраза «деплой на test» означает запуск **на сервере по SSH**, а не локально на текущей машине.
 - Runtime repo на сервере: `~/srv/projo`.
-- Команда по умолчанию (в test деплоим ref/ветку или main):
-   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo'`
+- Команда по умолчанию для test (деплой feature-ветки):
+   - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo'`
 - Фраза «деплой в prod/продакшн» означает promotion уже проверенного SHA из `origin/main`.
 - Команда по умолчанию для `prod`:
    - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo'`
@@ -55,7 +55,7 @@
    - перезапускают только нужные сервисы,
    - ждут `.../api/health`).
 2. Test:
-   - `./scripts/examples/deploy-test-from-ref.sh origin/main ~/srv/projo`
+   - `./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo`
 3. После проверки test — prod тем же SHA (из `origin/main`):
    - `./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo`
 4. Выполнить smoke-проверки из `docs/release-runbook.md`.
