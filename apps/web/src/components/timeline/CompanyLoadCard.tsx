@@ -1,7 +1,7 @@
 type CompanyLoadCardProps = {
   t: Record<string, string>;
   title: string;
-  companyLoad: { values: number[]; max: number };
+  companyLoad: { values: number[]; max: number; avg: number };
   companyLoadScaleMax: number;
   todayPosition: string | null;
   dragStepDays: 1 | 7 | 30;
@@ -19,7 +19,7 @@ export function CompanyLoadCard(props: CompanyLoadCardProps) {
     <section className="company-load-card">
       <div className="section-header">
         <h3>{title}</h3>
-        <span className="muted">max {companyLoad.max.toFixed(0)}%</span>
+        <span className="muted">avg {companyLoad.avg.toFixed(1)}% · max {companyLoad.max.toFixed(1)}%</span>
       </div>
       <div className="company-load-chart">
         {calendarSegments.map((segment) => (

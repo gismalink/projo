@@ -34,6 +34,7 @@ type ProjectAccessItem = {
   isOwner: boolean;
   projectsCount: number;
   totalAllocationPercent: number;
+  peakAllocationPercent: number;
 };
 
 type ProjectsResponse = {
@@ -249,7 +250,14 @@ export class AuthService {
     const items = await this.usersService.listProjectMembershipsInActiveCompany(userId, activeProjectId);
     const stats = await this.usersService.listWorkspaceProjectStats(items.map((item) => item.workspaceId));
     const statsByWorkspaceId = new Map(
-      stats.map((item) => [item.workspaceId, { projectsCount: item.projectsCount, totalAllocationPercent: item.totalAllocationPercent }]),
+      stats.map((item) => [
+        item.workspaceId,
+        {
+          projectsCount: item.projectsCount,
+          totalAllocationPercent: item.totalAllocationPercent,
+          peakAllocationPercent: item.peakAllocationPercent,
+        },
+      ]),
     );
 
     const projectItems = items.map((item) => ({
@@ -259,6 +267,7 @@ export class AuthService {
       isOwner: item.ownerUserId === userId,
       projectsCount: statsByWorkspaceId.get(item.workspaceId)?.projectsCount ?? 0,
       totalAllocationPercent: statsByWorkspaceId.get(item.workspaceId)?.totalAllocationPercent ?? 0,
+      peakAllocationPercent: statsByWorkspaceId.get(item.workspaceId)?.peakAllocationPercent ?? 0,
     }));
 
     return {

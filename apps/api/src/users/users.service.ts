@@ -41,6 +41,7 @@ type WorkspaceProjectStatsItem = {
   workspaceId: string;
   projectsCount: number;
   totalAllocationPercent: number;
+  peakAllocationPercent: number;
 };
 
 type AdminUserOverviewItem = {
@@ -464,6 +465,7 @@ export class UsersService {
         workspaceId,
         projectsCount: 0,
         totalAllocationPercent: 0,
+        peakAllocationPercent: 0,
       });
       utilizationByWorkspaceId.set(workspaceId, new Map());
     }
@@ -505,8 +507,16 @@ export class UsersService {
         (() => {
           const utilizationByEmployee = utilizationByWorkspaceId.get(item.workspaceId);
           if (!utilizationByEmployee || utilizationByEmployee.size === 0) return 0;
-          const totalUtilization = Array.from(utilizationByEmployee.values()).reduce((sum, value) => sum + value, 0);
-          return (totalUtilization / utilizationByEmployee.size).toFixed(1);
+          const employeeUtilization = Array.from(utilizationByEmployee.values());
+          const totalUtilization = employeeUtilization.reduce((sum, value) => sum + value, 0);
+          return (totalUtilization / employeeUtilization.length).toFixed(1);
+        })(),
+      ),
+      peakAllocationPercent: Number(
+        (() => {
+          const utilizationByEmployee = utilizationByWorkspaceId.get(item.workspaceId);
+          if (!utilizationByEmployee || utilizationByEmployee.size === 0) return 0;
+          return Math.max(...Array.from(utilizationByEmployee.values())).toFixed(1);
         })(),
       ),
     }));

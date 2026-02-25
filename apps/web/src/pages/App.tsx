@@ -535,7 +535,7 @@ export function App() {
                   onOpenProjectSettingsById={handleOpenProjectSettingsById}
                   onCreateDemoProjectSpaceCard={handleCreateDemoProjectSpaceCard}
                   onCreateProjectSpaceCard={handleCreateProjectSpaceCard}
-                  renderPlanStats={(projectsCount, totalAllocationPercent) => (
+                  renderPlanStats={(projectsCount, totalAllocationPercent, peakAllocationPercent) => (
                     <div className="project-space-card-stats">
                       <span className="project-space-card-stat" data-tooltip={t.planProjectsStat}>
                         <Icon name="grid" size={12} />
@@ -543,7 +543,7 @@ export function App() {
                       </span>
                       <span className="project-space-card-stat" data-tooltip={t.planLoadStat}>
                         <Icon name="users" size={12} />
-                        <span>{`${totalAllocationPercent.toFixed(1)}%`}</span>
+                        <span>{`avg ${totalAllocationPercent.toFixed(1)}% · max ${peakAllocationPercent.toFixed(1)}%`}</span>
                       </span>
                     </div>
                   )}

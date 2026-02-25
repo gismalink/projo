@@ -115,6 +115,43 @@ test('API e2e smoke: auth + timeline + calendar', async (t) => {
   assert.equal(typeof calendarHealth.payload?.currentYear?.freshness, 'string', 'calendar health should include freshness');
 });
 
+test('API e2e smoke: project-space KPI utilization is normalized', async (t) => {
+  const authHeaders = await getAuthHeaders(t);
+  if (!authHeaders) return;
+
+  const projectsResponse = await request('/auth/projects', { headers: authHeaders });
+  assert.equal(projectsResponse.response.status, 200, 'auth projects endpoint should return 200');
+  assert.ok(Array.isArray(projectsResponse.payload?.myProjects), 'myProjects should be an array');
+  assert.ok(Array.isArray(projectsResponse.payload?.sharedProjects), 'sharedProjects should be an array');
+
+  const allProjectSpaces = [...projectsResponse.payload.myProjects, ...projectsResponse.payload.sharedProjects];
+  for (const projectSpace of allProjectSpaces) {
+    assert.equal(Number.isFinite(projectSpace?.projectsCount), true, 'projectsCount should be finite');
+    assert.equal(Number.isFinite(projectSpace?.totalAllocationPercent), true, 'totalAllocationPercent should be finite');
+    assert.equal(Number.isFinite(projectSpace?.peakAllocationPercent), true, 'peakAllocationPercent should be finite');
+    assert.ok(projectSpace.projectsCount >= 0, 'projectsCount should be >= 0');
+    assert.ok(projectSpace.totalAllocationPercent >= 0, 'totalAllocationPercent should be >= 0');
+    assert.ok(projectSpace.peakAllocationPercent >= 0, 'peakAllocationPercent should be >= 0');
+    assert.ok(
+      projectSpace.totalAllocationPercent <= 1000,
+      'totalAllocationPercent should stay in non-explosive range (regression guard for >1000% anomalies)',
+    );
+    assert.ok(
+      projectSpace.peakAllocationPercent <= 1000,
+      'peakAllocationPercent should stay in non-explosive range (regression guard for >1000% anomalies)',
+    );
+    assert.ok(
+      projectSpace.peakAllocationPercent >= projectSpace.totalAllocationPercent,
+      'peakAllocationPercent should be >= totalAllocationPercent (avg)',
+    );
+
+    if (projectSpace.projectsCount === 0) {
+      assert.equal(projectSpace.totalAllocationPercent, 0, 'project spaces without projects should have 0% KPI load');
+      assert.equal(projectSpace.peakAllocationPercent, 0, 'project spaces without projects should have 0% KPI peak load');
+    }
+  }
+});
+
 test('API e2e smoke: project member + assignment consistency', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;

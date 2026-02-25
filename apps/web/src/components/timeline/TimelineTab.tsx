@@ -302,7 +302,8 @@ export function TimelineTab(props: TimelineTabProps) {
     }
 
     const max = Math.max(1, ...values);
-    return { values, max };
+    const avg = values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    return { values, max, avg };
   }, [assignments, selectedYear, employees, dragStepDays, calendarDayByIso, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
 
   const companyLoadTitle = useMemo(() => {

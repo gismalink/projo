@@ -56,6 +56,7 @@ export type ProjectSpaceItem = {
   isOwner: boolean;
   projectsCount: number;
   totalAllocationPercent: number;
+  peakAllocationPercent: number;
 };
 
 export type MyProjectsResponse = {
