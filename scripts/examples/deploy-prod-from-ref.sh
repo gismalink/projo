@@ -23,6 +23,10 @@ echo "[deploy-prod] resolved sha: $RESOLVED_SHA"
 
 git checkout --detach "$RESOLVED_SHA"
 
+if ! git symbolic-ref -q --short HEAD >/dev/null; then
+  echo "[deploy-prod] warning: repository is in detached HEAD state at $RESOLVED_SHA"
+fi
+
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "[deploy-prod] missing compose file: $COMPOSE_FILE" >&2
   exit 1
@@ -60,5 +64,21 @@ for i in {1..180}; do
 
   sleep 2
 done
+
+MARKER_DIR=".deploy"
+MARKER_FILE="$MARKER_DIR/last-deploy-prod.env"
+HISTORY_FILE="$MARKER_DIR/deploy-history.log"
+TIMESTAMP_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+mkdir -p "$MARKER_DIR"
+cat >"$MARKER_FILE" <<EOF
+DEPLOY_ENV="prod"
+DEPLOY_REF="$GIT_REF"
+DEPLOY_SHA="$RESOLVED_SHA"
+DEPLOY_TIMESTAMP_UTC="$TIMESTAMP_UTC"
+EOF
+printf '%s\tenv=prod\tsha=%s\tref=%s\n' "$TIMESTAMP_UTC" "$RESOLVED_SHA" "$GIT_REF" >>"$HISTORY_FILE"
+
+echo "[deploy-prod] marker updated: $MARKER_FILE"
 
 echo "[deploy-prod] prod deploy complete for $RESOLVED_SHA"

@@ -81,7 +81,7 @@
 2. [x] SSO proxy: добавить timeout на upstream fetch + контролируемую ошибку.
 3. [x] Web config safety: заменить fallback `VITE_API_URL` на `/api` (чтобы misconfig не вшивал `localhost:4000/api` в bundle).
 4. [x] Reduce config drift: `VITE_*` build args в `infra/docker-compose.host.yml` перевести на env-substitution (единый источник значений).
-5. [ ] Deploy scripts: явный маркер deployed SHA (файл/лог) + предупреждение про detached HEAD.
+5. [x] Deploy scripts: явный маркер deployed SHA (файл/лог) + предупреждение про detached HEAD.
 
 ### P4.5 — Импорт XLSX (новая компания)
 План: `docs/imports/xlsx-company-import-plan.md`.
