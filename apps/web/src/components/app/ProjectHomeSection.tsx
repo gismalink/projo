@@ -12,7 +12,16 @@ type ProjectHomeSectionProps = {
   onOpenProjectSettingsById: (projectId: string) => Promise<void>;
   onCreateDemoProjectSpaceCard: () => Promise<void>;
   onCreateProjectSpaceCard: () => Promise<void>;
-  renderPlanStats: (projectsCount: number, totalAllocationPercent: number, peakAllocationPercent: number) => ReactNode;
+  renderPlanStats: (
+    projectsCount: number,
+    totalAllocationPercent: number,
+    peakAllocationPercent: number,
+    monthlyLoadStats: Array<{
+      month: number;
+      avgAllocationPercent: number;
+      peakAllocationPercent: number;
+    }>,
+  ) => ReactNode;
 };
 
 export function ProjectHomeSection({
@@ -65,7 +74,7 @@ export function ProjectHomeSection({
                   ) : null}
                 </div>
               </div>
-              {renderPlanStats(item.projectsCount, item.totalAllocationPercent, item.peakAllocationPercent)}
+              {renderPlanStats(item.projectsCount, item.totalAllocationPercent, item.peakAllocationPercent, item.monthlyLoadStats)}
               <span>{item.role}</span>
             </div>
           ))}
@@ -119,7 +128,7 @@ export function ProjectHomeSection({
                     </button>
                   ) : null}
                 </div>
-                {renderPlanStats(item.projectsCount, item.totalAllocationPercent, item.peakAllocationPercent)}
+                {renderPlanStats(item.projectsCount, item.totalAllocationPercent, item.peakAllocationPercent, item.monthlyLoadStats)}
                 <span>{item.role}</span>
               </div>
             ))}

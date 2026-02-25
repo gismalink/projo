@@ -35,6 +35,11 @@ type ProjectAccessItem = {
   projectsCount: number;
   totalAllocationPercent: number;
   peakAllocationPercent: number;
+  monthlyLoadStats: Array<{
+    month: number;
+    avgAllocationPercent: number;
+    peakAllocationPercent: number;
+  }>;
 };
 
 type ProjectsResponse = {
@@ -256,6 +261,7 @@ export class AuthService {
           projectsCount: item.projectsCount,
           totalAllocationPercent: item.totalAllocationPercent,
           peakAllocationPercent: item.peakAllocationPercent,
+          monthlyLoadStats: item.monthlyLoadStats,
         },
       ]),
     );
@@ -268,6 +274,7 @@ export class AuthService {
       projectsCount: statsByWorkspaceId.get(item.workspaceId)?.projectsCount ?? 0,
       totalAllocationPercent: statsByWorkspaceId.get(item.workspaceId)?.totalAllocationPercent ?? 0,
       peakAllocationPercent: statsByWorkspaceId.get(item.workspaceId)?.peakAllocationPercent ?? 0,
+      monthlyLoadStats: statsByWorkspaceId.get(item.workspaceId)?.monthlyLoadStats ?? [],
     }));
 
     return {

@@ -42,6 +42,11 @@ type WorkspaceProjectStatsItem = {
   projectsCount: number;
   totalAllocationPercent: number;
   peakAllocationPercent: number;
+  monthlyLoadStats: Array<{
+    month: number;
+    avgAllocationPercent: number;
+    peakAllocationPercent: number;
+  }>;
 };
 
 type AdminUserOverviewItem = {
@@ -458,23 +463,46 @@ export class UsersService {
       },
     });
 
+    const employeeCounts = await this.prisma.employee.groupBy({
+      by: ['workspaceId'],
+      where: {
+        workspaceId: {
+          in: uniqueWorkspaceIds,
+        },
+      },
+      _count: {
+        _all: true,
+      },
+    });
+    const employeeCountByWorkspaceId = new Map(employeeCounts.map((item) => [item.workspaceId, item._count._all]));
+
     const statsByWorkspaceId = new Map<string, WorkspaceProjectStatsItem>();
-    const utilizationByWorkspaceId = new Map<string, Map<string, number>>();
+    const rawDailyLoadByWorkspaceId = new Map<string, number[]>();
     for (const workspaceId of uniqueWorkspaceIds) {
       statsByWorkspaceId.set(workspaceId, {
         workspaceId,
         projectsCount: 0,
         totalAllocationPercent: 0,
         peakAllocationPercent: 0,
+        monthlyLoadStats: Array.from({ length: 12 }, (_, index) => ({
+          month: index + 1,
+          avgAllocationPercent: 0,
+          peakAllocationPercent: 0,
+        })),
       });
-      utilizationByWorkspaceId.set(workspaceId, new Map());
+      rawDailyLoadByWorkspaceId.set(workspaceId, Array.from({ length: totalDaysInYear }, () => 0));
     }
+
+    const isWorkingDay = (date: Date) => {
+      const weekDay = date.getUTCDay();
+      return weekDay !== 0 && weekDay !== 6;
+    };
 
     for (const project of projects) {
       const bucket = statsByWorkspaceId.get(project.workspaceId);
-      const utilizationByEmployee = utilizationByWorkspaceId.get(project.workspaceId);
+      const rawDailyLoad = rawDailyLoadByWorkspaceId.get(project.workspaceId);
       if (!bucket) continue;
-      if (!utilizationByEmployee) continue;
+      if (!rawDailyLoad) continue;
 
       bucket.projectsCount += 1;
 
@@ -486,39 +514,55 @@ export class UsersService {
         if (effectiveEnd < effectiveStart) continue;
 
         const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
-        let weightedUtilization = 0;
-        const cursor = new Date(effectiveStart);
+        const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / 86_400_000));
+        const endIndex = Math.min(totalDaysInYear - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / 86_400_000));
 
-        while (cursor <= effectiveEnd) {
-          weightedUtilization += resolveLoadPercent(cursor) / totalDaysInYear;
-          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        for (let dayIndex = startIndex; dayIndex <= endIndex; dayIndex += 1) {
+          const currentDate = new Date(yearStart);
+          currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
+          if (!isWorkingDay(currentDate)) continue;
+
+          const loadPercent = resolveLoadPercent(currentDate);
+          if (!Number.isFinite(loadPercent) || loadPercent <= 0) continue;
+          rawDailyLoad[dayIndex] += loadPercent;
         }
-
-        utilizationByEmployee.set(
-          assignment.employeeId,
-          (utilizationByEmployee.get(assignment.employeeId) ?? 0) + weightedUtilization,
-        );
       }
     }
 
     return Array.from(statsByWorkspaceId.values()).map((item) => ({
       ...item,
-      totalAllocationPercent: Number(
-        (() => {
-          const utilizationByEmployee = utilizationByWorkspaceId.get(item.workspaceId);
-          if (!utilizationByEmployee || utilizationByEmployee.size === 0) return 0;
-          const employeeUtilization = Array.from(utilizationByEmployee.values());
-          const totalUtilization = employeeUtilization.reduce((sum, value) => sum + value, 0);
-          return (totalUtilization / employeeUtilization.length).toFixed(1);
-        })(),
-      ),
-      peakAllocationPercent: Number(
-        (() => {
-          const utilizationByEmployee = utilizationByWorkspaceId.get(item.workspaceId);
-          if (!utilizationByEmployee || utilizationByEmployee.size === 0) return 0;
-          return Math.max(...Array.from(utilizationByEmployee.values())).toFixed(1);
-        })(),
-      ),
+      ...(() => {
+        const rawDailyLoad = rawDailyLoadByWorkspaceId.get(item.workspaceId) ?? [];
+        const employeeCapacity = Math.max(1, employeeCountByWorkspaceId.get(item.workspaceId) ?? 0);
+        const dailyUtilization = rawDailyLoad.map((value) => value / employeeCapacity);
+        const yearlyAvg = dailyUtilization.length > 0 ? dailyUtilization.reduce((sum, value) => sum + value, 0) / dailyUtilization.length : 0;
+        const yearlyPeak = dailyUtilization.length > 0 ? Math.max(...dailyUtilization) : 0;
+
+        const monthlyLoadStats = Array.from({ length: 12 }, (_, monthIndex) => {
+          const monthStart = new Date(Date.UTC(currentYear, monthIndex, 1));
+          const nextMonthStart = new Date(Date.UTC(currentYear, monthIndex + 1, 1));
+          const startIndex = Math.max(0, Math.floor((monthStart.getTime() - yearStart.getTime()) / 86_400_000));
+          const endIndex = Math.max(
+            startIndex,
+            Math.min(totalDaysInYear, Math.floor((nextMonthStart.getTime() - yearStart.getTime()) / 86_400_000)),
+          );
+          const monthSlice = dailyUtilization.slice(startIndex, endIndex);
+          const monthAvg = monthSlice.length > 0 ? monthSlice.reduce((sum, value) => sum + value, 0) / monthSlice.length : 0;
+          const monthPeak = monthSlice.length > 0 ? Math.max(...monthSlice) : 0;
+
+          return {
+            month: monthIndex + 1,
+            avgAllocationPercent: Number(monthAvg.toFixed(1)),
+            peakAllocationPercent: Number(monthPeak.toFixed(1)),
+          };
+        });
+
+        return {
+          totalAllocationPercent: Number(yearlyAvg.toFixed(1)),
+          peakAllocationPercent: Number(yearlyPeak.toFixed(1)),
+          monthlyLoadStats,
+        };
+      })(),
     }));
   }
 

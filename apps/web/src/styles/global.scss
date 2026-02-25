@@ -222,6 +222,29 @@ body:not(.tooltip-portal-enabled) {
   padding: 0.1rem 0.34rem;
 }
 
+.project-space-mini-load {
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 28px;
+  border: 1px solid var(--ios-border);
+  border-radius: 8px;
+  background: rgba(10, 132, 255, 0.08);
+  padding: 2px;
+}
+
+.project-space-mini-load-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #42a5ff 0%, var(--ios-accent) 100%);
+}
+
+.project-space-mini-load-bar.overloaded {
+  background: linear-gradient(180deg, #ff7b72 0%, var(--ios-danger) 100%);
+}
+
 body:not(.tooltip-portal-enabled) {
   .project-space-card-stat[data-tooltip]::after {
     @include tooltip.tooltip-above;

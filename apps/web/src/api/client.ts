@@ -57,6 +57,11 @@ export type ProjectSpaceItem = {
   projectsCount: number;
   totalAllocationPercent: number;
   peakAllocationPercent: number;
+  monthlyLoadStats: Array<{
+    month: number;
+    avgAllocationPercent: number;
+    peakAllocationPercent: number;
+  }>;
 };
 
 export type MyProjectsResponse = {

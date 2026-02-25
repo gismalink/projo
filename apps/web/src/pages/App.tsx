@@ -535,18 +535,45 @@ export function App() {
                   onOpenProjectSettingsById={handleOpenProjectSettingsById}
                   onCreateDemoProjectSpaceCard={handleCreateDemoProjectSpaceCard}
                   onCreateProjectSpaceCard={handleCreateProjectSpaceCard}
-                  renderPlanStats={(projectsCount, totalAllocationPercent, peakAllocationPercent) => (
-                    <div className="project-space-card-stats">
-                      <span className="project-space-card-stat" data-tooltip={t.planProjectsStat}>
-                        <Icon name="grid" size={12} />
-                        <span>{projectsCount}</span>
-                      </span>
-                      <span className="project-space-card-stat" data-tooltip={t.planLoadStat}>
-                        <Icon name="users" size={12} />
-                        <span>{`avg ${totalAllocationPercent.toFixed(1)}% · max ${peakAllocationPercent.toFixed(1)}%`}</span>
-                      </span>
-                    </div>
-                  )}
+                  renderPlanStats={(projectsCount, totalAllocationPercent, peakAllocationPercent, monthlyLoadStats) => {
+                    const monthIndex = new Date().getUTCMonth();
+                    const monthStat =
+                      monthlyLoadStats[monthIndex] ??
+                      ({
+                        month: monthIndex + 1,
+                        avgAllocationPercent: totalAllocationPercent,
+                        peakAllocationPercent,
+                      } as const);
+
+                    return (
+                      <>
+                        <div className="project-space-card-stats">
+                          <span className="project-space-card-stat" data-tooltip={t.planProjectsStat}>
+                            <Icon name="grid" size={12} />
+                            <span>{projectsCount}</span>
+                          </span>
+                          <span className="project-space-card-stat" data-tooltip={t.planLoadStat}>
+                            <Icon name="users" size={12} />
+                            <span>{`${MONTHS_BY_LANG[lang][monthIndex]}: avg ${monthStat.avgAllocationPercent.toFixed(1)}% · max ${monthStat.peakAllocationPercent.toFixed(1)}%`}</span>
+                          </span>
+                        </div>
+                        <div className="project-space-mini-load" aria-label={t.planLoadStat}>
+                          {monthlyLoadStats.map((entry) => {
+                            const monthMax = Math.max(1, entry.peakAllocationPercent);
+                            const barHeight = Math.max(8, Math.min(100, (entry.avgAllocationPercent / Math.max(100, monthMax)) * 100));
+                            return (
+                              <span
+                                key={`plan-month-load-${entry.month}`}
+                                className={`project-space-mini-load-bar${entry.peakAllocationPercent > 100 ? ' overloaded' : ''}`}
+                                style={{ height: `${barHeight}%` }}
+                                title={`${MONTHS_BY_LANG[lang][entry.month - 1]}: avg ${entry.avgAllocationPercent.toFixed(1)}% · max ${entry.peakAllocationPercent.toFixed(1)}%`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </>
+                    );
+                  }}
                 />
               ) : null}
 

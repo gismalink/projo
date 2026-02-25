@@ -129,6 +129,8 @@ test('API e2e smoke: project-space KPI utilization is normalized', async (t) => 
     assert.equal(Number.isFinite(projectSpace?.projectsCount), true, 'projectsCount should be finite');
     assert.equal(Number.isFinite(projectSpace?.totalAllocationPercent), true, 'totalAllocationPercent should be finite');
     assert.equal(Number.isFinite(projectSpace?.peakAllocationPercent), true, 'peakAllocationPercent should be finite');
+    assert.ok(Array.isArray(projectSpace?.monthlyLoadStats), 'monthlyLoadStats should be an array');
+    assert.ok(projectSpace.monthlyLoadStats.length === 12, 'monthlyLoadStats should contain 12 months');
     assert.ok(projectSpace.projectsCount >= 0, 'projectsCount should be >= 0');
     assert.ok(projectSpace.totalAllocationPercent >= 0, 'totalAllocationPercent should be >= 0');
     assert.ok(projectSpace.peakAllocationPercent >= 0, 'peakAllocationPercent should be >= 0');
@@ -148,6 +150,15 @@ test('API e2e smoke: project-space KPI utilization is normalized', async (t) => 
     if (projectSpace.projectsCount === 0) {
       assert.equal(projectSpace.totalAllocationPercent, 0, 'project spaces without projects should have 0% KPI load');
       assert.equal(projectSpace.peakAllocationPercent, 0, 'project spaces without projects should have 0% KPI peak load');
+    }
+
+    for (const monthEntry of projectSpace.monthlyLoadStats) {
+      assert.ok(monthEntry.month >= 1 && monthEntry.month <= 12, 'monthlyLoadStats month should be in 1..12');
+      assert.ok(Number.isFinite(monthEntry.avgAllocationPercent), 'monthly avg should be finite');
+      assert.ok(Number.isFinite(monthEntry.peakAllocationPercent), 'monthly peak should be finite');
+      assert.ok(monthEntry.avgAllocationPercent >= 0, 'monthly avg should be >= 0');
+      assert.ok(monthEntry.peakAllocationPercent >= 0, 'monthly peak should be >= 0');
+      assert.ok(monthEntry.peakAllocationPercent <= 1000, 'monthly peak should stay in non-explosive range');
     }
   }
 });
