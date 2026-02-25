@@ -80,6 +80,29 @@ export type CompanyNameResponse = {
   name: string;
 };
 
+export type AdminOverviewUserItem = {
+  userId: string;
+  email: string;
+  fullName: string;
+  projectsCount: number;
+  ownedProjectsCount: number;
+};
+
+export type AdminOverviewResponse = {
+  companyId: string;
+  companyName: string;
+  totalUsers: number;
+  totalProjects: number;
+  users: AdminOverviewUserItem[];
+  topUsers: AdminOverviewUserItem[];
+  companies: Array<{
+    companyId: string;
+    companyName: string;
+    totalUsers: number;
+    totalProjects: number;
+  }>;
+};
+
 export type ProjectPermission = 'viewer' | 'editor';
 
 export type ProjectMemberItem = {
@@ -497,6 +520,7 @@ export const api = {
   ssoCurrentUser: () => request<Record<string, unknown>>('/sso/current-user', { credentials: 'include' }),
 
   getMyCompanies: (token: string) => request<MyCompaniesResponse>('/auth/companies', {}, token),
+  getAdminOverview: (token: string) => request<AdminOverviewResponse>('/auth/admin/overview', {}, token),
   createCompany: (name: string, token: string) =>
     request<LoginResponse>('/auth/companies', {
       method: 'POST',

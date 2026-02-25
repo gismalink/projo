@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { AppRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -58,6 +58,33 @@ type CompanyNameResponse = {
   name: string;
 };
 
+type AdminOverviewResponse = {
+  companyId: string;
+  companyName: string;
+  totalUsers: number;
+  totalProjects: number;
+  users: Array<{
+    userId: string;
+    email: string;
+    fullName: string;
+    projectsCount: number;
+    ownedProjectsCount: number;
+  }>;
+  topUsers: Array<{
+    userId: string;
+    email: string;
+    fullName: string;
+    projectsCount: number;
+    ownedProjectsCount: number;
+  }>;
+  companies: Array<{
+    companyId: string;
+    companyName: string;
+    totalUsers: number;
+    totalProjects: number;
+  }>;
+};
+
 type ProjectMemberItem = {
   userId: string;
   email: string;
@@ -85,6 +112,11 @@ export class AuthService {
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
+  }
+
+  private canUseAdminConsole(email: string, role: AppRole) {
+    const normalizedEmail = this.normalizeEmail(email);
+    return role === AppRole.ADMIN || normalizedEmail === 'gismalink@gmail.com';
   }
 
   private mapUser(payload: {
@@ -244,6 +276,19 @@ export class AuthService {
         isOwner: item.ownerUserId === userId,
       })),
     };
+  }
+
+  async getAdminOverview(userId: string, workspaceId: string): Promise<AdminOverviewResponse> {
+    const me = await this.usersService.findById(userId);
+    if (!me) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    if (!this.canUseAdminConsole(me.email, me.appRole)) {
+      throw new ForbiddenException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
+    }
+
+    return this.usersService.getAdminCompanyOverview(workspaceId);
   }
 
   async createCompany(userId: string, name: string): Promise<LoginResponse> {

@@ -71,6 +71,7 @@
 Скрипты лежат в:
 - `scripts/loadtest/k6-timeline-edit.js` — API-only (timeline + edit).
 - `scripts/loadtest/k6-user-journey.js` — более «похоже на пользователя» (SPA `GET /` + assets + API bootstrap + timeline + edit).
+- `scripts/loadtest/k6-timeline-edit-multitoken.js` — API-only, но с пулом токенов (важно для честной проверки capacity без искажения одним throttling bucket на токен).
 
 Метрики по трафику:
 - k6 в итоговой сводке показывает `data_received` / `data_sent` — это и есть общий объем трафика при прогоне.
@@ -83,6 +84,24 @@
 - `data_received` / `data_sent` (трафик) на этом плато
 - серверные метрики на этом плато (docker stats / postgres connections / логи)
 - рекомендации по оптимизациям (если нужно)
+
+### 9.1 Фактические прогоны (test, 2026-02-24)
+- Single-token (один и тот же Bearer для всех VU): уже на 80–100 VU наблюдался высокий fail-rate, что в основном отражает лимит одного throttling bucket, а не реальную емкость API/DB.
+- Multi-token (пул уникальных Bearer в одном user/workspace context):
+  - 100 VU: `http_req_failed = 0%`
+  - 200 VU: `http_req_failed = 0%`
+  - 300 VU: `http_req_failed ≈ 0.07%` (в основном transport/EOF)
+  - 350 VU: `http_req_failed = 0%`, p95 около `1.24s`
+  - 400 VU: `http_req_failed = 0.12%`, p95 около `1.93s`, `~299 req/s`, основная деградация в виде timeout/EOF при пике
+  - 450 VU: `http_req_failed = 0.11%`, p95 около `2.49s`, `~312 req/s`, ошибки также преимущественно transport (`timeout`/`unexpected EOF`)
+- Серверные метрики на 350–400 VU: `projo-api-test` держится в высоком CPU-профиле, `projo-db-test` нагружен умеренно, количество postgres connections стабильно около `15–16`, без признаков runaway по активным запросам.
+
+Дополнение по 450 VU:
+- По tails `samples.log`/`api-errors.log` паттерн сохраняется: API становится primary bottleneck, при этом БД остается стабильной по числу соединений; критического роста 5xx не зафиксировано.
+
+Практический вывод для текущих лимитов сервера (без тюнинга):
+- Рабочее «комфортное» плато: до ~350 VU для данного сценария.
+- 400–450 VU — рабочая stress-зона (error rate низкий, но p95 заметно хуже); использовать как верхний предел baseline перед тюнингом, а не как steady-state цель.
 
 ## 10) Снятие метрик на сервере (во время прогона k6)
 Запускать параллельно на сервере (лучше в `screen`/двух терминалах).

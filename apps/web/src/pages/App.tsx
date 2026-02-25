@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { api, GradeItem, ProjectMemberItem } from '../api/client';
+import { AdminOverviewResponse, api, GradeItem, ProjectMemberItem } from '../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../constants/seed-defaults.constants';
 import { ToastStack } from '../components/ToastStack';
@@ -48,6 +48,8 @@ export function App() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [adminOverview, setAdminOverview] = useState<AdminOverviewResponse | null>(null);
+  const [isAdminOverviewLoading, setIsAdminOverviewLoading] = useState(false);
   const t = TEXT[lang];
   const locale = LOCALE_BY_LANG[lang];
 
@@ -120,7 +122,9 @@ export function App() {
   const currentCompany = app.companies.find((item) => item.id === app.activeCompanyId) || null;
   const currentCompanyName = currentCompany?.name || '-';
 
-  const isCompanyAdminTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction'].includes(app.activeTab);
+  const canUseAdminConsole =
+    app.currentUserRole === 'ADMIN' || app.currentUserEmail.trim().toLowerCase() === 'gismalink@gmail.com';
+  const isCompanyAdminTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction', 'admin'].includes(app.activeTab);
   const headerContext = isCompanyAdminTabOpen && companyTabReturnRef.current ? companyTabReturnRef.current : null;
   const headerIsProjectHomeOpen = headerContext ? headerContext.isProjectHomeOpen : isProjectHomeOpen;
   const headerActiveTab = headerContext ? headerContext.activeTab : app.activeTab;
@@ -128,6 +132,8 @@ export function App() {
   const canRenameCompany = Boolean(currentCompany?.isOwner);
   const myCompanies = app.companies.filter((item) => item.isOwner);
   const otherCompanies = app.companies.filter((item) => !item.isOwner);
+  const adminTopUsers = adminOverview?.topUsers ?? [];
+  const adminCompanySummaries = adminOverview?.companies ?? [];
 
   const currentProjectName =
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
@@ -160,10 +166,47 @@ export function App() {
   });
 
   useEffect(() => {
-    if (!canUseCompanyAdminTabs && app.activeTab !== 'timeline') {
+    const canStayOnCurrentTab =
+      app.activeTab === 'timeline' ||
+      (app.activeTab === 'admin' ? canUseAdminConsole : canUseCompanyAdminTabs);
+    if (!canStayOnCurrentTab) {
       app.setActiveTab('timeline');
     }
-  }, [app.activeTab, app.setActiveTab, canUseCompanyAdminTabs]);
+  }, [app.activeTab, app.setActiveTab, canUseCompanyAdminTabs, canUseAdminConsole]);
+
+  useEffect(() => {
+    if (!app.token || app.activeTab !== 'admin' || !canUseAdminConsole) {
+      if (app.activeTab !== 'admin') {
+        setAdminOverview(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setIsAdminOverviewLoading(true);
+    void api
+      .getAdminOverview(app.token)
+      .then((result) => {
+        if (!cancelled) {
+          setAdminOverview(result);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAdminOverview(null);
+          app.pushToast(t.uiLoadProjectsFailed);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsAdminOverviewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [app.activeTab, app.pushToast, app.token, canUseAdminConsole, t.uiLoadProjectsFailed]);
 
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
@@ -227,7 +270,7 @@ export function App() {
     app.setActiveTab('timeline');
   };
 
-  const toggleCompanyTab = (tab: 'personnel' | 'roles' | 'instruction') => {
+  const toggleCompanyTab = (tab: 'personnel' | 'roles' | 'instruction' | 'admin') => {
     const isAlreadyOpen = !isProjectHomeOpen && app.activeTab === tab;
     if (isAlreadyOpen) {
       const back = companyTabReturnRef.current;
@@ -242,7 +285,7 @@ export function App() {
       return;
     }
 
-    const isCompanyTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction'].includes(app.activeTab);
+    const isCompanyTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction', 'admin'].includes(app.activeTab);
     if (!isCompanyTabOpen && !companyTabReturnRef.current) {
       companyTabReturnRef.current = {
         isProjectHomeOpen,
@@ -600,6 +643,21 @@ export function App() {
                 <Icon name="copy" />
               </button>
             </>
+          ) : null}
+          {app.token && canUseAdminConsole ? (
+            <button
+              type="button"
+              className={
+                !isProjectHomeOpen && app.activeTab === 'admin'
+                  ? 'icon-btn active header-btn header-icon-btn'
+                  : 'icon-btn header-btn header-icon-btn'
+              }
+              onClick={() => toggleCompanyTab('admin')}
+              aria-label={t.tabAdmin}
+              data-tooltip={t.tabAdmin}
+            >
+              <Icon name="settings" />
+            </button>
           ) : null}
           {app.token ? (
             <button
@@ -967,6 +1025,115 @@ export function App() {
               ) : null}
 
               {canUseCompanyAdminTabs && app.activeTab === 'instruction' ? <InstructionTab t={t} /> : null}
+
+              {canUseAdminConsole && app.activeTab === 'admin' ? (
+                <>
+                <article className="card" style={{ marginBottom: 12 }}>
+                  <div className="timeline-form">
+                    <h4>
+                      {t.adminOverviewTitle}: {adminOverview?.companyName ?? '-'}
+                    </h4>
+                    <div className="project-space-grid" style={{ marginBottom: 12 }}>
+                      <div className="project-space-card">
+                        <strong>{t.adminOverviewUsers}</strong>
+                        <span>{adminOverview?.totalUsers ?? 0}</span>
+                      </div>
+                      <div className="project-space-card">
+                        <strong>{t.adminOverviewProjects}</strong>
+                        <span>{adminOverview?.totalProjects ?? 0}</span>
+                      </div>
+                    </div>
+
+                    {isAdminOverviewLoading ? (
+                      <p className="muted">Loading...</p>
+                    ) : (
+                      <div className="table-wrap">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>{t.adminOverviewUserCol}</th>
+                              <th>{t.adminOverviewEmailCol}</th>
+                              <th>{t.adminOverviewProjectsCol}</th>
+                              <th>{t.adminOverviewOwnedProjectsCol}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(adminOverview?.users ?? []).map((item) => (
+                              <tr key={item.userId}>
+                                <td>{item.fullName}</td>
+                                <td>{item.email}</td>
+                                <td>{item.projectsCount}</td>
+                                <td>{item.ownedProjectsCount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </article>
+                <article className="card" style={{ marginBottom: 12 }}>
+                  <div className="timeline-form">
+                    <h4>{t.adminTopUsersTitle}</h4>
+                    {isAdminOverviewLoading ? (
+                      <p className="muted">Loading...</p>
+                    ) : (
+                      <div className="table-wrap">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>{t.adminOverviewUserCol}</th>
+                              <th>{t.adminOverviewEmailCol}</th>
+                              <th>{t.adminOverviewProjectsCol}</th>
+                              <th>{t.adminOverviewOwnedProjectsCol}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {adminTopUsers.map((item) => (
+                              <tr key={`top-${item.userId}`}>
+                                <td>{item.fullName}</td>
+                                <td>{item.email}</td>
+                                <td>{item.projectsCount}</td>
+                                <td>{item.ownedProjectsCount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </article>
+                <article className="card" style={{ marginBottom: 12 }}>
+                  <div className="timeline-form">
+                    <h4>{t.adminCompaniesTitle}</h4>
+                    {isAdminOverviewLoading ? (
+                      <p className="muted">Loading...</p>
+                    ) : (
+                      <div className="table-wrap">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>{t.adminCompanyCol}</th>
+                              <th>{t.adminCompanyUsersCol}</th>
+                              <th>{t.adminCompanyProjectsCol}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {adminCompanySummaries.map((item) => (
+                              <tr key={item.companyId}>
+                                <td>{item.companyName}</td>
+                                <td>{item.totalUsers}</td>
+                                <td>{item.totalProjects}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </article>
+                </>
+              ) : null}
 
               {app.activeTab === 'timeline' ? (
             <TimelineTab

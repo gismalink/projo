@@ -42,7 +42,7 @@ const resolveInitialActiveTab = (): ActiveTab => {
   if (typeof window === 'undefined') return 'timeline';
   try {
     const raw = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
-    if (raw === 'timeline' || raw === 'personnel' || raw === 'roles' || raw === 'instruction') {
+    if (raw === 'timeline' || raw === 'personnel' || raw === 'roles' || raw === 'instruction' || raw === 'admin') {
       return raw;
     }
   } catch {

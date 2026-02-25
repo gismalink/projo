@@ -18,7 +18,7 @@ export type Employee = {
   department?: { id: string; name: string; colorHex?: string | null } | null;
 };
 
-export type ActiveTab = 'timeline' | 'personnel' | 'roles' | 'instruction';
+export type ActiveTab = 'timeline' | 'personnel' | 'roles' | 'instruction' | 'admin';
 export type Lang = 'ru' | 'en' | 'es' | 'de' | 'fr' | 'it' | 'pt' | 'pl' | 'tr' | 'uk' | 'zh' | 'ja';
 
 export type Toast = {

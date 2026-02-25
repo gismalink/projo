@@ -43,6 +43,29 @@ type WorkspaceProjectStatsItem = {
   totalAllocationPercent: number;
 };
 
+type AdminUserOverviewItem = {
+  userId: string;
+  email: string;
+  fullName: string;
+  projectsCount: number;
+  ownedProjectsCount: number;
+};
+
+type AdminCompanyOverview = {
+  companyId: string;
+  companyName: string;
+  totalUsers: number;
+  totalProjects: number;
+  users: AdminUserOverviewItem[];
+  topUsers: AdminUserOverviewItem[];
+  companies: Array<{
+    companyId: string;
+    companyName: string;
+    totalUsers: number;
+    totalProjects: number;
+  }>;
+};
+
 const COMPANY_HOME_WORKSPACE_PREFIX = '__company_home__:';
 
 @Injectable()
@@ -500,6 +523,207 @@ export class UsersService {
         companyName: company.name,
         ownerUserId: company.ownerUserId,
       })),
+    };
+  }
+
+  async getAdminCompanyOverview(activeWorkspaceId: string): Promise<AdminCompanyOverview> {
+    const companyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { id: true, name: true },
+    });
+
+    const companyName = company?.name ?? 'Company';
+
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        companyId,
+        NOT: {
+          name: {
+            startsWith: COMPANY_HOME_WORKSPACE_PREFIX,
+          },
+        },
+      },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (workspaces.length === 0) {
+      const companies = await this.prisma.company.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: [{ createdAt: 'asc' }],
+      });
+
+      return {
+        companyId,
+        companyName,
+        totalUsers: 0,
+        totalProjects: 0,
+        users: [],
+        topUsers: [],
+        companies: companies.map((item) => ({
+          companyId: item.id,
+          companyName: item.name,
+          totalUsers: 0,
+          totalProjects: 0,
+        })),
+      };
+    }
+
+    const workspaceIds = workspaces.map((workspace) => workspace.id);
+    const ownerByWorkspaceId = new Map(workspaces.map((workspace) => [workspace.id, workspace.ownerUserId] as const));
+
+    const memberships = await this.prisma.workspaceMember.findMany({
+      where: {
+        workspaceId: {
+          in: workspaceIds,
+        },
+      },
+      select: {
+        workspaceId: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    const projectsByUserId = new Map<string, Set<string>>();
+    const ownedProjectsByUserId = new Map<string, number>();
+    const userById = new Map<string, { userId: string; email: string; fullName: string }>();
+
+    for (const membership of memberships) {
+      const userId = membership.user.id;
+
+      userById.set(userId, {
+        userId,
+        email: membership.user.email,
+        fullName: membership.user.fullName,
+      });
+
+      if (!projectsByUserId.has(userId)) {
+        projectsByUserId.set(userId, new Set<string>());
+      }
+      projectsByUserId.get(userId)?.add(membership.workspaceId);
+
+      if (ownerByWorkspaceId.get(membership.workspaceId) === userId) {
+        ownedProjectsByUserId.set(userId, (ownedProjectsByUserId.get(userId) ?? 0) + 1);
+      }
+    }
+
+    const users = Array.from(userById.values())
+      .map((user) => ({
+        ...user,
+        projectsCount: projectsByUserId.get(user.userId)?.size ?? 0,
+        ownedProjectsCount: ownedProjectsByUserId.get(user.userId) ?? 0,
+      }))
+      .sort((left, right) => {
+        if (right.projectsCount !== left.projectsCount) {
+          return right.projectsCount - left.projectsCount;
+        }
+        return left.email.localeCompare(right.email);
+      });
+
+    const topUsers = users.slice(0, 10);
+
+    const companies = await this.prisma.company.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    const companyIds = companies.map((item) => item.id);
+    const companyWorkspaces = await this.prisma.workspace.findMany({
+      where: {
+        companyId: {
+          in: companyIds,
+        },
+        NOT: {
+          name: {
+            startsWith: COMPANY_HOME_WORKSPACE_PREFIX,
+          },
+        },
+      },
+      select: {
+        id: true,
+        companyId: true,
+      },
+    });
+
+    const companyIdByWorkspaceId = new Map(companyWorkspaces.map((item) => [item.id, item.companyId] as const));
+    const companyUsersById = new Map<string, Set<string>>();
+    const companyProjectsCountById = new Map<string, number>();
+
+    for (const workspace of companyWorkspaces) {
+      if (!workspace.companyId) {
+        continue;
+      }
+
+      companyProjectsCountById.set(workspace.companyId, (companyProjectsCountById.get(workspace.companyId) ?? 0) + 1);
+      if (!companyUsersById.has(workspace.companyId)) {
+        companyUsersById.set(workspace.companyId, new Set<string>());
+      }
+    }
+
+    if (companyWorkspaces.length > 0) {
+      const membershipsByCompany = await this.prisma.workspaceMember.findMany({
+        where: {
+          workspaceId: {
+            in: companyWorkspaces.map((item) => item.id),
+          },
+        },
+        select: {
+          workspaceId: true,
+          userId: true,
+        },
+      });
+
+      for (const membership of membershipsByCompany) {
+        const targetCompanyId = companyIdByWorkspaceId.get(membership.workspaceId);
+        if (!targetCompanyId) {
+          continue;
+        }
+
+        if (!companyUsersById.has(targetCompanyId)) {
+          companyUsersById.set(targetCompanyId, new Set<string>());
+        }
+        companyUsersById.get(targetCompanyId)?.add(membership.userId);
+      }
+    }
+
+    const companySummaries = companies
+      .map((item) => ({
+        companyId: item.id,
+        companyName: item.name,
+        totalUsers: companyUsersById.get(item.id)?.size ?? 0,
+        totalProjects: companyProjectsCountById.get(item.id) ?? 0,
+      }))
+      .sort((left, right) => {
+        if (right.totalProjects !== left.totalProjects) {
+          return right.totalProjects - left.totalProjects;
+        }
+        return left.companyName.localeCompare(right.companyName);
+      });
+
+    return {
+      companyId,
+      companyName,
+      totalUsers: users.length,
+      totalProjects: workspaceIds.length,
+      users,
+      topUsers,
+      companies: companySummaries,
     };
   }
 
