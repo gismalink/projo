@@ -24,6 +24,8 @@ import { ERROR_TEXT, LANGUAGE_OPTIONS, LOCALE_BY_LANG, MONTHS_BY_LANG, TEXT } fr
 import { Lang } from './app-types';
 
 export function App() {
+  const SUPER_ADMIN_EMAIL = 'gismalink@gmail.com';
+
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -122,8 +124,7 @@ export function App() {
   const currentCompany = app.companies.find((item) => item.id === app.activeCompanyId) || null;
   const currentCompanyName = currentCompany?.name || '-';
 
-  const canUseAdminConsole =
-    app.currentUserRole === 'ADMIN' || app.currentUserEmail.trim().toLowerCase() === 'gismalink@gmail.com';
+  const canUseAdminConsole = app.currentUserEmail.trim().toLowerCase() === SUPER_ADMIN_EMAIL;
   const isCompanyAdminTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction', 'admin'].includes(app.activeTab);
   const headerContext = isCompanyAdminTabOpen && companyTabReturnRef.current ? companyTabReturnRef.current : null;
   const headerIsProjectHomeOpen = headerContext ? headerContext.isProjectHomeOpen : isProjectHomeOpen;
@@ -139,6 +140,30 @@ export function App() {
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
     app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId)?.name ||
     '-';
+
+  const maskEmail = (email: string) => {
+    const [local, domain] = email.split('@');
+    if (!local || !domain) {
+      return email;
+    }
+
+    const maskedLocal =
+      local.length <= 2
+        ? `${local[0] ?? ''}..${local.slice(-1)}`
+        : local.length <= 4
+          ? `${local.slice(0, 1)}..${local.slice(-1)}`
+          : `${local.slice(0, 2)}..${local.slice(-2)}`;
+
+    const domainParts = domain.split('.');
+    const domainName = domainParts[0] ?? '';
+    const domainTail = domainParts.slice(1).join('.');
+    const maskedDomainName =
+      domainName.length <= 2
+        ? `${domainName.slice(0, 1)}...`
+        : `${domainName.slice(0, 1)}...${domainName.slice(-1)}`;
+
+    return `${maskedLocal}@${maskedDomainName}${domainTail ? `.${domainTail}` : ''}`;
+  };
   const currentProjectAccess =
     app.myProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
     app.sharedProjectSpaces.find((item) => item.id === app.activeProjectSpaceId) ||
@@ -194,6 +219,7 @@ export function App() {
       .catch(() => {
         if (!cancelled) {
           setAdminOverview(null);
+          app.setActiveTab('timeline');
           app.pushToast(t.uiLoadProjectsFailed);
         }
       })
@@ -1059,7 +1085,7 @@ export function App() {
                             {(adminOverview?.users ?? []).map((item) => (
                               <tr key={item.userId}>
                                 <td>{item.fullName}</td>
-                                <td>{item.email}</td>
+                                <td title={item.email}>{maskEmail(item.email)}</td>
                                 <td>{item.projectsCount}</td>
                                 <td>{item.ownedProjectsCount}</td>
                               </tr>
@@ -1090,7 +1116,7 @@ export function App() {
                             {adminTopUsers.map((item) => (
                               <tr key={`top-${item.userId}`}>
                                 <td>{item.fullName}</td>
-                                <td>{item.email}</td>
+                                <td title={item.email}>{maskEmail(item.email)}</td>
                                 <td>{item.projectsCount}</td>
                                 <td>{item.ownedProjectsCount}</td>
                               </tr>

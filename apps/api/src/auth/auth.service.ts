@@ -105,6 +105,8 @@ type ProjectNameResponse = {
 
 @Injectable()
 export class AuthService {
+  private static readonly SUPER_ADMIN_EMAIL = 'gismalink@gmail.com';
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -114,9 +116,9 @@ export class AuthService {
     return email.trim().toLowerCase();
   }
 
-  private canUseAdminConsole(email: string, role: AppRole) {
+  private canUseAdminConsole(email: string) {
     const normalizedEmail = this.normalizeEmail(email);
-    return role === AppRole.ADMIN || normalizedEmail === 'gismalink@gmail.com';
+    return normalizedEmail === AuthService.SUPER_ADMIN_EMAIL;
   }
 
   private mapUser(payload: {
@@ -284,7 +286,7 @@ export class AuthService {
       throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
     }
 
-    if (!this.canUseAdminConsole(me.email, me.appRole)) {
+    if (!this.canUseAdminConsole(me.email)) {
       throw new ForbiddenException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
     }
 
