@@ -232,7 +232,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [app.activeTab, app.pushToast, app.token, canUseAdminConsole, t.uiLoadProjectsFailed]);
+  }, [app.activeTab, app.token, canUseAdminConsole, t.uiLoadProjectsFailed]);
 
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
@@ -1068,7 +1068,7 @@ export function App() {
                       </div>
                     </div>
 
-                    {isAdminOverviewLoading ? (
+                    {isAdminOverviewLoading && !adminOverview ? (
                       <p className="muted">Loading...</p>
                     ) : (
                       <div className="table-wrap">
@@ -1099,7 +1099,7 @@ export function App() {
                 <article className="card" style={{ marginBottom: 12 }}>
                   <div className="timeline-form">
                     <h4>{t.adminTopUsersTitle}</h4>
-                    {isAdminOverviewLoading ? (
+                    {isAdminOverviewLoading && !adminOverview ? (
                       <p className="muted">Loading...</p>
                     ) : (
                       <div className="table-wrap">
@@ -1130,7 +1130,7 @@ export function App() {
                 <article className="card" style={{ marginBottom: 12 }}>
                   <div className="timeline-form">
                     <h4>{t.adminCompaniesTitle}</h4>
-                    {isAdminOverviewLoading ? (
+                    {isAdminOverviewLoading && !adminOverview ? (
                       <p className="muted">Loading...</p>
                     ) : (
                       <div className="table-wrap">
