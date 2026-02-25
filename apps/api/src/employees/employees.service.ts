@@ -260,14 +260,13 @@ export class EmployeesService {
   async remove(workspaceId: string, id: string) {
     await this.findOne(workspaceId, id);
 
-    const [membersCount, assignmentsCount] = await Promise.all([
-      this.prisma.projectMember.count({ where: { employeeId: id } }),
-      this.prisma.projectAssignment.count({ where: { employeeId: id } }),
-    ]);
+    const assignmentsCount = await this.prisma.projectAssignment.count({ where: { employeeId: id } });
 
-    if (membersCount > 0 || assignmentsCount > 0) {
+    if (assignmentsCount > 0) {
       throw new ConflictException(ErrorCode.EMPLOYEE_IN_USE);
     }
+
+    await this.prisma.projectMember.deleteMany({ where: { employeeId: id } });
 
     return this.prisma.employee.delete({ where: { id } });
   }

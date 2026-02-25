@@ -243,27 +243,6 @@ export class AssignmentsService {
     );
   }
 
-  private async ensureProjectMember(projectId: string, employeeId: string) {
-    const existing = await this.prisma.projectMember.findUnique({
-      where: {
-        projectId_employeeId: {
-          projectId,
-          employeeId,
-        },
-      },
-      select: { id: true },
-    });
-
-    if (existing) return;
-
-    await this.prisma.projectMember.create({
-      data: {
-        projectId,
-        employeeId,
-      },
-    });
-  }
-
   private ensureDateRange(startDate: Date, endDate: Date) {
     if (endDate < startDate) {
       throw new BadRequestException(ErrorCode.ASSIGNMENT_DATE_RANGE_INVALID);
@@ -311,8 +290,6 @@ export class AssignmentsService {
       projectId: dto.projectId,
       employeeId: dto.employeeId,
     });
-
-    await this.ensureProjectMember(dto.projectId, dto.employeeId);
 
     return this.prisma.projectAssignment.create({
       data: {
@@ -398,8 +375,6 @@ export class AssignmentsService {
       employeeId,
       excludeAssignmentId: id,
     });
-
-    await this.ensureProjectMember(projectId, employeeId);
 
     const normalizedExplicitLoadProfile = this.normalizeLoadProfile(dto.loadProfile, nextStart, nextEnd);
     const storedLoadProfile = this.readStoredLoadProfile(existing.loadProfile);
