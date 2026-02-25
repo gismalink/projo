@@ -41,6 +41,9 @@ export function AccountModal(props: AccountModalProps) {
 
   if (!isOpen) return null;
 
+  const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE ?? 'local').toLowerCase();
+  const isSsoOnly = AUTH_MODE === 'sso';
+
   const accountFullNameValue = accountFullNameDraft.trim();
   const currentPasswordValue = currentPassword.trim();
   const newPasswordValue = newPassword.trim();
@@ -65,10 +68,12 @@ export function AccountModal(props: AccountModalProps) {
           </div>
         </div>
         <div className="timeline-form">
-          <label>
-            <span className="field-label">{t.email}</span>
-            <input value={currentUserEmail} readOnly />
-          </label>
+          {!isSsoOnly ? (
+            <label>
+              <span className="field-label">{t.email}</span>
+              <input value={currentUserEmail} readOnly />
+            </label>
+          ) : null}
           <label>
             <span className="field-label">{t.companyName}</span>
             <input value={currentCompanyName || '-'} readOnly />
@@ -94,71 +99,73 @@ export function AccountModal(props: AccountModalProps) {
             </label>
             <button type="submit">{t.saveProfile}</button>
           </form>
-          <form onSubmit={onChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
-            <label>
-              <span className="field-label required">{t.currentPassword}</span>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={currentPassword}
-                required
-                minLength={8}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-              />
-              <span className={!currentPasswordValue ? 'field-status pending' : isCurrentPasswordValid ? 'field-status success' : 'field-status error'}>
-                {!currentPasswordValue
-                  ? t.uiStatusAwaitingPassword
-                  : isCurrentPasswordValid
-                    ? t.uiStatusPasswordValid
-                    : t.uiStatusPasswordInvalid}
-              </span>
-            </label>
-            <label>
-              <span className="field-label required">{t.newPassword}</span>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={newPassword}
-                required
-                minLength={8}
-                onChange={(event) => setNewPassword(event.target.value)}
-              />
-              <span className={!newPasswordValue ? 'field-status pending' : isNewPasswordValid ? 'field-status success' : 'field-status error'}>
-                {!newPasswordValue
-                  ? t.uiStatusAwaitingPassword
-                  : isNewPasswordValid
-                    ? t.uiStatusPasswordValid
-                    : t.uiStatusPasswordInvalid}
-              </span>
-            </label>
-            <label>
-              <span className="field-label required">{t.confirmPassword}</span>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={newPasswordConfirm}
-                required
-                minLength={8}
-                onChange={(event) => setNewPasswordConfirm(event.target.value)}
-              />
-              <span
-                className={
-                  !newPasswordConfirmValue
-                    ? 'field-status pending'
+          {!isSsoOnly ? (
+            <form onSubmit={onChangePasswordSubmit} className="timeline-form" style={{ padding: 0 }}>
+              <label>
+                <span className="field-label required">{t.currentPassword}</span>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={currentPassword}
+                  required
+                  minLength={8}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                />
+                <span className={!currentPasswordValue ? 'field-status pending' : isCurrentPasswordValid ? 'field-status success' : 'field-status error'}>
+                  {!currentPasswordValue
+                    ? t.uiStatusAwaitingPassword
+                    : isCurrentPasswordValid
+                      ? t.uiStatusPasswordValid
+                      : t.uiStatusPasswordInvalid}
+                </span>
+              </label>
+              <label>
+                <span className="field-label required">{t.newPassword}</span>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  required
+                  minLength={8}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+                <span className={!newPasswordValue ? 'field-status pending' : isNewPasswordValid ? 'field-status success' : 'field-status error'}>
+                  {!newPasswordValue
+                    ? t.uiStatusAwaitingPassword
+                    : isNewPasswordValid
+                      ? t.uiStatusPasswordValid
+                      : t.uiStatusPasswordInvalid}
+                </span>
+              </label>
+              <label>
+                <span className="field-label required">{t.confirmPassword}</span>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPasswordConfirm}
+                  required
+                  minLength={8}
+                  onChange={(event) => setNewPasswordConfirm(event.target.value)}
+                />
+                <span
+                  className={
+                    !newPasswordConfirmValue
+                      ? 'field-status pending'
+                      : isNewPasswordConfirmValid
+                        ? 'field-status success'
+                        : 'field-status error'
+                  }
+                >
+                  {!newPasswordConfirmValue
+                    ? t.uiStatusAwaitingPasswordConfirm
                     : isNewPasswordConfirmValid
-                      ? 'field-status success'
-                      : 'field-status error'
-                }
-              >
-                {!newPasswordConfirmValue
-                  ? t.uiStatusAwaitingPasswordConfirm
-                  : isNewPasswordConfirmValid
-                    ? t.uiStatusPasswordConfirmValid
-                    : t.uiStatusPasswordConfirmInvalid}
-              </span>
-            </label>
-            <button type="submit">{t.changePassword}</button>
-          </form>
+                      ? t.uiStatusPasswordConfirmValid
+                      : t.uiStatusPasswordConfirmInvalid}
+                </span>
+              </label>
+              <button type="submit">{t.changePassword}</button>
+            </form>
+          ) : null}
         </div>
       </article>
     </div>
