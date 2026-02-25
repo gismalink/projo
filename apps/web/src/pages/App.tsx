@@ -13,6 +13,19 @@ import { useAppData } from '../hooks/useAppData';
 import { ERROR_TEXT, LOCALE_BY_LANG, MONTHS_BY_LANG, TEXT } from './app-i18n';
 import { Lang } from './app-types';
 
+const COMPANY_TABS: Array<'personnel' | 'roles' | 'instruction' | 'admin'> = ['personnel', 'roles', 'instruction', 'admin'];
+
+function buildTimestampedName(prefix: string) {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const mm = pad(now.getMonth() + 1);
+  const dd = pad(now.getDate());
+  const hh = pad(now.getHours());
+  const mi = pad(now.getMinutes());
+  return `${prefix} + ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
 export function App() {
   const SUPER_ADMIN_EMAIL = 'gismalink@gmail.com';
 
@@ -115,7 +128,7 @@ export function App() {
   const currentCompanyName = currentCompany?.name || '-';
 
   const canUseAdminConsole = app.currentUserEmail.trim().toLowerCase() === SUPER_ADMIN_EMAIL;
-  const isCompanyAdminTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction', 'admin'].includes(app.activeTab);
+  const isCompanyAdminTabOpen = !isProjectHomeOpen && COMPANY_TABS.includes(app.activeTab as (typeof COMPANY_TABS)[number]);
   const headerContext = isCompanyAdminTabOpen && companyTabReturnRef.current ? companyTabReturnRef.current : null;
   const headerIsProjectHomeOpen = headerContext ? headerContext.isProjectHomeOpen : isProjectHomeOpen;
   const headerActiveTab = headerContext ? headerContext.activeTab : app.activeTab;
@@ -276,7 +289,7 @@ export function App() {
       return;
     }
 
-    const isCompanyTabOpen = !isProjectHomeOpen && ['personnel', 'roles', 'instruction', 'admin'].includes(app.activeTab);
+    const isCompanyTabOpen = !isProjectHomeOpen && COMPANY_TABS.includes(app.activeTab as (typeof COMPANY_TABS)[number]);
     if (!isCompanyTabOpen && !companyTabReturnRef.current) {
       companyTabReturnRef.current = {
         isProjectHomeOpen,
@@ -290,28 +303,6 @@ export function App() {
     app.setActiveTab(tab);
   };
 
-  const buildUnnamedProjectName = () => {
-    const now = new Date();
-    const pad = (value: number) => String(value).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    const mm = pad(now.getMonth() + 1);
-    const dd = pad(now.getDate());
-    const hh = pad(now.getHours());
-    const mi = pad(now.getMinutes());
-    return `unnamed + ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-  };
-
-  const buildUnnamedCompanyName = () => {
-    const now = new Date();
-    const pad = (value: number) => String(value).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    const mm = pad(now.getMonth() + 1);
-    const dd = pad(now.getDate());
-    const hh = pad(now.getHours());
-    const mi = pad(now.getMinutes());
-    return `company + ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-  };
-
   const closeProjectSettings = () => {
     setIsProjectSettingsOpen(false);
     setProjectSettingsProjectId('');
@@ -321,7 +312,7 @@ export function App() {
   };
 
   const handleCreateProjectSpaceCard = async () => {
-    await app.handleCreateProjectSpace(buildUnnamedProjectName());
+    await app.handleCreateProjectSpace(buildTimestampedName('unnamed'));
     setIsProjectHomeOpen(false);
   };
 
@@ -375,7 +366,7 @@ export function App() {
 
   const handleCreateCompany = async () => {
     setCompanyModalMode('create');
-    setCompanyNameDraft(buildUnnamedCompanyName());
+    setCompanyNameDraft(buildTimestampedName('company'));
     setIsCompanyModalOpen(true);
   };
 
@@ -404,10 +395,7 @@ export function App() {
     }
   };
 
-  const handleOpenProjectSettings = async () => {
-    const projectId = app.activeProjectSpaceId;
-    if (!projectId) return;
-
+  const openProjectSettingsById = async (projectId: string) => {
     const projectAccess =
       app.myProjectSpaces.find((item) => item.id === projectId) ||
       app.sharedProjectSpaces.find((item) => item.id === projectId);
@@ -424,21 +412,14 @@ export function App() {
     }
   };
 
-  const handleOpenProjectSettingsById = async (projectId: string) => {
-    const projectAccess =
-      app.myProjectSpaces.find((item) => item.id === projectId) ||
-      app.sharedProjectSpaces.find((item) => item.id === projectId);
-    if (!projectAccess) return;
+  const handleOpenProjectSettings = async () => {
+    const projectId = app.activeProjectSpaceId;
+    if (!projectId) return;
+    await openProjectSettingsById(projectId);
+  };
 
-    const members = await app.loadProjectMembers(projectId);
-    if (members) {
-      setProjectSettingsProjectId(projectId);
-      setProjectSettingsNameDraft(projectAccess.name);
-      setProjectMembers(members);
-      setProjectMemberSearch('');
-      setDeleteProjectConfirmText('');
-      setIsProjectSettingsOpen(true);
-    }
+  const handleOpenProjectSettingsById = async (projectId: string) => {
+    await openProjectSettingsById(projectId);
   };
 
   const handleUpdateProjectNameSubmit = async (event: FormEvent) => {
