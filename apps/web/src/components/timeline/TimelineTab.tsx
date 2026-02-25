@@ -327,9 +327,13 @@ export function TimelineTab(props: TimelineTabProps) {
         const value = bucket.count > 0 ? bucket.sum / bucket.count : 0;
         values.push(value);
 
-        const spanDays = Math.max(1, bucket.endIndex - bucket.startIndex + 1);
+        const mondayIndex = Math.floor((bucket.start.getTime() - yearStart.getTime()) / MS_PER_DAY);
+        const fridayIndex = mondayIndex + 4;
+        const clampedStartIndex = Math.max(0, mondayIndex);
+        const clampedEndIndex = Math.min(days - 1, fridayIndex);
+        const spanDays = Math.max(1, clampedEndIndex - clampedStartIndex + 1);
         bars.push({
-          left: `${((bucket.startIndex / days) * 100).toFixed(6)}%`,
+          left: `${((clampedStartIndex / days) * 100).toFixed(6)}%`,
           width: `${((spanDays / days) * 100).toFixed(6)}%`,
           value,
           label: `Week ${bucketIndex + 1}`,
