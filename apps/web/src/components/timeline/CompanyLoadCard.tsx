@@ -1,7 +1,12 @@
 type CompanyLoadCardProps = {
   t: Record<string, string>;
   title: string;
-  companyLoad: { values: number[]; max: number; avg: number };
+  companyLoad: {
+    values: number[];
+    bars: Array<{ left: string; width: string; value: number; label: string }>;
+    max: number;
+    avg: number;
+  };
   companyLoadScaleMax: number;
   todayPosition: string | null;
   dragStepDays: 1 | 7 | 30;
@@ -31,16 +36,19 @@ export function CompanyLoadCard(props: CompanyLoadCardProps) {
         ))}
         <span className="company-load-grid-line company-load-grid-line-limit" style={{ bottom: `${(100 / companyLoadScaleMax) * 100}%` }} />
         {todayPosition ? <span className="current-day-line" style={{ left: todayPosition }} /> : null}
-        {companyLoad.values.map((value, index) => {
-          const unitLabel =
-            dragStepDays === 30 ? (months[index] ?? `Month ${index + 1}`) : dragStepDays === 7 ? `Week ${index + 1}` : `Day ${index + 1}`;
+        {companyLoad.bars.map((bar, index) => {
+          const value = bar.value;
           const barHeightPercent = value > 0 ? Math.max(2, (value / companyLoadScaleMax) * 100) : 0;
           return (
             <span
               key={`${selectedYear}-load-${index}`}
-              className={value > 100 ? 'company-load-bar overloaded' : 'company-load-bar'}
-              style={{ height: `${barHeightPercent}%` }}
-              title={`${unitLabel}: ${value.toFixed(1)}%`}
+              className={value > 100 ? 'company-load-bar positioned overloaded' : 'company-load-bar positioned'}
+              style={{
+                left: bar.left,
+                width: bar.width,
+                height: `${barHeightPercent}%`,
+              }}
+              title={`${bar.label}: ${value.toFixed(1)}%`}
             />
           );
         })}

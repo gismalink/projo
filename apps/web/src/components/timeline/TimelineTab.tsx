@@ -79,6 +79,13 @@ type TimelineTabProps = {
   isoToInputDate: (value: string) => string;
 };
 
+type CompanyLoadBarLayoutItem = {
+  left: string;
+  width: string;
+  value: number;
+  label: string;
+};
+
 export function TimelineTab(props: TimelineTabProps) {
   const {
     t,
@@ -277,12 +284,20 @@ export function TimelineTab(props: TimelineTabProps) {
     const dailyUtilization = rawTotals.map((value) => value / employeeCapacity);
 
     const values: number[] = [];
+    const bars: CompanyLoadBarLayoutItem[] = [];
     if (dragStepDays === 1) {
       values.push(...dailyUtilization);
-    } else if (dragStepDays === 7) {
-      const weekBuckets = new Map<string, { start: Date; sum: number; count: number }>();
       for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
-        if (!loadBearingDayByIndex[dayIndex]) continue;
+        bars.push({
+          left: `${((dayIndex / days) * 100).toFixed(6)}%`,
+          width: `${(100 / days).toFixed(6)}%`,
+          value: dailyUtilization[dayIndex] ?? 0,
+          label: `Day ${dayIndex + 1}`,
+        });
+      }
+    } else if (dragStepDays === 7) {
+      const weekBuckets = new Map<string, { start: Date; startIndex: number; endIndex: number; sum: number; count: number }>();
+      for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
         const currentDate = new Date(yearStart);
         currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
         const weekStart = new Date(currentDate);
@@ -290,15 +305,35 @@ export function TimelineTab(props: TimelineTabProps) {
         const offsetToMonday = (weekDay + 6) % 7;
         weekStart.setUTCDate(weekStart.getUTCDate() - offsetToMonday);
         const key = weekStart.toISOString().slice(0, 10);
-        const bucket = weekBuckets.get(key) ?? { start: weekStart, sum: 0, count: 0 };
-        bucket.sum += dailyUtilization[dayIndex] ?? 0;
-        bucket.count += 1;
+        const bucket = weekBuckets.get(key) ?? {
+          start: weekStart,
+          startIndex: dayIndex,
+          endIndex: dayIndex,
+          sum: 0,
+          count: 0,
+        };
+        bucket.startIndex = Math.min(bucket.startIndex, dayIndex);
+        bucket.endIndex = Math.max(bucket.endIndex, dayIndex);
+        if (loadBearingDayByIndex[dayIndex]) {
+          bucket.sum += dailyUtilization[dayIndex] ?? 0;
+          bucket.count += 1;
+        }
         weekBuckets.set(key, bucket);
       }
 
       const sortedBuckets = Array.from(weekBuckets.values()).sort((a, b) => a.start.getTime() - b.start.getTime());
-      for (const bucket of sortedBuckets) {
-        values.push(bucket.count > 0 ? bucket.sum / bucket.count : 0);
+      for (let bucketIndex = 0; bucketIndex < sortedBuckets.length; bucketIndex += 1) {
+        const bucket = sortedBuckets[bucketIndex];
+        const value = bucket.count > 0 ? bucket.sum / bucket.count : 0;
+        values.push(value);
+
+        const spanDays = Math.max(1, bucket.endIndex - bucket.startIndex + 1);
+        bars.push({
+          left: `${((bucket.startIndex / days) * 100).toFixed(6)}%`,
+          width: `${((spanDays / days) * 100).toFixed(6)}%`,
+          value,
+          label: `Week ${bucketIndex + 1}`,
+        });
       }
     } else {
       for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
@@ -315,6 +350,14 @@ export function TimelineTab(props: TimelineTabProps) {
         }
         const avg = count > 0 ? sum / count : 0;
         values.push(avg);
+
+        const spanDays = Math.max(1, endIndex - startIndex);
+        bars.push({
+          left: `${((startIndex / days) * 100).toFixed(6)}%`,
+          width: `${((spanDays / days) * 100).toFixed(6)}%`,
+          value: avg,
+          label: months[monthIndex] ?? `Month ${monthIndex + 1}`,
+        });
       }
     }
 
@@ -322,8 +365,8 @@ export function TimelineTab(props: TimelineTabProps) {
     const avgSource =
       dragStepDays === 1 ? values.filter((_, dayIndex) => loadBearingDayByIndex[dayIndex]) : values;
     const avg = avgSource.length > 0 ? avgSource.reduce((sum, value) => sum + value, 0) / avgSource.length : 0;
-    return { values, max, avg };
-  }, [assignments, selectedYear, employees, dragStepDays, calendarDayByIso, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
+    return { values, bars, max, avg };
+  }, [assignments, selectedYear, employees, dragStepDays, calendarDayByIso, filterBenchDepartmentName, filterBenchEmployeeId, months, t.unassignedDepartment]);
 
   const companyLoadTitle = useMemo(() => {
     if (filterBenchEmployeeId) {

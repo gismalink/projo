@@ -246,6 +246,12 @@
   z-index: 3;
 }
 
+.company-load-bar.positioned {
+  position: absolute;
+  bottom: 0;
+  min-width: 0;
+}
+
 .company-load-bar.overloaded {
   background: linear-gradient(180deg, #ff7b72 0%, var(--ios-danger) 100%);
 }
