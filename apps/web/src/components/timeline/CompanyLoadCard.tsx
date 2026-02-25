@@ -44,6 +44,13 @@ export function CompanyLoadCard(props: CompanyLoadCardProps) {
             />
           );
         })}
+        {calendarSegments.map((segment) => (
+          <span
+            key={`chart-overlay-${segment.key}`}
+            className={`calendar-day-segment company-chart-overlay ${segment.kind === 'holiday' ? 'holiday' : 'weekend'}`}
+            style={{ left: segment.left, width: segment.width }}
+          />
+        ))}
       </div>
       <div className="day-grid" style={{ ['--day-step' as string]: dayStep }}>
         {calendarSegments.map((segment) => (

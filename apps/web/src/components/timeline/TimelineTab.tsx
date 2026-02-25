@@ -47,6 +47,8 @@ type TimelineTabProps = {
     projectId: string,
     payload: { code: string; name: string; startDate: string; endDate: string; teamTemplateId?: string | null },
   ) => Promise<void>;
+  onCopyProject: (projectId: string) => Promise<void>;
+  onDeleteProject: (projectId: string) => Promise<void>;
   onOpenAssignmentModal: (projectId: string, employeeId?: string) => void;
   onSelectProject: (projectId: string) => Promise<void>;
   onYearChange: (nextYear: number) => Promise<void>;
@@ -99,6 +101,8 @@ export function TimelineTab(props: TimelineTabProps) {
     projectDetails,
     onOpenProjectModal,
     onAutoSaveProjectMeta,
+    onCopyProject,
+    onDeleteProject,
     onOpenAssignmentModal,
     onSelectProject,
     onYearChange,
@@ -1177,6 +1181,8 @@ export function TimelineTab(props: TimelineTabProps) {
                       onMoveProject={onMoveProject}
                       onToggleProject={handleToggleClick}
                       onAutoSaveProjectMeta={onAutoSaveProjectMeta}
+                      onCopyProject={onCopyProject}
+                      onDeleteProject={onDeleteProject}
                       onOpenAssignmentModal={onOpenAssignmentModal}
                       onPlanBarHover={handlePlanBarHover}
                       onClearPlanBarHover={clearPlanBarHover}

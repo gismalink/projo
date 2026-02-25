@@ -131,6 +131,34 @@ export function createProjectsHandlers({
     });
   }
 
+  async function handleCopyProject(projectId: string) {
+    if (!state.token) return;
+
+    await runWithErrorToast({
+      operation: async () => {
+        const copied = await api.copyProject(projectId, undefined, state.token as string);
+        await refreshData(state.token as string, state.selectedYear, copied.id);
+      },
+      fallbackMessage: t.uiCopyProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
+  async function handleDeleteProject(projectId: string) {
+    if (!state.token) return;
+
+    await runWithErrorToast({
+      operation: async () => {
+        await api.deleteProject(projectId, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+      },
+      fallbackMessage: t.uiDeleteProjectSpaceFailed,
+      errorText,
+      pushToast,
+    });
+  }
+
   async function handleSelectProject(projectId: string) {
     if (!state.token) return;
 
@@ -175,6 +203,8 @@ export function createProjectsHandlers({
     handleCreateProject,
     handleUpdateProjectDates,
     handleAutoSaveProjectMeta,
+    handleCopyProject,
+    handleDeleteProject,
     handleSelectProject,
     handleMoveProject,
   };

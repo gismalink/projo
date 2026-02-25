@@ -250,6 +250,18 @@
   background: linear-gradient(180deg, #ff7b72 0%, var(--ios-danger) 100%);
 }
 
+.company-load-chart .company-chart-overlay {
+  z-index: 4;
+}
+
+.company-load-chart .company-chart-overlay.weekend {
+  background: rgba(120, 120, 128, 0.16);
+}
+
+.company-load-chart .company-chart-overlay.holiday {
+  background: rgba(255, 69, 58, 0.22);
+}
+
 .calendar-day-segment {
   position: absolute;
   top: 0;
@@ -815,6 +827,30 @@ body.tooltip-portal-enabled .timeline-inline-tooltip {
 .project-edit-row select {
   min-height: 32px;
   padding: 0.35rem 0.5rem;
+}
+
+.project-edit-actions {
+  margin-top: 0.4rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.project-edit-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 32px;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgba(255, 69, 58, 0.42);
+  border-radius: 8px;
+  background: rgba(255, 69, 58, 0.08);
+  color: var(--ios-danger);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.project-edit-delete-btn:hover {
+  background: rgba(255, 69, 58, 0.15);
 }
 
 .timeline-meta-icon-btn {

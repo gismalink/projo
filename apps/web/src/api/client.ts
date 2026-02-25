@@ -169,6 +169,9 @@ export type CreateProjectPayload = {
   teamTemplateId?: string;
 };
 export type UpdateProjectPayload = Partial<CreateProjectPayload>;
+export type CopyProjectPayload = {
+  name?: string;
+};
 
 export type CreateRolePayload = {
   name: string;
@@ -644,6 +647,9 @@ export const api = {
     request('/projects', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateProject: (projectId: string, payload: UpdateProjectPayload, token: string) =>
     request(`/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  copyProject: (projectId: string, payload: CopyProjectPayload | undefined, token: string) =>
+    request<ProjectListItem>(`/projects/${projectId}/copy`, { method: 'POST', body: JSON.stringify(payload ?? {}) }, token),
+  deleteProject: (projectId: string, token: string) => request(`/projects/${projectId}`, { method: 'DELETE' }, token),
   createAssignment: (payload: CreateAssignmentPayload, token: string) =>
     request('/assignments', { method: 'POST', body: JSON.stringify(payload) }, token),
   updateAssignment: (assignmentId: string, payload: UpdateAssignmentPayload, token: string) =>

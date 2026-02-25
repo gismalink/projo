@@ -654,14 +654,12 @@ export function ProjectAssignmentsCard(props: ProjectAssignmentsCardProps) {
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (!window.confirm(t.confirmRemoveAssignment)) return;
                     void onDeleteAssignment(detail.id, assignment.id);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
                       event.stopPropagation();
-                      if (!window.confirm(t.confirmRemoveAssignment)) return;
                       void onDeleteAssignment(detail.id, assignment.id);
                     }
                   }}

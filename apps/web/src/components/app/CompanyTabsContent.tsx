@@ -250,6 +250,8 @@ export function CompanyTabsContent({
           projectDetails={app.projectDetails}
           onOpenProjectModal={app.openProjectModal}
           onAutoSaveProjectMeta={app.handleAutoSaveProjectMeta}
+          onCopyProject={app.handleCopyProject}
+          onDeleteProject={app.handleDeleteProject}
           onOpenAssignmentModal={(projectId, employeeId) => {
             app.setAssignmentProjectId(projectId);
             if (employeeId) {

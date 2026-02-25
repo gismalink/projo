@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AppRoleValue, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { AddProjectMemberDto } from './dto/add-project-member.dto';
+import { CopyProjectDto } from './dto/copy-project.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectsService } from './projects.service';
@@ -58,6 +59,12 @@ export class ProjectsController {
   @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR)
   update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateProjectDto) {
     return this.projectsService.update(req.user.workspaceId, id, dto);
+  }
+
+  @Post(':id/copy')
+  @Roles(AppRoleValue.ADMIN, AppRoleValue.EDITOR)
+  copy(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: CopyProjectDto) {
+    return this.projectsService.copy(req.user.workspaceId, id, dto.name);
   }
 
   @Delete(':id')

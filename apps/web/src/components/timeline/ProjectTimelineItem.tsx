@@ -47,6 +47,8 @@ type ProjectTimelineItemProps = {
     projectId: string,
     payload: { code: string; name: string; startDate: string; endDate: string; teamTemplateId?: string | null },
   ) => Promise<void>;
+  onCopyProject: (projectId: string) => Promise<void>;
+  onDeleteProject: (projectId: string) => Promise<void>;
   onOpenAssignmentModal: (projectId: string, employeeId?: string) => void;
   onPlanBarHover: (event: ReactMouseEvent<HTMLElement>, row: ProjectTimelineRow) => void;
   onClearPlanBarHover: (row: ProjectTimelineRow) => void;
@@ -89,6 +91,8 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
     onMoveProject,
     onToggleProject,
     onAutoSaveProjectMeta,
+    onCopyProject,
+    onDeleteProject,
     onOpenAssignmentModal,
     onPlanBarHover,
     onClearPlanBarHover,
@@ -164,6 +168,7 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
   }, [detail?.teamTemplate?.id, draftCode, draftEndDate, draftName, draftStartDate, draftTeamTemplateId, isProjectEditOpen, onAutoSaveProjectMeta, row.code, row.endDate, row.id, row.name, row.startDate]);
 
   const editProjectTooltip = `${t.editProjectMeta}: ${row.code}`;
+  const copyProjectTooltip = `${t.copyProjectSpace}: ${row.code}`;
 
   const handleRowBackgroundClick = (event: ReactMouseEvent) => {
     const target = event.target as HTMLElement | null;
@@ -247,6 +252,18 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                       <Icon name="edit" />
                     </button>
                   </TooltipAnchor>
+                  <TooltipAnchor text={copyProjectTooltip}>
+                    <button
+                      type="button"
+                      className="timeline-meta-icon-btn"
+                      onClick={() => {
+                        void onCopyProject(row.id);
+                      }}
+                      aria-label={copyProjectTooltip}
+                    >
+                      <Icon name="copy" />
+                    </button>
+                  </TooltipAnchor>
                   {isProjectEditOpen ? (
                     <div className="project-edit-popover">
                       <div className="project-edit-row">
@@ -266,6 +283,20 @@ export function ProjectTimelineItem(props: ProjectTimelineItemProps) {
                             </option>
                           ))}
                         </select>
+                      </div>
+                      <div className="project-edit-actions">
+                        <button
+                          type="button"
+                          className="project-edit-delete-btn"
+                          onClick={() => {
+                            if (!window.confirm(`${t.deleteProject}?`)) return;
+                            void onDeleteProject(row.id);
+                            setIsProjectEditOpen(false);
+                          }}
+                        >
+                          <Icon name="trash" size={14} />
+                          <span>{t.deleteProject}</span>
+                        </button>
                       </div>
                     </div>
                   ) : null}

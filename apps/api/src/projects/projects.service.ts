@@ -20,6 +20,29 @@ const PROJECT_PERSON_SELECT = {
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async nextCopiedProjectCode(workspaceId: string, baseCode: string) {
+    let suffix = 1;
+    let candidate = `${baseCode}-copy`;
+    while (true) {
+      const existing = await this.prisma.project.findFirst({
+        where: {
+          workspaceId,
+          code: candidate,
+        },
+        select: { id: true },
+      });
+      if (!existing) return candidate;
+      suffix += 1;
+      candidate = `${baseCode}-copy-${suffix}`;
+    }
+  }
+
+  private toPrismaJsonInput(value: Prisma.JsonValue | null | undefined) {
+    if (value === undefined) return undefined;
+    if (value === null) return Prisma.JsonNull;
+    return value as Prisma.InputJsonValue;
+  }
+
   private async ensureTeamTemplateExists(workspaceId: string, templateId: string) {
     const scope = await this.getWorkspaceScope(workspaceId);
     const template = await this.prisma.projectTeamTemplate.findFirst({
@@ -467,5 +490,84 @@ export class ProjectsService {
   async remove(workspaceId: string, id: string) {
     await this.findOne(workspaceId, id);
     return this.prisma.project.delete({ where: { id } });
+  }
+
+  async copy(workspaceId: string, sourceProjectId: string, name?: string) {
+    const source = await this.prisma.project.findFirst({
+      where: {
+        id: sourceProjectId,
+        workspaceId,
+      },
+      include: {
+        members: {
+          select: {
+            employeeId: true,
+          },
+        },
+        assignments: {
+          select: {
+            employeeId: true,
+            assignmentStartDate: true,
+            assignmentEndDate: true,
+            allocationPercent: true,
+            loadProfile: true,
+            plannedHoursPerDay: true,
+            roleOnProject: true,
+          },
+        },
+      },
+    });
+
+    if (!source) {
+      throw new NotFoundException(ErrorCode.PROJECT_NOT_FOUND);
+    }
+
+    const copiedCode = await this.nextCopiedProjectCode(workspaceId, source.code);
+    const copiedName = name?.trim() ? name.trim() : `${source.name} copy`;
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          workspaceId,
+          code: copiedCode,
+          name: copiedName,
+          description: source.description,
+          status: source.status,
+          priority: source.priority,
+          startDate: source.startDate,
+          endDate: source.endDate,
+          links: this.toPrismaJsonInput(source.links),
+          teamTemplateId: source.teamTemplateId,
+        },
+      });
+
+      if (source.members.length > 0) {
+        await tx.projectMember.createMany({
+          data: source.members.map((member) => ({
+            projectId: project.id,
+            employeeId: member.employeeId,
+          })),
+        });
+      }
+
+      if (source.assignments.length > 0) {
+        await tx.projectAssignment.createMany({
+          data: source.assignments.map((assignment) => ({
+            projectId: project.id,
+            employeeId: assignment.employeeId,
+            assignmentStartDate: assignment.assignmentStartDate,
+            assignmentEndDate: assignment.assignmentEndDate,
+            allocationPercent: assignment.allocationPercent,
+            loadProfile: this.toPrismaJsonInput(assignment.loadProfile),
+            plannedHoursPerDay: assignment.plannedHoursPerDay,
+            roleOnProject: assignment.roleOnProject,
+          })),
+        });
+      }
+
+      return project;
+    });
+
+    return created;
   }
 }
