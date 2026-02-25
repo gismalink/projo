@@ -7,9 +7,9 @@ services:
       dockerfile: infra/Dockerfile.host
       target: api-runtime
       args:
-        VITE_API_URL: /api
-        VITE_AUTH_MODE: sso
-        VITE_AUTH_BASE_URL: https://test.auth.gismalink.art
+        VITE_API_URL: ${TEST_VITE_API_URL:-/api}
+        VITE_AUTH_MODE: ${TEST_VITE_AUTH_MODE:-sso}
+        VITE_AUTH_BASE_URL: ${TEST_VITE_AUTH_BASE_URL:-https://test.auth.gismalink.art}
     image: projo-api:test
     container_name: projo-api-test
     restart: unless-stopped
@@ -28,9 +28,9 @@ services:
       dockerfile: infra/Dockerfile.host
       target: web-runtime
       args:
-        VITE_API_URL: /api
-        VITE_AUTH_MODE: sso
-        VITE_AUTH_BASE_URL: https://test.auth.gismalink.art
+        VITE_API_URL: ${TEST_VITE_API_URL:-/api}
+        VITE_AUTH_MODE: ${TEST_VITE_AUTH_MODE:-sso}
+        VITE_AUTH_BASE_URL: ${TEST_VITE_AUTH_BASE_URL:-https://test.auth.gismalink.art}
     image: projo-web:test
     container_name: projo-web-test
     restart: unless-stopped
@@ -59,9 +59,9 @@ services:
       dockerfile: infra/Dockerfile.host
       target: api-runtime
       args:
-        VITE_API_URL: /api
-        VITE_AUTH_MODE: sso
-        VITE_AUTH_BASE_URL: https://auth.gismalink.art
+        VITE_API_URL: ${PROD_VITE_API_URL:-/api}
+        VITE_AUTH_MODE: ${PROD_VITE_AUTH_MODE:-sso}
+        VITE_AUTH_BASE_URL: ${PROD_VITE_AUTH_BASE_URL:-https://auth.gismalink.art}
     image: projo-api:prod
     container_name: projo-api-prod
     restart: unless-stopped
@@ -80,9 +80,9 @@ services:
       dockerfile: infra/Dockerfile.host
       target: web-runtime
       args:
-        VITE_API_URL: /api
-        VITE_AUTH_MODE: sso
-        VITE_AUTH_BASE_URL: https://auth.gismalink.art
+        VITE_API_URL: ${PROD_VITE_API_URL:-/api}
+        VITE_AUTH_MODE: ${PROD_VITE_AUTH_MODE:-sso}
+        VITE_AUTH_BASE_URL: ${PROD_VITE_AUTH_BASE_URL:-https://auth.gismalink.art}
     image: projo-web:prod
     container_name: projo-web-prod
     restart: unless-stopped
