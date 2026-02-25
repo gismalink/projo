@@ -78,7 +78,7 @@
 Источник: `docs/audits/technical-audit-2026-02-24.md`.
 
 1. [ ] CORS deny-path: вместо error -> `callback(null, false)` + безопасное логирование origin.
-2. [ ] SSO proxy: добавить timeout на upstream fetch + контролируемую ошибку.
+2. [x] SSO proxy: добавить timeout на upstream fetch + контролируемую ошибку.
 3. [x] Web config safety: заменить fallback `VITE_API_URL` на `/api` (чтобы misconfig не вшивал `localhost:4000/api` в bundle).
 4. [ ] Reduce config drift: `VITE_*` build args в `infra/docker-compose.host.yml` перевести на env-substitution (единый источник значений).
 5. [ ] Deploy scripts: явный маркер deployed SHA (файл/лог) + предупреждение про detached HEAD.
