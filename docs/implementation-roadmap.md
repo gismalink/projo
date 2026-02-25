@@ -61,7 +61,7 @@
 1. [ ] Закрепить минимальный набор post-deploy проверок для `test`:
    - [x] `npm run check`,
    - [x] `SMOKE_API=1 npm run check` (в e2e smoke добавлен preflight API availability + skip-safe поведение; подтверждено на `test` с `E2E_API_URL=https://test.projo.gismalink.art/api` после деплоя `c6e5a50`),
-   - [ ] ручной smoke критического user-flow.
+   - [~] ручной smoke критического user-flow (авто-probe пройден: `test.auth` login redirects Google/Yandex + logout returnUrl -> `test.projo`; остаётся интерактивная проверка login->timeline->logout в браузере).
 2. [ ] Добавить release checklist перед `prod`:
    - [ ] backup БД,
    - [ ] green test-smoke,
