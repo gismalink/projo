@@ -527,18 +527,15 @@ export class UsersService {
   }
 
   async getAdminCompanyOverview(activeWorkspaceId: string): Promise<AdminCompanyOverview> {
-    const companyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
+    const activeCompanyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
 
-    const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
+    const activeCompany = await this.prisma.company.findUnique({
+      where: { id: activeCompanyId },
       select: { id: true, name: true },
     });
 
-    const companyName = company?.name ?? 'Company';
-
     const workspaces = await this.prisma.workspace.findMany({
       where: {
-        companyId,
         NOT: {
           name: {
             startsWith: COMPANY_HOME_WORKSPACE_PREFIX,
@@ -548,92 +545,36 @@ export class UsersService {
       select: {
         id: true,
         ownerUserId: true,
+        companyId: true,
       },
     });
-
-    if (workspaces.length === 0) {
-      const companies = await this.prisma.company.findMany({
-        select: {
-          id: true,
-          name: true,
-        },
-        orderBy: [{ createdAt: 'asc' }],
-      });
-
-      return {
-        companyId,
-        companyName,
-        totalUsers: 0,
-        totalProjects: 0,
-        users: [],
-        topUsers: [],
-        companies: companies.map((item) => ({
-          companyId: item.id,
-          companyName: item.name,
-          totalUsers: 0,
-          totalProjects: 0,
-        })),
-      };
-    }
 
     const workspaceIds = workspaces.map((workspace) => workspace.id);
     const ownerByWorkspaceId = new Map(workspaces.map((workspace) => [workspace.id, workspace.ownerUserId] as const));
+    const companyIdByWorkspaceId = new Map(workspaces.map((workspace) => [workspace.id, workspace.companyId] as const));
 
-    const memberships = await this.prisma.workspaceMember.findMany({
-      where: {
-        workspaceId: {
-          in: workspaceIds,
-        },
-      },
-      select: {
-        workspaceId: true,
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
+    const memberships = workspaceIds.length
+      ? await this.prisma.workspaceMember.findMany({
+          where: {
+            workspaceId: {
+              in: workspaceIds,
+            },
           },
-        },
+          select: {
+            workspaceId: true,
+            userId: true,
+          },
+        })
+      : [];
+
+    const allUsers = await this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
       },
+      orderBy: [{ createdAt: 'asc' }],
     });
-
-    const projectsByUserId = new Map<string, Set<string>>();
-    const ownedProjectsByUserId = new Map<string, number>();
-    const userById = new Map<string, { userId: string; email: string; fullName: string }>();
-
-    for (const membership of memberships) {
-      const userId = membership.user.id;
-
-      userById.set(userId, {
-        userId,
-        email: membership.user.email,
-        fullName: membership.user.fullName,
-      });
-
-      if (!projectsByUserId.has(userId)) {
-        projectsByUserId.set(userId, new Set<string>());
-      }
-      projectsByUserId.get(userId)?.add(membership.workspaceId);
-
-      if (ownerByWorkspaceId.get(membership.workspaceId) === userId) {
-        ownedProjectsByUserId.set(userId, (ownedProjectsByUserId.get(userId) ?? 0) + 1);
-      }
-    }
-
-    const users = Array.from(userById.values())
-      .map((user) => ({
-        ...user,
-        projectsCount: projectsByUserId.get(user.userId)?.size ?? 0,
-        ownedProjectsCount: ownedProjectsByUserId.get(user.userId) ?? 0,
-      }))
-      .sort((left, right) => {
-        if (right.projectsCount !== left.projectsCount) {
-          return right.projectsCount - left.projectsCount;
-        }
-        return left.email.localeCompare(right.email);
-      });
-
-    const topUsers = users.slice(0, 10);
 
     const companies = await this.prisma.company.findMany({
       select: {
@@ -643,29 +584,12 @@ export class UsersService {
       orderBy: [{ createdAt: 'asc' }],
     });
 
-    const companyIds = companies.map((item) => item.id);
-    const companyWorkspaces = await this.prisma.workspace.findMany({
-      where: {
-        companyId: {
-          in: companyIds,
-        },
-        NOT: {
-          name: {
-            startsWith: COMPANY_HOME_WORKSPACE_PREFIX,
-          },
-        },
-      },
-      select: {
-        id: true,
-        companyId: true,
-      },
-    });
-
-    const companyIdByWorkspaceId = new Map(companyWorkspaces.map((item) => [item.id, item.companyId] as const));
+    const projectsByUserId = new Map<string, Set<string>>();
+    const ownedProjectsByUserId = new Map<string, number>();
     const companyUsersById = new Map<string, Set<string>>();
     const companyProjectsCountById = new Map<string, number>();
 
-    for (const workspace of companyWorkspaces) {
+    for (const workspace of workspaces) {
       if (!workspace.companyId) {
         continue;
       }
@@ -676,31 +600,43 @@ export class UsersService {
       }
     }
 
-    if (companyWorkspaces.length > 0) {
-      const membershipsByCompany = await this.prisma.workspaceMember.findMany({
-        where: {
-          workspaceId: {
-            in: companyWorkspaces.map((item) => item.id),
-          },
-        },
-        select: {
-          workspaceId: true,
-          userId: true,
-        },
+    for (const membership of memberships) {
+      if (!projectsByUserId.has(membership.userId)) {
+        projectsByUserId.set(membership.userId, new Set<string>());
+      }
+      projectsByUserId.get(membership.userId)?.add(membership.workspaceId);
+
+      if (ownerByWorkspaceId.get(membership.workspaceId) === membership.userId) {
+        ownedProjectsByUserId.set(membership.userId, (ownedProjectsByUserId.get(membership.userId) ?? 0) + 1);
+      }
+
+      const targetCompanyId = companyIdByWorkspaceId.get(membership.workspaceId);
+      if (!targetCompanyId) {
+        continue;
+      }
+
+      if (!companyUsersById.has(targetCompanyId)) {
+        companyUsersById.set(targetCompanyId, new Set<string>());
+      }
+      companyUsersById.get(targetCompanyId)?.add(membership.userId);
+    }
+
+    const users = allUsers
+      .map((user) => ({
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        projectsCount: projectsByUserId.get(user.id)?.size ?? 0,
+        ownedProjectsCount: ownedProjectsByUserId.get(user.id) ?? 0,
+      }))
+      .sort((left, right) => {
+        if (right.projectsCount !== left.projectsCount) {
+          return right.projectsCount - left.projectsCount;
+        }
+        return left.email.localeCompare(right.email);
       });
 
-      for (const membership of membershipsByCompany) {
-        const targetCompanyId = companyIdByWorkspaceId.get(membership.workspaceId);
-        if (!targetCompanyId) {
-          continue;
-        }
-
-        if (!companyUsersById.has(targetCompanyId)) {
-          companyUsersById.set(targetCompanyId, new Set<string>());
-        }
-        companyUsersById.get(targetCompanyId)?.add(membership.userId);
-      }
-    }
+    const topUsers = users.slice(0, 10);
 
     const companySummaries = companies
       .map((item) => ({
@@ -717,8 +653,8 @@ export class UsersService {
       });
 
     return {
-      companyId,
-      companyName,
+      companyId: activeCompanyId,
+      companyName: activeCompany?.name ?? 'Portal',
       totalUsers: users.length,
       totalProjects: workspaceIds.length,
       users,

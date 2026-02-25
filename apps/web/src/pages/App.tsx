@@ -656,7 +656,7 @@ export function App() {
               aria-label={t.tabAdmin}
               data-tooltip={t.tabAdmin}
             >
-              <Icon name="settings" />
+              <Icon name="grid" />
             </button>
           ) : null}
           {app.token ? (
@@ -1030,9 +1030,7 @@ export function App() {
                 <>
                 <article className="card" style={{ marginBottom: 12 }}>
                   <div className="timeline-form">
-                    <h4>
-                      {t.adminOverviewTitle}: {adminOverview?.companyName ?? '-'}
-                    </h4>
+                    <h4>{t.adminOverviewTitle}</h4>
                     <div className="project-space-grid" style={{ marginBottom: 12 }}>
                       <div className="project-space-card">
                         <strong>{t.adminOverviewUsers}</strong>
