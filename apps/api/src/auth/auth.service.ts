@@ -4,7 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { ErrorCode } from '../common/error-codes';
 import { AppRoleValue } from '../common/decorators/roles.decorator';
+import { PrismaService } from '../common/prisma.service';
 import { UsersService } from '../users/users.service';
+
+const COMPANY_HOME_WORKSPACE_PREFIX = '__company_home__:';
 
 type LoginResponse = {
   accessToken: string;
@@ -52,6 +55,7 @@ type CompanyAccessItem = {
   id: string;
   name: string;
   isOwner: boolean;
+  projectsCount: number;
 };
 
 type CompaniesResponse = {
@@ -114,6 +118,7 @@ export class AuthService {
   private static readonly SUPER_ADMIN_EMAIL = 'gismalink@gmail.com';
 
   constructor(
+    private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
@@ -286,12 +291,37 @@ export class AuthService {
 
   async getMyCompanies(userId: string): Promise<CompaniesResponse> {
     const list = await this.usersService.listCompaniesForUser(userId);
+    const companyIds = list.companies.map((item) => item.companyId);
+
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        companyId: {
+          in: companyIds,
+        },
+        NOT: {
+          name: {
+            startsWith: COMPANY_HOME_WORKSPACE_PREFIX,
+          },
+        },
+      },
+      select: {
+        companyId: true,
+      },
+    });
+
+    const projectsCountByCompanyId = new Map<string, number>();
+    for (const workspace of workspaces) {
+      if (!workspace.companyId) continue;
+      projectsCountByCompanyId.set(workspace.companyId, (projectsCountByCompanyId.get(workspace.companyId) ?? 0) + 1);
+    }
+
     return {
       activeCompanyId: list.activeCompanyId,
       companies: list.companies.map((item) => ({
         id: item.companyId,
         name: item.companyName,
         isOwner: item.ownerUserId === userId,
+        projectsCount: projectsCountByCompanyId.get(item.companyId) ?? 0,
       })),
     };
   }

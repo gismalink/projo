@@ -74,6 +74,7 @@ export type CompanyItem = {
   id: string;
   name: string;
   isOwner: boolean;
+  projectsCount: number;
 };
 
 export type MyCompaniesResponse = {

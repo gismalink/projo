@@ -201,6 +201,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
         const result = await api.createProjectSpace(trimmedName, state.token as string);
         applyAuthSession(result);
         await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
         await loadMyProjects(result.accessToken);
       },
       fallbackMessage: t.uiCreateProjectSpaceFailed,
@@ -286,6 +287,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
         const result = await api.switchProjectSpace(projectId, state.token as string);
         applyAuthSession(result);
         await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
         await loadMyProjects(result.accessToken);
       },
       fallbackMessage: t.uiSwitchProjectSpaceFailed,
@@ -329,6 +331,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
         const result = await api.deleteProjectSpace(projectId, state.token as string);
         applyAuthSession(result);
         await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
         await loadMyProjects(result.accessToken);
       },
       fallbackMessage: t.uiDeleteProjectSpaceFailed,
@@ -356,6 +359,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     const copied = await runWithErrorToastVoid({
       operation: async () => {
         await api.copyProjectSpace(projectId, trimmedName, state.token as string);
+        await loadMyCompanies(state.token as string);
         await loadMyProjects(state.token as string);
       },
       fallbackMessage: t.uiCopyProjectSpaceFailed,

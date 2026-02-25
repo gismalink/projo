@@ -118,7 +118,7 @@ export function AppHeader({
                   <optgroup label={t.myCompanies}>
                     {myCompanies.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name}
+                        {`${item.name} (${item.projectsCount})`}
                       </option>
                     ))}
                   </optgroup>
@@ -127,7 +127,7 @@ export function AppHeader({
                   <optgroup label={t.otherCompanies}>
                     {otherCompanies.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name}
+                        {`${item.name} (${item.projectsCount})`}
                       </option>
                     ))}
                   </optgroup>
