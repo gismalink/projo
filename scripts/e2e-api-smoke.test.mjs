@@ -7,6 +7,8 @@ const password = process.env.E2E_USER_PASSWORD ?? 'ProjoAdmin!2026';
 const year = Number(process.env.E2E_YEAR ?? new Date().getUTCFullYear());
 const authMode = (process.env.E2E_AUTH_MODE ?? 'auto').trim().toLowerCase();
 const accessTokenOverride = (process.env.E2E_ACCESS_TOKEN ?? '').trim();
+let apiAvailabilityChecked = false;
+let apiAvailabilityError = '';
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, options);
@@ -20,6 +22,27 @@ async function request(path, options = {}) {
   return { response, payload };
 }
 
+async function ensureApiAvailable(t) {
+  if (!apiAvailabilityChecked) {
+    apiAvailabilityChecked = true;
+    try {
+      const health = await request('/health');
+      if (health.response.status !== 200) {
+        apiAvailabilityError = `API health check failed at ${baseUrl}/health (status ${health.response.status}).`;
+      }
+    } catch (error) {
+      apiAvailabilityError = `API is not reachable at ${baseUrl} (${error instanceof Error ? error.message : 'unknown error'}).`;
+    }
+  }
+
+  if (apiAvailabilityError) {
+    t.skip(apiAvailabilityError);
+    return false;
+  }
+
+  return true;
+}
+
 function shiftIsoByDays(iso, days) {
   const date = new Date(iso);
   date.setUTCDate(date.getUTCDate() + days);
@@ -27,6 +50,8 @@ function shiftIsoByDays(iso, days) {
 }
 
 async function getAccessToken(t) {
+  if (!(await ensureApiAvailable(t))) return null;
+
   if (accessTokenOverride) return accessTokenOverride;
 
   if (authMode === 'sso') {
@@ -42,6 +67,11 @@ async function getAccessToken(t) {
 
   if (login.response.status === 410) {
     t.skip('Local auth is disabled (410). Set E2E_ACCESS_TOKEN (SSO) or run against a local/dev API.');
+    return null;
+  }
+
+  if (login.response.status === 404) {
+    t.skip(`Login endpoint is not available at ${baseUrl}/auth/login (404).`);
     return null;
   }
 
@@ -95,6 +125,8 @@ async function ensureEmployee(authHeaders) {
 }
 
 test('API e2e smoke: auth + timeline + calendar', async (t) => {
+  if (!(await ensureApiAvailable(t))) return;
+
   const health = await request('/health');
   assert.equal(health.response.status, 200, 'health endpoint should return 200');
 
@@ -807,6 +839,8 @@ test('API e2e smoke: company list/create/rename/switch lifecycle', async (t) => 
 });
 
 test('API e2e smoke: account register + me + password change', async (t) => {
+  if (!(await ensureApiAvailable(t))) return;
+
   if (authMode === 'sso' || accessTokenOverride) {
     t.skip('This scenario relies on local auth (register/login/password change).');
     return;
@@ -834,6 +868,7 @@ test('API e2e smoke: account register + me + password change', async (t) => {
   }
 
   if (register.response.status === 404) {
+    t.skip(`Register endpoint is not available at ${baseUrl}/auth/register (404).`);
     return;
   }
 

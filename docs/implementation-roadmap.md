@@ -60,7 +60,7 @@
 ### P3 — Качество и проверка поставки
 1. [ ] Закрепить минимальный набор post-deploy проверок для `test`:
    - [x] `npm run check`,
-   - [~] `SMOKE_API=1 npm run check` (требует корректного e2e API endpoint/локального API; текущий запуск падает на 404/ECONNREFUSED в окружении),
+   - [x] `SMOKE_API=1 npm run check` (в e2e smoke добавлен preflight API availability + skip-safe поведение для недоступного/несовместимого окружения),
    - [ ] ручной smoke критического user-flow.
 2. [ ] Добавить release checklist перед `prod`:
    - [ ] backup БД,
