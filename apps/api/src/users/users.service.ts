@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppRole, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { getAverageAssignmentLoadPercent } from '../common/load-profile.utils';
+import { createAssignmentLoadPercentResolver, startOfUtcDay } from '../common/load-profile.utils';
 import { PrismaService } from '../common/prisma.service';
 
 type UserAuthContext = {
@@ -431,6 +431,11 @@ export class UsersService {
   async listWorkspaceProjectStats(workspaceIds: string[]): Promise<WorkspaceProjectStatsItem[]> {
     if (workspaceIds.length === 0) return [];
 
+    const currentYear = new Date().getUTCFullYear();
+    const yearStart = new Date(Date.UTC(currentYear, 0, 1));
+    const yearEnd = new Date(Date.UTC(currentYear, 11, 31));
+    const totalDaysInYear = Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86_400_000) + 1;
+
     const uniqueWorkspaceIds = Array.from(new Set(workspaceIds));
     const projects = await this.prisma.project.findMany({
       where: {
@@ -442,6 +447,7 @@ export class UsersService {
         workspaceId: true,
         assignments: {
           select: {
+            employeeId: true,
             allocationPercent: true,
             loadProfile: true,
             assignmentStartDate: true,
@@ -452,27 +458,57 @@ export class UsersService {
     });
 
     const statsByWorkspaceId = new Map<string, WorkspaceProjectStatsItem>();
+    const utilizationByWorkspaceId = new Map<string, Map<string, number>>();
     for (const workspaceId of uniqueWorkspaceIds) {
       statsByWorkspaceId.set(workspaceId, {
         workspaceId,
         projectsCount: 0,
         totalAllocationPercent: 0,
       });
+      utilizationByWorkspaceId.set(workspaceId, new Map());
     }
 
     for (const project of projects) {
       const bucket = statsByWorkspaceId.get(project.workspaceId);
+      const utilizationByEmployee = utilizationByWorkspaceId.get(project.workspaceId);
       if (!bucket) continue;
+      if (!utilizationByEmployee) continue;
 
       bucket.projectsCount += 1;
-      bucket.totalAllocationPercent += project.assignments.reduce((sum, assignment) => {
-        return sum + getAverageAssignmentLoadPercent(assignment);
-      }, 0);
+
+      for (const assignment of project.assignments) {
+        const assignmentStart = startOfUtcDay(assignment.assignmentStartDate);
+        const assignmentEnd = startOfUtcDay(assignment.assignmentEndDate);
+        const effectiveStart = assignmentStart > yearStart ? assignmentStart : yearStart;
+        const effectiveEnd = assignmentEnd < yearEnd ? assignmentEnd : yearEnd;
+        if (effectiveEnd < effectiveStart) continue;
+
+        const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
+        let weightedUtilization = 0;
+        const cursor = new Date(effectiveStart);
+
+        while (cursor <= effectiveEnd) {
+          weightedUtilization += resolveLoadPercent(cursor) / totalDaysInYear;
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+
+        utilizationByEmployee.set(
+          assignment.employeeId,
+          (utilizationByEmployee.get(assignment.employeeId) ?? 0) + weightedUtilization,
+        );
+      }
     }
 
     return Array.from(statsByWorkspaceId.values()).map((item) => ({
       ...item,
-      totalAllocationPercent: Number(item.totalAllocationPercent.toFixed(1)),
+      totalAllocationPercent: Number(
+        (() => {
+          const utilizationByEmployee = utilizationByWorkspaceId.get(item.workspaceId);
+          if (!utilizationByEmployee || utilizationByEmployee.size === 0) return 0;
+          const totalUtilization = Array.from(utilizationByEmployee.values()).reduce((sum, value) => sum + value, 0);
+          return (totalUtilization / utilizationByEmployee.size).toFixed(1);
+        })(),
+      ),
     }));
   }
 
