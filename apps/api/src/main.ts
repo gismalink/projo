@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import helmet from 'helmet';
@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
   // Important for correct rate-limiting and logging behind reverse proxies (Caddy/edge).
   // Makes Express derive req.ip from X-Forwarded-For.
@@ -24,14 +25,21 @@ async function bootstrap() {
 
   const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 
+  const normalizeOriginForLog = (origin: string) => {
+    const sanitized = origin.replace(/[\r\n\t]/g, ' ').slice(0, 200).trim();
+    return sanitized || '<empty-origin>';
+  };
+
   app.setGlobalPrefix('api');
   const corsOrigin: NonNullable<CorsOptions['origin']> = (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error('Origin is not allowed by CORS'));
-    };
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    logger.warn(`CORS denied origin: ${normalizeOriginForLog(origin)}`);
+    callback(null, false);
+  };
 
   app.enableCors({
     origin: corsOrigin,
