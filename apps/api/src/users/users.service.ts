@@ -442,6 +442,36 @@ export class UsersService {
     const yearEnd = new Date(Date.UTC(currentYear, 11, 31));
     const totalDaysInYear = Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86_400_000) + 1;
 
+    const calendarDays = await this.prisma.calendarDay.findMany({
+      where: {
+        date: {
+          gte: yearStart,
+          lte: yearEnd,
+        },
+      },
+      select: {
+        date: true,
+        isWorkingDay: true,
+      },
+    });
+    const calendarWorkingDayByDateIso = new Map(
+      calendarDays.map((item) => [item.date.toISOString().slice(0, 10), item.isWorkingDay]),
+    );
+
+    const isLoadBearingDay = (date: Date) => {
+      const isoDate = date.toISOString().slice(0, 10);
+      const byCalendar = calendarWorkingDayByDateIso.get(isoDate);
+      if (typeof byCalendar === 'boolean') return byCalendar;
+      const weekDay = date.getUTCDay();
+      return weekDay !== 0 && weekDay !== 6;
+    };
+
+    const loadBearingDayByIndex = Array.from({ length: totalDaysInYear }, (_, dayIndex) => {
+      const currentDate = new Date(yearStart);
+      currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
+      return isLoadBearingDay(currentDate);
+    });
+
     const uniqueWorkspaceIds = Array.from(new Set(workspaceIds));
     const projects = await this.prisma.project.findMany({
       where: {
@@ -493,11 +523,6 @@ export class UsersService {
       rawDailyLoadByWorkspaceId.set(workspaceId, Array.from({ length: totalDaysInYear }, () => 0));
     }
 
-    const isWorkingDay = (date: Date) => {
-      const weekDay = date.getUTCDay();
-      return weekDay !== 0 && weekDay !== 6;
-    };
-
     for (const project of projects) {
       const bucket = statsByWorkspaceId.get(project.workspaceId);
       const rawDailyLoad = rawDailyLoadByWorkspaceId.get(project.workspaceId);
@@ -518,10 +543,10 @@ export class UsersService {
         const endIndex = Math.min(totalDaysInYear - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / 86_400_000));
 
         for (let dayIndex = startIndex; dayIndex <= endIndex; dayIndex += 1) {
+          if (!loadBearingDayByIndex[dayIndex]) continue;
+
           const currentDate = new Date(yearStart);
           currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
-          if (!isWorkingDay(currentDate)) continue;
-
           const loadPercent = resolveLoadPercent(currentDate);
           if (!Number.isFinite(loadPercent) || loadPercent <= 0) continue;
           rawDailyLoad[dayIndex] += loadPercent;
@@ -535,8 +560,9 @@ export class UsersService {
         const rawDailyLoad = rawDailyLoadByWorkspaceId.get(item.workspaceId) ?? [];
         const employeeCapacity = Math.max(1, employeeCountByWorkspaceId.get(item.workspaceId) ?? 0);
         const dailyUtilization = rawDailyLoad.map((value) => value / employeeCapacity);
-        const yearlyAvg = dailyUtilization.length > 0 ? dailyUtilization.reduce((sum, value) => sum + value, 0) / dailyUtilization.length : 0;
-        const yearlyPeak = dailyUtilization.length > 0 ? Math.max(...dailyUtilization) : 0;
+        const yearlyValues = dailyUtilization.filter((_, dayIndex) => loadBearingDayByIndex[dayIndex]);
+        const yearlyAvg = yearlyValues.length > 0 ? yearlyValues.reduce((sum, value) => sum + value, 0) / yearlyValues.length : 0;
+        const yearlyPeak = yearlyValues.length > 0 ? Math.max(...yearlyValues) : 0;
 
         const monthlyLoadStats = Array.from({ length: 12 }, (_, monthIndex) => {
           const monthStart = new Date(Date.UTC(currentYear, monthIndex, 1));
@@ -546,9 +572,13 @@ export class UsersService {
             startIndex,
             Math.min(totalDaysInYear, Math.floor((nextMonthStart.getTime() - yearStart.getTime()) / 86_400_000)),
           );
-          const monthSlice = dailyUtilization.slice(startIndex, endIndex);
-          const monthAvg = monthSlice.length > 0 ? monthSlice.reduce((sum, value) => sum + value, 0) / monthSlice.length : 0;
-          const monthPeak = monthSlice.length > 0 ? Math.max(...monthSlice) : 0;
+          const monthValues: number[] = [];
+          for (let dayIndex = startIndex; dayIndex < endIndex; dayIndex += 1) {
+            if (!loadBearingDayByIndex[dayIndex]) continue;
+            monthValues.push(dailyUtilization[dayIndex] ?? 0);
+          }
+          const monthAvg = monthValues.length > 0 ? monthValues.reduce((sum, value) => sum + value, 0) / monthValues.length : 0;
+          const monthPeak = monthValues.length > 0 ? Math.max(...monthValues) : 0;
 
           return {
             month: monthIndex + 1,

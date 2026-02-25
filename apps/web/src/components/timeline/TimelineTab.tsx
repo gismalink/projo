@@ -241,6 +241,12 @@ export function TimelineTab(props: TimelineTabProps) {
           )
         : null;
 
+    const loadBearingDayByIndex = Array.from({ length: days }, (_, dayIndex) => {
+      const currentDate = new Date(yearStart);
+      currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
+      return isLoadBearingDay(currentDate);
+    });
+
     for (const assignment of assignments) {
       if (filterEmployeeIdSet && !filterEmployeeIdSet.has(assignment.employeeId)) continue;
       const resolveLoadPercent = createAssignmentLoadPercentResolver(assignment);
@@ -254,9 +260,9 @@ export function TimelineTab(props: TimelineTabProps) {
       const startIndex = Math.max(0, Math.floor((effectiveStart.getTime() - yearStart.getTime()) / MS_PER_DAY));
       const endIndex = Math.min(days - 1, Math.floor((effectiveEnd.getTime() - yearStart.getTime()) / MS_PER_DAY));
       for (let i = startIndex; i <= endIndex; i += 1) {
+        if (!loadBearingDayByIndex[i]) continue;
         const currentDate = new Date(yearStart);
         currentDate.setUTCDate(currentDate.getUTCDate() + i);
-        if (!isLoadBearingDay(currentDate)) continue;
         const loadPercent = resolveLoadPercent(currentDate);
         if (!Number.isFinite(loadPercent) || loadPercent <= 0) continue;
         rawTotals[i] += loadPercent;
@@ -272,6 +278,7 @@ export function TimelineTab(props: TimelineTabProps) {
     } else if (dragStepDays === 7) {
       const weekBuckets = new Map<string, { start: Date; sum: number; count: number }>();
       for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
+        if (!loadBearingDayByIndex[dayIndex]) continue;
         const currentDate = new Date(yearStart);
         currentDate.setUTCDate(currentDate.getUTCDate() + dayIndex);
         const weekStart = new Date(currentDate);
@@ -295,14 +302,22 @@ export function TimelineTab(props: TimelineTabProps) {
         const nextMonthStart = new Date(Date.UTC(selectedYear, monthIndex + 1, 1));
         const startIndex = Math.max(0, Math.floor((monthStart.getTime() - yearStart.getTime()) / MS_PER_DAY));
         const endIndex = Math.max(startIndex, Math.min(days, Math.floor((nextMonthStart.getTime() - yearStart.getTime()) / MS_PER_DAY)));
-        const slice = dailyUtilization.slice(startIndex, endIndex);
-        const avg = slice.length > 0 ? slice.reduce((sum, value) => sum + value, 0) / slice.length : 0;
+        let sum = 0;
+        let count = 0;
+        for (let dayIndex = startIndex; dayIndex < endIndex; dayIndex += 1) {
+          if (!loadBearingDayByIndex[dayIndex]) continue;
+          sum += dailyUtilization[dayIndex] ?? 0;
+          count += 1;
+        }
+        const avg = count > 0 ? sum / count : 0;
         values.push(avg);
       }
     }
 
     const max = Math.max(1, ...values);
-    const avg = values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const avgSource =
+      dragStepDays === 1 ? values.filter((_, dayIndex) => loadBearingDayByIndex[dayIndex]) : values;
+    const avg = avgSource.length > 0 ? avgSource.reduce((sum, value) => sum + value, 0) / avgSource.length : 0;
     return { values, max, avg };
   }, [assignments, selectedYear, employees, dragStepDays, calendarDayByIso, filterBenchDepartmentName, filterBenchEmployeeId, t.unassignedDepartment]);
 
