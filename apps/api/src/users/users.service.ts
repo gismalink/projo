@@ -508,6 +508,7 @@ export class UsersService {
 
     const statsByWorkspaceId = new Map<string, WorkspaceProjectStatsItem>();
     const rawDailyLoadByWorkspaceId = new Map<string, number[]>();
+    const assignedEmployeeIdsByWorkspaceId = new Map<string, Set<string>>();
     for (const workspaceId of uniqueWorkspaceIds) {
       statsByWorkspaceId.set(workspaceId, {
         workspaceId,
@@ -521,6 +522,7 @@ export class UsersService {
         })),
       });
       rawDailyLoadByWorkspaceId.set(workspaceId, Array.from({ length: totalDaysInYear }, () => 0));
+      assignedEmployeeIdsByWorkspaceId.set(workspaceId, new Set<string>());
     }
 
     for (const project of projects) {
@@ -532,6 +534,9 @@ export class UsersService {
       bucket.projectsCount += 1;
 
       for (const assignment of project.assignments) {
+        const assignedEmployeeIds = assignedEmployeeIdsByWorkspaceId.get(project.workspaceId);
+        assignedEmployeeIds?.add(assignment.employeeId);
+
         const assignmentStart = startOfUtcDay(assignment.assignmentStartDate);
         const assignmentEnd = startOfUtcDay(assignment.assignmentEndDate);
         const effectiveStart = assignmentStart > yearStart ? assignmentStart : yearStart;
@@ -558,7 +563,9 @@ export class UsersService {
       ...item,
       ...(() => {
         const rawDailyLoad = rawDailyLoadByWorkspaceId.get(item.workspaceId) ?? [];
-        const employeeCapacity = Math.max(1, employeeCountByWorkspaceId.get(item.workspaceId) ?? 0);
+        const workspaceEmployeeCount = employeeCountByWorkspaceId.get(item.workspaceId) ?? 0;
+        const assignedEmployeeCount = assignedEmployeeIdsByWorkspaceId.get(item.workspaceId)?.size ?? 0;
+        const employeeCapacity = Math.max(1, workspaceEmployeeCount, assignedEmployeeCount);
         const dailyUtilization = rawDailyLoad.map((value) => value / employeeCapacity);
         const yearlyValues = dailyUtilization.filter((_, dayIndex) => loadBearingDayByIndex[dayIndex]);
         const yearlyAvg = yearlyValues.length > 0 ? yearlyValues.reduce((sum, value) => sum + value, 0) / yearlyValues.length : 0;
