@@ -17,6 +17,7 @@ import { SkillsModule } from './skills/skills.module';
 import { DemoModule } from './demo/demo.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { TeamTemplatesModule } from './team-templates/team-templates.module';
+import { ImportsModule } from './imports/imports.module';
 import { UsersModule } from './users/users.module';
 import { VacationsModule } from './vacations/vacations.module';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
@@ -55,6 +56,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     AssignmentsModule,
     TimelineModule,
     TeamTemplatesModule,
+    ImportsModule,
     VacationsModule,
     HealthModule,
     DemoModule,

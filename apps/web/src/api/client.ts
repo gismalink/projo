@@ -87,6 +87,48 @@ export type CompanyNameResponse = {
   name: string;
 };
 
+export type CompanyXlsxImportIssue = {
+  sheet: string;
+  row: number;
+  col: string;
+  message: string;
+};
+
+export type CompanyXlsxImportPreviewResponse = {
+  counts: {
+    projects: number;
+    employees: number;
+    assignments: number;
+  };
+  monthRange: {
+    from: string | null;
+    to: string | null;
+  };
+  errors: CompanyXlsxImportIssue[];
+  warnings: CompanyXlsxImportIssue[];
+};
+
+export type CompanyXlsxImportApplyResponse = {
+  company: {
+    id: string;
+    name: string;
+  };
+  workspace: {
+    id: string;
+    name: string;
+  };
+  counts: {
+    projects: number;
+    employees: number;
+    assignments: number;
+  };
+  monthRange: {
+    from: string | null;
+    to: string | null;
+  };
+  warnings: CompanyXlsxImportIssue[];
+};
+
 export type AdminOverviewUserItem = {
   userId: string;
   email: string;
@@ -508,6 +550,46 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return (await response.json()) as T;
 }
 
+async function requestFormData<T>(path: string, formData: FormData, token: string): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let code = `HTTP_${response.status}`;
+    let message = '';
+
+    try {
+      const payload = (await response.json()) as
+        | { message?: string | string[]; error?: string; statusCode?: number }
+        | undefined;
+      if (payload) {
+        if (Array.isArray(payload.message)) {
+          message = payload.message.join(', ');
+        } else if (typeof payload.message === 'string') {
+          message = payload.message;
+        }
+        if (typeof payload.error === 'string' && !message) {
+          message = payload.error;
+        }
+      }
+    } catch {
+      message = await response.text();
+    }
+
+    if (message && /^ERR_[A-Z0-9_]+$/.test(message)) {
+      code = message;
+    }
+    throw new ApiError(code, response.status, message || code);
+  }
+
+  return (await response.json()) as T;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<LoginResponse>('/auth/login', {
@@ -530,6 +612,16 @@ export const api = {
   ssoCurrentUser: () => request<Record<string, unknown>>('/sso/current-user', { credentials: 'include' }),
 
   getMyCompanies: (token: string) => request<MyCompaniesResponse>('/auth/companies', {}, token),
+  previewCompanyXlsxImport: (file: File, token: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return requestFormData<CompanyXlsxImportPreviewResponse>('/imports/xlsx/company/preview', formData, token);
+  },
+  applyCompanyXlsxImport: (file: File, token: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return requestFormData<CompanyXlsxImportApplyResponse>('/imports/xlsx/company/apply', formData, token);
+  },
   getAdminOverview: (token: string) => request<AdminOverviewResponse>('/auth/admin/overview', {}, token),
   createCompany: (name: string, token: string) =>
     request<LoginResponse>('/auth/companies', {

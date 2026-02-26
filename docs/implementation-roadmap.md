@@ -60,6 +60,8 @@
 
 ### P4.5 — Импорт XLSX (новая компания)
 План: `docs/imports/xlsx-company-import-plan.md`.
+- [~] MVP реализован: backend `preview/apply` (`/imports/xlsx/company/*`) + frontend upload action в header (2-фазный flow: preview -> confirm -> apply).
+- [ ] Прогнать end-to-end smoke на реальном XLSX и зафиксировать аудит (валидность кривых loadProfile, корректность counts, отсутствие регрессий timeline).
 
 ### P4 — Функциональные улучшения после стабилизации
 1. [ ] Довести стабильность UX/метрик timeline на краевых сценариях.
@@ -71,11 +73,6 @@
    - [x] В smoke добавлен авто-bootstrap `POST /roles/defaults`, что снимает skip employee-сценариев при пустом каталоге ролей.
    - [x] В локальном/dev контуре достигнут стабильный non-skip прогон: `13/13 pass`, `0 skip`, `0 fail` (включая `E2E_MAX_SKIPPED=0`).
    - [x] Подтвержден non-skip baseline в test token-run контуре (`E2E_AUTH_MODE=sso` + `E2E_ACCESS_TOKEN`): `core gate = 7/7 pass, 0 skip, 0 fail`.
-3. [ ] Добавить страницу статистики для владельца/админа:
-   - [ ] общее количество пользователей,
-   - [ ] общее количество проектов,
-   - [ ] количество проектов по каждому пользователю.
-   - [ ] таблица пользователей с колонками: user, role, projects count, plans count.
 4. [ ] Исследовать и реализовать мультикурсор в рамках проекта (desktop-only):
    - [ ] пользователи в одном проекте видят курсоры друг друга в реальном времени,
    - [ ] поддержать роли viewer/editor/owner,

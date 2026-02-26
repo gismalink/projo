@@ -385,6 +385,10 @@ export function App() {
     await app.handleDeleteCompany(app.activeCompanyId);
   };
 
+  const handleImportCompanyXlsx = async (file: File) => {
+    await app.handleImportCompanyXlsx(file);
+  };
+
   const handleSubmitCompanyModal = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -501,6 +505,7 @@ export function App() {
         onRenameCompany={handleRenameCompany}
         onDeleteCompany={handleDeleteCompany}
         onCreateCompany={handleCreateCompany}
+        onImportCompanyXlsx={handleImportCompanyXlsx}
         onToggleCompanyTab={toggleCompanyTab}
         onToggleAccountModal={() => setIsAccountModalOpen((prev) => !prev)}
         onChangeLang={setLang}

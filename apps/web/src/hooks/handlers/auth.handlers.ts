@@ -279,6 +279,43 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     return false;
   }
 
+  async function handleImportCompanyXlsx(file: File) {
+    if (!state.token) return false;
+
+    const imported = await runWithErrorToastVoid({
+      operation: async () => {
+        const preview = await api.previewCompanyXlsxImport(file, state.token as string);
+
+        if (preview.errors.length > 0) {
+          pushToast(
+            `${t.uiImportCompanyXlsxPreviewFailed}: ${preview.errors[0]?.message ?? t.uiImportCompanyXlsxPreviewInvalid}`,
+          );
+          return;
+        }
+
+        const confirmed = window.confirm(
+          `${t.confirmImportCompanyXlsx}\n\nprojects: ${preview.counts.projects}\nemployees: ${preview.counts.employees}\nassignments: ${preview.counts.assignments}`,
+        );
+        if (!confirmed) return;
+
+        await api.applyCompanyXlsxImport(file, state.token as string);
+        await refreshData(state.token as string, state.selectedYear);
+        await loadMyCompanies(state.token as string);
+        await loadMyProjects(state.token as string);
+      },
+      fallbackMessage: t.uiImportCompanyXlsxFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (imported) {
+      pushToast(t.uiImportCompanyXlsxSuccess);
+      return true;
+    }
+
+    return false;
+  }
+
   async function handleDeleteCompany(companyId: string) {
     if (!state.token) return false;
 
@@ -640,6 +677,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     handleUpdateCompanyName,
     handleDeleteCompany,
     handleCreateProjectSpace,
+    handleImportCompanyXlsx,
     handleSwitchProjectSpace,
     handleUpdateProjectSpaceName,
     handleDeleteProjectSpace,

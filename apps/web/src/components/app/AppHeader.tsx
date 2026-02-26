@@ -1,4 +1,5 @@
 import { CompanyItem } from '../../api/client';
+import { ChangeEvent } from 'react';
 import { LANGUAGE_OPTIONS } from '../../pages/app-i18n';
 import { Lang } from '../../pages/app-types';
 import { Icon } from '../Icon';
@@ -33,6 +34,7 @@ type AppHeaderProps = {
   onRenameCompany: () => Promise<void>;
   onDeleteCompany: () => Promise<void>;
   onCreateCompany: () => Promise<void>;
+  onImportCompanyXlsx: (file: File) => Promise<void>;
   onToggleCompanyTab: (tab: CompanyTab) => void;
   onToggleAccountModal: () => void;
   onChangeLang: (lang: Lang) => void;
@@ -65,6 +67,7 @@ export function AppHeader({
   onRenameCompany,
   onDeleteCompany,
   onCreateCompany,
+  onImportCompanyXlsx,
   onToggleCompanyTab,
   onToggleAccountModal,
   onChangeLang,
@@ -168,6 +171,21 @@ export function AppHeader({
               >
                 <Icon name="plus" />
               </button>
+              <label className="icon-btn" aria-label={t.importCompanyXlsx} data-tooltip={t.importCompanyXlsx}>
+                <Icon name="upload" />
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  style={{ display: 'none' }}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      void onImportCompanyXlsx(file);
+                    }
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
             </div>
           </div>
         ) : (
