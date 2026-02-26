@@ -1,9 +1,8 @@
 import { Dispatch, SetStateAction } from 'react';
-import { AdminOverviewResponse, api, CompanyOverviewResponse, GradeItem } from '../../api/client';
+import { AdminOverviewResponse, api, GradeItem } from '../../api/client';
 import { DEFAULT_EMPLOYEE_STATUS, DEFAULT_VACATION_TYPE } from '../../constants/app.constants';
 import { DEFAULT_DATE_INPUTS } from '../../constants/seed-defaults.constants';
 import { isoToInputDate, roleColorOrDefault, timelineStyle, useAppData, utilizationColor } from '../../hooks/useAppData';
-import { CompanyOverviewTable } from '../admin/CompanyOverviewTable';
 import { AdminUsersTable } from '../admin/AdminUsersTable';
 import { AssignmentModal } from '../modals/AssignmentModal';
 import { EmployeeCreateModal } from '../modals/EmployeeCreateModal';
@@ -22,7 +21,6 @@ type CompanyTabsContentProps = {
   locale: string;
   months: string[];
   canUseCompanyAdminTabs: boolean;
-  canUseCompanyStatsTab: boolean;
   canUseAdminConsole: boolean;
   canManageTimeline: boolean;
   canSeedDemoWorkspace: boolean;
@@ -32,8 +30,6 @@ type CompanyTabsContentProps = {
   gradeOptions: string[];
   adminOverview: AdminOverviewResponse | null;
   isAdminOverviewLoading: boolean;
-  companyOverview: CompanyOverviewResponse | null;
-  isCompanyOverviewLoading: boolean;
   handleCreateDefaultGrades: () => Promise<void>;
 };
 
@@ -43,7 +39,6 @@ export function CompanyTabsContent({
   locale,
   months,
   canUseCompanyAdminTabs,
-  canUseCompanyStatsTab,
   canUseAdminConsole,
   canManageTimeline,
   canSeedDemoWorkspace,
@@ -53,8 +48,6 @@ export function CompanyTabsContent({
   gradeOptions,
   adminOverview,
   isAdminOverviewLoading,
-  companyOverview,
-  isCompanyOverviewLoading,
   handleCreateDefaultGrades,
 }: CompanyTabsContentProps) {
   return (
@@ -233,10 +226,6 @@ export function CompanyTabsContent({
 
       {canUseAdminConsole && app.activeTab === 'admin' ? (
         <AdminUsersTable t={t} adminOverview={adminOverview} isLoading={isAdminOverviewLoading} />
-      ) : null}
-
-      {canUseCompanyStatsTab && !canUseAdminConsole && app.activeTab === 'admin' ? (
-        <CompanyOverviewTable t={t} companyOverview={companyOverview} isLoading={isCompanyOverviewLoading} />
       ) : null}
 
       {app.activeTab === 'timeline' ? (

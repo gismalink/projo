@@ -1,9 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AppRole, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createAssignmentLoadPercentResolver, startOfUtcDay } from '../common/load-profile.utils';
 import { PrismaService } from '../common/prisma.service';
-import { ErrorCode } from '../common/error-codes';
 
 type UserAuthContext = {
   user: {
@@ -71,23 +70,6 @@ type AdminCompanyOverview = {
     totalUsers: number;
     totalProjects: number;
   }>;
-};
-
-type CompanyOverviewUserItem = {
-  userId: string;
-  email: string;
-  fullName: string;
-  role: string;
-  projectsCount: number;
-  plansCount: number;
-};
-
-type CompanyOverview = {
-  companyId: string;
-  companyName: string;
-  totalUsers: number;
-  totalProjects: number;
-  users: CompanyOverviewUserItem[];
 };
 
 const COMPANY_HOME_WORKSPACE_PREFIX = '__company_home__:';
@@ -805,177 +787,6 @@ export class UsersService {
       users,
       topUsers,
       companies: companySummaries,
-    };
-  }
-
-  async getCompanyOverview(userId: string, activeWorkspaceId: string): Promise<CompanyOverview> {
-    const activeCompanyId = await this.ensureWorkspaceCompanyId(activeWorkspaceId);
-
-    const activeCompany = await this.prisma.company.findUnique({
-      where: { id: activeCompanyId },
-      select: {
-        id: true,
-        name: true,
-        ownerUserId: true,
-      },
-    });
-
-    if (!activeCompany) {
-      throw new Error('Company not found while resolving company overview');
-    }
-
-    const canAccessAsOwner = activeCompany.ownerUserId === userId;
-    if (!canAccessAsOwner) {
-      const adminMembership = await this.prisma.workspaceMember.findFirst({
-        where: {
-          userId,
-          role: AppRole.ADMIN,
-          workspace: {
-            companyId: activeCompanyId,
-          },
-        },
-        select: { id: true },
-      });
-
-      if (!adminMembership) {
-        throw new ForbiddenException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
-      }
-    }
-
-    const companyWorkspaces = await this.prisma.workspace.findMany({
-      where: {
-        companyId: activeCompanyId,
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: [{ createdAt: 'asc' }],
-    });
-
-    const workspaceIds = companyWorkspaces.map((workspace) => workspace.id);
-    const isHomeWorkspaceById = new Map(
-      companyWorkspaces.map((workspace) => [workspace.id, this.isCompanyHomeWorkspaceName(workspace.name)] as const),
-    );
-
-    const memberships = workspaceIds.length
-      ? await this.prisma.workspaceMember.findMany({
-          where: {
-            workspaceId: {
-              in: workspaceIds,
-            },
-          },
-          select: {
-            workspaceId: true,
-            userId: true,
-            role: true,
-          },
-        })
-      : [];
-
-    const projects = workspaceIds.length
-      ? await this.prisma.project.findMany({
-          where: {
-            workspaceId: {
-              in: workspaceIds,
-            },
-          },
-          select: {
-            id: true,
-            workspaceId: true,
-          },
-        })
-      : [];
-
-    const projectCountByWorkspaceId = new Map<string, number>();
-    for (const project of projects) {
-      projectCountByWorkspaceId.set(project.workspaceId, (projectCountByWorkspaceId.get(project.workspaceId) ?? 0) + 1);
-    }
-
-    const companyUserIds = new Set<string>();
-    companyUserIds.add(activeCompany.ownerUserId);
-
-    const roleWeight: Record<string, number> = {
-      VIEWER: 1,
-      FINANCE: 2,
-      EDITOR: 3,
-      ADMIN: 4,
-      OWNER: 5,
-    };
-
-    const roleByUserId = new Map<string, string>();
-    roleByUserId.set(activeCompany.ownerUserId, 'OWNER');
-    const plansByUserId = new Map<string, Set<string>>();
-    const projectsCountByUserId = new Map<string, number>();
-
-    for (const membership of memberships) {
-      companyUserIds.add(membership.userId);
-
-      const currentRole = roleByUserId.get(membership.userId);
-      const nextRole = membership.role;
-      if (!currentRole || (roleWeight[nextRole] ?? 0) > (roleWeight[currentRole] ?? 0)) {
-        roleByUserId.set(membership.userId, nextRole);
-      }
-
-      if (isHomeWorkspaceById.get(membership.workspaceId)) {
-        continue;
-      }
-
-      if (!plansByUserId.has(membership.userId)) {
-        plansByUserId.set(membership.userId, new Set<string>());
-      }
-      plansByUserId.get(membership.userId)?.add(membership.workspaceId);
-
-      const workspaceProjectsCount = projectCountByWorkspaceId.get(membership.workspaceId) ?? 0;
-      projectsCountByUserId.set(membership.userId, (projectsCountByUserId.get(membership.userId) ?? 0) + workspaceProjectsCount);
-    }
-
-    const users = companyUserIds.size
-      ? await this.prisma.user.findMany({
-          where: {
-            id: {
-              in: Array.from(companyUserIds),
-            },
-          },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-          },
-          orderBy: [{ createdAt: 'asc' }],
-        })
-      : [];
-
-    const userItems: CompanyOverviewUserItem[] = users
-      .map((user) => ({
-        userId: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: roleByUserId.get(user.id) ?? 'VIEWER',
-        projectsCount: projectsCountByUserId.get(user.id) ?? 0,
-        plansCount: plansByUserId.get(user.id)?.size ?? 0,
-      }))
-      .sort((left, right) => {
-        if (right.projectsCount !== left.projectsCount) {
-          return right.projectsCount - left.projectsCount;
-        }
-        if (right.plansCount !== left.plansCount) {
-          return right.plansCount - left.plansCount;
-        }
-        return left.email.localeCompare(right.email);
-      });
-
-    const totalProjects = Array.from(projectCountByWorkspaceId.entries()).reduce((sum, [workspaceId, count]) => {
-      if (isHomeWorkspaceById.get(workspaceId)) return sum;
-      return sum + count;
-    }, 0);
-
-    return {
-      companyId: activeCompany.id,
-      companyName: activeCompany.name,
-      totalUsers: userItems.length,
-      totalProjects,
-      users: userItems,
     };
   }
 

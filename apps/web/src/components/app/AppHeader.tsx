@@ -22,7 +22,7 @@ type AppHeaderProps = {
   canRenameCompany: boolean;
   canDeleteCompany: boolean;
   canUseCompanyAdminTabs: boolean;
-  canUseAdminTab: boolean;
+  canUseAdminConsole: boolean;
   isAccountModalOpen: boolean;
   currentUserFullName: string;
   lang: Lang;
@@ -54,7 +54,7 @@ export function AppHeader({
   canRenameCompany,
   canDeleteCompany,
   canUseCompanyAdminTabs,
-  canUseAdminTab,
+  canUseAdminConsole,
   isAccountModalOpen,
   currentUserFullName,
   lang,
@@ -218,7 +218,7 @@ export function AppHeader({
             </button>
           </>
         ) : null}
-        {token && canUseAdminTab ? (
+        {token && canUseAdminConsole ? (
           <button
             type="button"
             className={

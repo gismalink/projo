@@ -88,12 +88,6 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('companies/overview')
-  getCompanyOverview(@Req() req: AuthenticatedRequest) {
-    return this.authService.getCompanyOverview(req.user.userId, req.user.workspaceId);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Post('companies')
   createCompany(@Req() req: AuthenticatedRequest, @Body() dto: CreateCompanyDto) {
     return this.authService.createCompany(req.user.userId, dto.name);

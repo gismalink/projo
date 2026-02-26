@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { AdminOverviewResponse, api, CompanyOverviewResponse, GradeItem, ProjectMemberItem } from '../api/client';
+import { AdminOverviewResponse, api, GradeItem, ProjectMemberItem } from '../api/client';
 import { ToastStack } from '../components/ToastStack';
 import { AccountModal } from '../components/modals/AccountModal';
 import { AuthGate } from '../components/modals/AuthGate';
@@ -55,8 +55,6 @@ export function App() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [adminOverview, setAdminOverview] = useState<AdminOverviewResponse | null>(null);
   const [isAdminOverviewLoading, setIsAdminOverviewLoading] = useState(false);
-  const [companyOverview, setCompanyOverview] = useState<CompanyOverviewResponse | null>(null);
-  const [isCompanyOverviewLoading, setIsCompanyOverviewLoading] = useState(false);
   const t = TEXT[lang];
   const locale = LOCALE_BY_LANG[lang];
 
@@ -158,10 +156,8 @@ export function App() {
   const isOwner = Boolean(currentProjectAccess?.isOwner);
   const isEditor = app.currentUserRole === 'EDITOR';
   const canUseCompanyAdminTabs = isCompanyOwner;
-  const canUseCompanyStatsTab = isCompanyOwner || app.currentUserRole === 'ADMIN';
   const canManageTimeline = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
   const canSeedDemoWorkspace = app.currentUserRole === 'ADMIN' || app.currentUserRole === 'EDITOR';
-  const canUseAdminTab = canUseAdminConsole || canUseCompanyStatsTab;
   const canViewParticipants = isOwner || isEditor;
   const canInviteParticipants = Boolean(settingsProjectAccess?.isOwner);
   const projectMemberSearchValue = projectMemberSearch.trim().toLowerCase();
@@ -176,11 +172,11 @@ export function App() {
   useEffect(() => {
     const canStayOnCurrentTab =
       app.activeTab === 'timeline' ||
-      (app.activeTab === 'admin' ? canUseAdminTab : canUseCompanyAdminTabs);
+      (app.activeTab === 'admin' ? canUseAdminConsole : canUseCompanyAdminTabs);
     if (!canStayOnCurrentTab) {
       app.setActiveTab('timeline');
     }
-  }, [app.activeTab, app.setActiveTab, canUseAdminTab, canUseCompanyAdminTabs]);
+  }, [app.activeTab, app.setActiveTab, canUseCompanyAdminTabs, canUseAdminConsole]);
 
   useEffect(() => {
     if (!app.token || app.activeTab !== 'admin' || !canUseAdminConsole) {
@@ -216,41 +212,6 @@ export function App() {
       cancelled = true;
     };
   }, [app.activeTab, app.token, canUseAdminConsole, t.uiLoadProjectsFailed]);
-
-  useEffect(() => {
-    if (!app.token || app.activeTab !== 'admin' || !canUseCompanyStatsTab || canUseAdminConsole) {
-      if (app.activeTab !== 'admin') {
-        setCompanyOverview(null);
-      }
-      return;
-    }
-
-    let cancelled = false;
-    setIsCompanyOverviewLoading(true);
-    void api
-      .getCompanyOverview(app.token)
-      .then((result) => {
-        if (!cancelled) {
-          setCompanyOverview(result);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCompanyOverview(null);
-          app.setActiveTab('timeline');
-          app.pushToast(t.uiLoadProjectsFailed);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsCompanyOverviewLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [app.activeTab, app.token, app.pushToast, app.setActiveTab, canUseAdminConsole, canUseCompanyStatsTab, t.uiLoadProjectsFailed]);
 
   const handleRegisterSubmit = async (event: FormEvent) => {
     if (registerPassword !== registerPasswordConfirm) {
@@ -529,7 +490,7 @@ export function App() {
         canRenameCompany={canRenameCompany}
         canDeleteCompany={canDeleteCompany}
         canUseCompanyAdminTabs={canUseCompanyAdminTabs}
-            canUseAdminTab={canUseAdminTab}
+        canUseAdminConsole={canUseAdminConsole}
         isAccountModalOpen={isAccountModalOpen}
         currentUserFullName={app.currentUserFullName}
         lang={lang}
@@ -670,7 +631,6 @@ export function App() {
               locale={locale}
               months={MONTHS_BY_LANG[lang]}
               canUseCompanyAdminTabs={canUseCompanyAdminTabs}
-              canUseCompanyStatsTab={canUseCompanyStatsTab}
               canUseAdminConsole={canUseAdminConsole}
               canManageTimeline={canManageTimeline}
               canSeedDemoWorkspace={canSeedDemoWorkspace}
@@ -680,8 +640,6 @@ export function App() {
               gradeOptions={gradeOptions}
               adminOverview={adminOverview}
               isAdminOverviewLoading={isAdminOverviewLoading}
-              companyOverview={companyOverview}
-              isCompanyOverviewLoading={isCompanyOverviewLoading}
               handleCreateDefaultGrades={handleCreateDefaultGrades}
             />
           ) : null}

@@ -1491,37 +1491,6 @@ smokeTest('API e2e smoke: company counters are correct for owner and non-owner',
   });
 });
 
-smokeTest('API e2e smoke: company overview endpoint is available for owner/admin', 'extended', async (t) => {
-  const authHeaders = await getAuthHeaders(t);
-  if (!authHeaders) return;
-
-  const overview = await request('/auth/companies/overview', { headers: authHeaders });
-  assert.ok(
-    overview.response.status === 200 || overview.response.status === 403,
-    'company overview should return 200 for owner/admin or 403 for non-privileged users',
-  );
-
-  if (overview.response.status === 403) {
-    const deniedCode = overview.payload?.code ?? overview.payload?.message;
-    assert.equal(deniedCode, 'ERR_AUTH_COMPANY_ACCESS_DENIED', 'forbidden company overview should return access denied code');
-    return;
-  }
-
-  assert.equal(typeof overview.payload?.companyId, 'string', 'company overview should include companyId');
-  assert.equal(typeof overview.payload?.companyName, 'string', 'company overview should include companyName');
-  assert.equal(Number.isFinite(overview.payload?.totalUsers), true, 'company overview totalUsers should be finite');
-  assert.equal(Number.isFinite(overview.payload?.totalProjects), true, 'company overview totalProjects should be finite');
-  assert.ok(Array.isArray(overview.payload?.users), 'company overview users should be an array');
-
-  for (const user of overview.payload.users) {
-    assert.equal(typeof user?.userId, 'string', 'company overview user should include userId');
-    assert.equal(typeof user?.fullName, 'string', 'company overview user should include fullName');
-    assert.equal(typeof user?.role, 'string', 'company overview user should include role');
-    assert.equal(Number.isFinite(user?.projectsCount), true, 'company overview user projectsCount should be finite');
-    assert.equal(Number.isFinite(user?.plansCount), true, 'company overview user plansCount should be finite');
-  }
-});
-
 smokeTest('API e2e smoke: account register + me + password change', 'extended', async (t) => {
   if (!(await ensureApiAvailable(t))) return;
 

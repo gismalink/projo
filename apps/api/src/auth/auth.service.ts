@@ -95,21 +95,6 @@ type AdminOverviewResponse = {
   }>;
 };
 
-type CompanyOverviewResponse = {
-  companyId: string;
-  companyName: string;
-  totalUsers: number;
-  totalProjects: number;
-  users: Array<{
-    userId: string;
-    email: string;
-    fullName: string;
-    role: string;
-    projectsCount: number;
-    plansCount: number;
-  }>;
-};
-
 type ProjectMemberItem = {
   userId: string;
   email: string;
@@ -352,10 +337,6 @@ export class AuthService {
     }
 
     return this.usersService.getAdminCompanyOverview(workspaceId);
-  }
-
-  async getCompanyOverview(userId: string, workspaceId: string): Promise<CompanyOverviewResponse> {
-    return this.usersService.getCompanyOverview(userId, workspaceId);
   }
 
   async createCompany(userId: string, name: string): Promise<LoginResponse> {

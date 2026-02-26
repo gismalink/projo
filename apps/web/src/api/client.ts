@@ -110,23 +110,6 @@ export type AdminOverviewResponse = {
   }>;
 };
 
-export type CompanyOverviewUserItem = {
-  userId: string;
-  email: string;
-  fullName: string;
-  role: string;
-  projectsCount: number;
-  plansCount: number;
-};
-
-export type CompanyOverviewResponse = {
-  companyId: string;
-  companyName: string;
-  totalUsers: number;
-  totalProjects: number;
-  users: CompanyOverviewUserItem[];
-};
-
 export type ProjectPermission = 'viewer' | 'editor';
 
 export type ProjectMemberItem = {
@@ -548,7 +531,6 @@ export const api = {
 
   getMyCompanies: (token: string) => request<MyCompaniesResponse>('/auth/companies', {}, token),
   getAdminOverview: (token: string) => request<AdminOverviewResponse>('/auth/admin/overview', {}, token),
-  getCompanyOverview: (token: string) => request<CompanyOverviewResponse>('/auth/companies/overview', {}, token),
   createCompany: (name: string, token: string) =>
     request<LoginResponse>('/auth/companies', {
       method: 'POST',
