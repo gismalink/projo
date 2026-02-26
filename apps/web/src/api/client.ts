@@ -546,6 +546,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ name }),
     }, token),
+  deleteCompany: (companyId: string, token: string) =>
+    request<LoginResponse>(`/auth/companies/${companyId}`, {
+      method: 'DELETE',
+    }, token),
   getMyProjects: (token: string) => request<MyProjectsResponse>('/auth/projects', {}, token),
   createProjectSpace: (name: string, token: string) =>
     request<LoginResponse>('/auth/projects', {

@@ -20,6 +20,7 @@ type AppHeaderProps = {
   myCompanies: CompanyItem[];
   otherCompanies: CompanyItem[];
   canRenameCompany: boolean;
+  canDeleteCompany: boolean;
   canUseCompanyAdminTabs: boolean;
   canUseAdminConsole: boolean;
   isAccountModalOpen: boolean;
@@ -30,6 +31,7 @@ type AppHeaderProps = {
   onOpenProjectSettings: () => Promise<void>;
   onSwitchCompany: (companyId: string) => Promise<void>;
   onRenameCompany: () => Promise<void>;
+  onDeleteCompany: () => Promise<void>;
   onCreateCompany: () => Promise<void>;
   onToggleCompanyTab: (tab: CompanyTab) => void;
   onToggleAccountModal: () => void;
@@ -50,6 +52,7 @@ export function AppHeader({
   myCompanies,
   otherCompanies,
   canRenameCompany,
+  canDeleteCompany,
   canUseCompanyAdminTabs,
   canUseAdminConsole,
   isAccountModalOpen,
@@ -60,6 +63,7 @@ export function AppHeader({
   onOpenProjectSettings,
   onSwitchCompany,
   onRenameCompany,
+  onDeleteCompany,
   onCreateCompany,
   onToggleCompanyTab,
   onToggleAccountModal,
@@ -142,6 +146,17 @@ export function AppHeader({
                   data-tooltip={t.editCompany}
                 >
                   <Icon name="edit" />
+                </button>
+              ) : null}
+              {canDeleteCompany ? (
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => void onDeleteCompany()}
+                  aria-label={t.deleteCompany}
+                  data-tooltip={t.deleteCompany}
+                >
+                  <Icon name="trash" />
                 </button>
               ) : null}
               <button

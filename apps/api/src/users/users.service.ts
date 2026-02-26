@@ -856,6 +856,87 @@ export class UsersService {
     });
   }
 
+  async deleteCompany(ownerUserId: string, companyId: string): Promise<boolean> {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: {
+        id: true,
+        ownerUserId: true,
+      },
+    });
+
+    if (!company || company.ownerUserId !== ownerUserId) {
+      return false;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const owner = await tx.user.findUnique({
+        where: { id: ownerUserId },
+        select: {
+          fullName: true,
+        },
+      });
+
+      const fallbackCompany =
+        (await tx.company.findFirst({
+          where: {
+            ownerUserId,
+            id: {
+              not: companyId,
+            },
+          },
+          orderBy: [{ createdAt: 'asc' }],
+          select: {
+            id: true,
+          },
+        })) ??
+        (await tx.company.create({
+          data: {
+            ownerUserId,
+            name: this.companyNameForUser(owner?.fullName ?? ''),
+          },
+          select: {
+            id: true,
+          },
+        }));
+
+      const fallbackWorkspace = await this.ensureCompanyHomeWorkspace(tx, ownerUserId, fallbackCompany.id, AppRole.ADMIN);
+
+      await tx.user.updateMany({
+        where: {
+          activeWorkspace: {
+            is: {
+              companyId,
+            },
+          },
+        },
+        data: {
+          activeWorkspaceId: null,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: ownerUserId },
+        data: {
+          activeWorkspaceId: fallbackWorkspace.id,
+        },
+      });
+
+      const workspacesToDelete = await tx.workspace.findMany({
+        where: { companyId },
+        select: { id: true },
+      });
+
+      for (const workspace of workspacesToDelete) {
+        await tx.workspace.delete({ where: { id: workspace.id } });
+      }
+
+      await tx.company.delete({ where: { id: companyId } });
+    });
+
+    return true;
+  }
+
   async switchActiveCompany(userId: string, companyId: string): Promise<{ workspaceId: string } | null> {
     const existingMembership = await this.prisma.workspaceMember.findFirst({
       where: {

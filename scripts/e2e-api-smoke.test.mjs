@@ -1250,6 +1250,27 @@ smokeTest('API e2e smoke: company list/create/rename/switch lifecycle', 'core', 
     Array.isArray(afterDeleteCompanies.payload?.companies) && afterDeleteCompanies.payload.companies.some((item) => item.id === createdCompany.id),
     'company should stay in companies list even if it has 0 plans',
   );
+
+  const deleteCompany = await request(`/auth/companies/${createdCompany.id}`, {
+    method: 'DELETE',
+    headers: afterDeleteHeaders,
+  });
+  assert.equal(deleteCompany.response.status, 200, 'company delete should return 200');
+  assert.equal(typeof deleteCompany.payload?.accessToken, 'string', 'company delete should return updated access token');
+
+  const afterDeleteCompanyHeaders = {
+    Authorization: `Bearer ${deleteCompany.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const companiesAfterCompanyDelete = await request('/auth/companies', { headers: afterDeleteCompanyHeaders });
+  assert.equal(companiesAfterCompanyDelete.response.status, 200, 'companies endpoint should return 200 after company delete');
+  assert.ok(
+    Array.isArray(companiesAfterCompanyDelete.payload?.companies) &&
+      !companiesAfterCompanyDelete.payload.companies.some((item) => item.id === createdCompany.id),
+    'deleted company should not remain in companies list',
+  );
+  assert.equal(typeof companiesAfterCompanyDelete.payload?.activeCompanyId, 'string', 'active company should stay defined after company delete');
 });
 
 smokeTest('API e2e smoke: project-space token rotation keeps auth context consistent', 'core', async (t) => {

@@ -279,6 +279,30 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     return false;
   }
 
+  async function handleDeleteCompany(companyId: string) {
+    if (!state.token) return false;
+
+    const deleted = await runWithErrorToastVoid({
+      operation: async () => {
+        const result = await api.deleteCompany(companyId, state.token as string);
+        applyAuthSession(result);
+        await refreshData(result.accessToken, state.selectedYear);
+        await loadMyCompanies(result.accessToken);
+        await loadMyProjects(result.accessToken);
+      },
+      fallbackMessage: t.uiDeleteCompanyFailed,
+      errorText,
+      pushToast,
+    });
+
+    if (deleted) {
+      pushToast(t.uiDeleteCompanySuccess);
+      return true;
+    }
+
+    return false;
+  }
+
   async function handleSwitchProjectSpace(projectId: string) {
     if (!state.token) return;
 
@@ -614,6 +638,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
     handleCreateCompany,
     handleSwitchCompany,
     handleUpdateCompanyName,
+    handleDeleteCompany,
     handleCreateProjectSpace,
     handleSwitchProjectSpace,
     handleUpdateProjectSpaceName,

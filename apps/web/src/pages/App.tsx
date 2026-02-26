@@ -134,6 +134,7 @@ export function App() {
   const headerActiveTab = headerContext ? headerContext.activeTab : app.activeTab;
   const isCompanyOwner = Boolean(currentCompany?.isOwner);
   const canRenameCompany = Boolean(currentCompany?.isOwner);
+  const canDeleteCompany = Boolean(currentCompany?.isOwner);
   const myCompanies = app.companies.filter((item) => item.isOwner);
   const otherCompanies = app.companies.filter((item) => !item.isOwner);
 
@@ -377,6 +378,13 @@ export function App() {
     setIsCompanyModalOpen(true);
   };
 
+  const handleDeleteCompany = async () => {
+    if (!app.activeCompanyId || !canDeleteCompany) return;
+    if (!window.confirm(t.confirmDeleteCompany)) return;
+
+    await app.handleDeleteCompany(app.activeCompanyId);
+  };
+
   const handleSubmitCompanyModal = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -480,6 +488,7 @@ export function App() {
         myCompanies={myCompanies}
         otherCompanies={otherCompanies}
         canRenameCompany={canRenameCompany}
+        canDeleteCompany={canDeleteCompany}
         canUseCompanyAdminTabs={canUseCompanyAdminTabs}
         canUseAdminConsole={canUseAdminConsole}
         isAccountModalOpen={isAccountModalOpen}
@@ -490,6 +499,7 @@ export function App() {
         onOpenProjectSettings={handleOpenProjectSettings}
         onSwitchCompany={handleSwitchCompany}
         onRenameCompany={handleRenameCompany}
+        onDeleteCompany={handleDeleteCompany}
         onCreateCompany={handleCreateCompany}
         onToggleCompanyTab={toggleCompanyTab}
         onToggleAccountModal={() => setIsAccountModalOpen((prev) => !prev)}

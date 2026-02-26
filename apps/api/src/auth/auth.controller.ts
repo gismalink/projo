@@ -110,6 +110,12 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Delete('companies/:companyId')
+  deleteCompany(@Req() req: AuthenticatedRequest, @Param('companyId') companyId: string) {
+    return this.authService.deleteCompany(req.user.userId, companyId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('projects')
   createProject(@Req() req: AuthenticatedRequest, @Body() dto: CreateProjectSpaceDto) {
     return this.authService.createProjectSpace(req.user.userId, dto.name);

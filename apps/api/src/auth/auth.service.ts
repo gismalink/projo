@@ -415,6 +415,33 @@ export class AuthService {
     };
   }
 
+  async deleteCompany(userId: string, companyId: string): Promise<LoginResponse> {
+    const deleted = await this.usersService.deleteCompany(userId, companyId);
+    if (!deleted) {
+      throw new UnauthorizedException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
+    }
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const accessToken = await this.issueAccessToken({
+      user: context.user,
+      workspaceId: context.workspaceId,
+      workspaceRole: context.workspaceRole,
+    });
+
+    return {
+      accessToken,
+      user: this.mapUser({
+        user: context.user,
+        workspaceId: context.workspaceId,
+        workspaceRole: context.workspaceRole,
+      }),
+    };
+  }
+
   async createProjectSpace(userId: string, name: string): Promise<LoginResponse> {
     const trimmedName = name.trim();
     if (!trimmedName) {
