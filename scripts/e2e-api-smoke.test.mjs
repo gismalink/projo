@@ -145,12 +145,27 @@ async function ensureEmployee(authHeaders, t) {
   assert.equal(roles.response.status, 200, 'roles endpoint should return 200');
   assert.ok(Array.isArray(roles.payload), 'roles payload should be an array');
 
-  if (roles.payload.length === 0) {
+  let availableRoles = roles.payload;
+  if (availableRoles.length === 0) {
+    const defaultsBootstrap = await request('/roles/defaults', {
+      method: 'POST',
+      headers: authHeaders,
+    });
+
+    if (defaultsBootstrap.response.status === 200 || defaultsBootstrap.response.status === 201) {
+      const rolesAfterBootstrap = await request('/roles', { headers: authHeaders });
+      assert.equal(rolesAfterBootstrap.response.status, 200, 'roles endpoint should return 200 after defaults bootstrap');
+      assert.ok(Array.isArray(rolesAfterBootstrap.payload), 'roles payload should be an array after defaults bootstrap');
+      availableRoles = rolesAfterBootstrap.payload;
+    }
+  }
+
+  if (availableRoles.length === 0) {
     if (t) {
-      t.skip('No roles available in current workspace scope to create smoke employee.');
+      t.skip('No roles available in current workspace scope to create smoke employee (including roles/defaults bootstrap).');
       return null;
     }
-    assert.ok(roles.payload.length > 0, 'roles payload should not be empty');
+    assert.ok(availableRoles.length > 0, 'roles payload should not be empty');
   }
 
   const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -160,7 +175,7 @@ async function ensureEmployee(authHeaders, t) {
     body: JSON.stringify({
       fullName: `Smoke Employee ${seed}`,
       email: `smoke-employee-${seed}@projo.local`,
-      roleId: roles.payload[0].id,
+      roleId: availableRoles[0].id,
     }),
   });
 

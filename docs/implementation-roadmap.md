@@ -63,9 +63,9 @@
    - [x] Во время драга со скамейки сворачивать проекты, чтобы не тащить карточку через весь экран и не скроллить вручную.
 2. [~] Усилить тестовое покрытие критических сценариев (assignment/member, shift/resize, auth-flow).
    - [x] Добавлен формальный smoke-gate: `npm run test:e2e:api:gate` (пороги `E2E_MIN_TESTS` / `E2E_MAX_SKIPPED`) для фиксации pass-rate/skip-rate token-run.
-   - [~] В shared test-workspace часть employee-сценариев остается skip из-за ограниченного `roles` scope (инфраструктурный контур, не regression кода).
-   - [ ] Довести employee-зависимые сценарии до non-skip выполнения в тестовом контуре (или выделить отдельный стабильный workspace для них).
-   - [ ] Зафиксировать стабильный token-run с целевым pass-rate и минимальными skip (кроме осознанных local-auth-only кейсов).
+   - [x] В smoke добавлен авто-bootstrap `POST /roles/defaults`, что снимает skip employee-сценариев при пустом каталоге ролей.
+   - [~] В локальном/dev контуре достигнут стабильный non-skip прогон: `13/13 pass`, `0 skip`, `0 fail` (включая `E2E_MAX_SKIPPED=0`).
+   - [ ] Подтвердить тот же non-skip результат в test token-run контуре (`E2E_AUTH_MODE=sso` + `E2E_ACCESS_TOKEN`) и зафиксировать baseline pass-rate.
 3. [ ] Добавить страницу статистики для владельца/админа:
    - [ ] общее количество пользователей,
    - [ ] общее количество проектов,
