@@ -1,52 +1,52 @@
-# Release Notes — RC1 (2026-02-26)
+# Релиз-ноты — RC1 (2026-02-26)
 
-## Scope
-- Repo: `projo`
-- Branch: `feature/gitops-test-branch-policy`
-- Candidate SHA: `23ed340`
-- Commit window: `2e53bf7..23ed340`
+## Область релиза
+- Репозиторий: `projo`
+- Ветка: `feature/gitops-test-branch-policy`
+- Кандидат SHA: `23ed340`
+- Диапазон коммитов: `2e53bf7..23ed340`
 
-## Included changes
+## Что вошло
 
-### Product / UX
-- Timeline: weekly bars aligned to real week boundaries and then limited to Monday–Friday (`c13f978`, `2dc840f`).
-- Timeline: holiday/weekend overlays switched to opaque pastel for readability (`900fec5`).
-- Timeline: project duplicate/delete actions added in UI (`6c3cede`).
-- Company selector: shows plans count as `Company (N)` with reactive updates (`19c55f6`).
-- Account modal in SSO mode hides local credential management fields (`817e59a`).
+### Продукт / UX
+- Timeline: недельные бары выровнены по реальным границам недель и ограничены диапазоном понедельник–пятница (`c13f978`, `2dc840f`).
+- Timeline: оверлеи праздников/выходных переведены в непрозрачные пастельные цвета для лучшей читаемости (`900fec5`).
+- Timeline: добавлены действия дублирования/удаления проектов в UI (`6c3cede`).
+- Селектор компаний: показывается количество планов в формате `Company (N)` с реактивным обновлением (`19c55f6`).
+- Модалка аккаунта в SSO-режиме скрывает локальное управление credential-полями (`817e59a`).
 
-### API / Domain logic
-- KPI normalization fixes for annual utilization and monthly averaging guards (`3f4af5a`, `f06e64e`, `cfbb908`).
-- Employee deletion decoupled from legacy project-member coupling; legacy links cleanup added (`374c3f6`).
-- SSO proxy hardening: upstream timeout and controlled `503 ERR_SSO_UPSTREAM_UNAVAILABLE` (`7fcf8e8`).
-- CORS hardening: deny-path changed to `callback(null, false)` with safe origin logging (`e6dd467`).
+### API / доменная логика
+- Исправлена нормализация KPI для годовой утилизации и защищены месячные усреднения от аномалий (`3f4af5a`, `f06e64e`, `cfbb908`).
+- Удаление сотрудников отвязано от legacy-связки с project-member; добавлена зачистка legacy-ссылок (`374c3f6`).
+- Усилен SSO proxy: timeout на upstream и контролируемая ошибка `503 ERR_SSO_UPSTREAM_UNAVAILABLE` (`7fcf8e8`).
+- Усилен CORS: deny-path переведён на `callback(null, false)` с безопасным логированием origin (`e6dd467`).
 
-### Platform / Release engineering
-- API smoke tests made env-resilient with availability preflight and skip-safe behavior (`c6e5a50`).
-- Host compose `VITE_*` build args moved to env-substitution single source (`bb495b8`).
-- Deploy scripts now write deployed SHA markers and warn on detached HEAD (`692ed27`).
-- Release runbook enhanced with explicit pre-prod checklist (`23ed340`).
+### Платформа / релиз-инжиниринг
+- API smoke-тесты сделаны устойчивыми к окружению: preflight доступности + skip-safe поведение (`c6e5a50`).
+- В `host compose` `VITE_*` build args переведены на env-substitution из единого источника (`bb495b8`).
+- Deploy-скрипты теперь пишут маркеры задеплоенного SHA и предупреждают о `detached HEAD` (`692ed27`).
+- Runbook релиза дополнен явным pre-prod checklist (`23ed340`).
 
-## Verification evidence
-- `npm run check` — green.
-- `SMOKE_API=1 npm run check` — green/skip-safe in non-local auth environments.
-- `E2E_API_URL=https://test.projo.gismalink.art/api SMOKE_API=1 npm run check` — green with expected auth-disabled skips.
-- Test deploy(s): `deploy-test-from-ref.sh` successful.
-- Platform smoke: `ssh mac-mini 'cd ~/srv/edge && ./scripts/test-smoke.sh --local test'` -> `== smoke: OK ==`.
-- Manual SSO critical flow: login/logout confirmed working by operator.
+## Подтверждения проверок
+- `npm run check` — зелёный.
+- `SMOKE_API=1 npm run check` — зелёный/skip-safe в окружениях без local auth.
+- `E2E_API_URL=https://test.projo.gismalink.art/api SMOKE_API=1 npm run check` — зелёный с ожидаемыми skip по disabled local auth.
+- Test deploy: `deploy-test-from-ref.sh` выполнен успешно.
+- Платформенный smoke: `ssh mac-mini 'cd ~/srv/edge && ./scripts/test-smoke.sh --local test'` -> `== smoke: OK ==`.
+- Критический ручной SSO flow: login/logout подтверждён оператором.
 
-## Risk notes
-- Main residual risk is operational (`prod`) checklist completion: DB backup + post-prod monitoring window.
-- Build currently reports non-blocking Vite chunk-size warning (>500 kB).
+## Риски
+- Основной остаточный риск — операционный checklist для `prod`: backup БД + окно пост-релизного мониторинга.
+- В сборке остаётся неблокирующее предупреждение Vite по размеру чанков (>500 kB).
 
 ## Rollback
-1. Identify previous stable SHA on `origin/main`.
-2. Run prod deploy script against that SHA:
+1. Определить предыдущий стабильный SHA в `origin/main`.
+2. Запустить prod deploy-скрипт на этот SHA:
    - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-prod-from-ref.sh origin/main ~/srv/projo'`
-   - or explicit stable ref/tag if needed.
-3. Verify health:
+   - либо использовать явный стабильный ref/tag.
+3. Проверить health:
    - `curl -fsS https://projo.gismalink.art/api/health`
    - `curl -I https://projo.gismalink.art`
-4. Check marker/log files:
+4. Проверить маркер и историю деплоя:
    - `~/srv/projo/.deploy/last-deploy-prod.env`
    - `~/srv/projo/.deploy/deploy-history.log`
