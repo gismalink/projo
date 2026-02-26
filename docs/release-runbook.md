@@ -96,6 +96,27 @@
      - `curl -I https://projo.gismalink.art`
    - Просмотреть логи целевых контейнеров и отсутствие критичных ошибок в первые минуты после выката.
 
+### Шаг D.1. Post-deploy monitoring window (`prod`, 15 минут)
+Сразу после выката в `prod` выполняем короткое окно наблюдения:
+
+1. **T+0..2 мин — базовый health**
+   - `curl -fsS https://projo.gismalink.art/api/health`
+   - `curl -I https://projo.gismalink.art`
+
+2. **T+2..10 мин — контейнеры и логи**
+   - `ssh mac-mini 'cd ~/srv/projo && docker compose -f infra/docker-compose.host.yml --profile prod ps'`
+   - `ssh mac-mini 'docker logs --tail=200 projo-api-prod | tail -n 120'`
+   - `ssh mac-mini 'docker logs --tail=200 projo-web-prod | tail -n 120'`
+
+3. **T+10..15 мин — итоговая фиксация**
+   - Убедиться, что нет ростa `5xx`, crash-loop, повторяющихся критичных ошибок в логах.
+   - Зафиксировать результат мониторинга: timestamp, SHA и статус (`pass`/`needs-investigation`).
+
+Если выявлена деградация:
+- немедленно остановить rollout-активности,
+- выполнить rollback по разделу `Rollback procedure`,
+- повторно проверить health + smoke.
+
 ### Упрощённый сценарий (одной SSH-командой)
 - Для обновления `test` конкретной feature-веткой:
    - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo'`

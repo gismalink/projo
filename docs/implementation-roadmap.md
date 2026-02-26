@@ -58,7 +58,7 @@
 - [ ] Монетизация и killer-features (discovery).
 
 ### P3 — Качество и проверка поставки
-1. [ ] Закрепить минимальный набор post-deploy проверок для `test`:
+1. [x] Закрепить минимальный набор post-deploy проверок для `test`:
    - [x] `npm run check`,
    - [x] `SMOKE_API=1 npm run check` (в e2e smoke добавлен preflight API availability + skip-safe поведение; подтверждено на `test` с `E2E_API_URL=https://test.projo.gismalink.art/api` после деплоя `c6e5a50`),
    - [x] ручной smoke критического user-flow (подтверждено: login/logout в SSO режиме работает; авто-probe redirect/logout также пройден).
@@ -66,7 +66,7 @@
    - [ ] backup БД,
    - [x] green test-smoke,
    - [x] подтвержденный changelog (`docs/releases/RELEASE_NOTES_2026-02-26_RC1.md`),
-   - [ ] мониторинг после выката.
+   - [x] мониторинг после выката (процедура и команды зафиксированы в `docs/release-runbook.md`, раздел `Шаг D.1`).
 3. [ ] Добавить базовую наблюдаемость:
    - [ ] access/error logs,
    - [ ] uptime/5xx/latency метрики,
