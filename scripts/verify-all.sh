@@ -14,8 +14,15 @@ echo "[verify] build"
 npm run build
 
 if [[ "${SMOKE_API:-0}" == "1" ]]; then
-	echo "[verify] smoke api"
-	npm run test:e2e:api
+	echo "[verify] smoke api (core gate)"
+	npm run test:e2e:api:gate:core
+
+	if [[ "${SMOKE_API_EXTENDED:-0}" == "1" ]]; then
+		echo "[verify] smoke api (extended gate)"
+		npm run test:e2e:api:gate:extended
+	else
+		echo "[verify] smoke api extended skipped (set SMOKE_API_EXTENDED=1 to enable)"
+	fi
 else
 	echo "[verify] smoke api skipped (set SMOKE_API=1 to enable)"
 fi
