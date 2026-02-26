@@ -536,17 +536,18 @@ export function App() {
                   onCreateDemoProjectSpaceCard={handleCreateDemoProjectSpaceCard}
                   onCreateProjectSpaceCard={handleCreateProjectSpaceCard}
                   renderPlanStats={(projectsCount, totalAllocationPercent, peakAllocationPercent, monthlyLoadStats) => {
-                    const monthlyAverageValues =
-                      monthlyLoadStats.length > 0
-                        ? monthlyLoadStats.map((entry) => entry.avgAllocationPercent)
-                        : [totalAllocationPercent];
-                    const loadAvg =
-                      monthlyAverageValues.length > 0
+                    const monthlyAverageValues = monthlyLoadStats.map((entry) => entry.avgAllocationPercent);
+                    const loadAvg = Number.isFinite(totalAllocationPercent)
+                      ? totalAllocationPercent
+                      : monthlyAverageValues.length > 0
                         ? monthlyAverageValues.reduce((sum, value) => sum + value, 0) / monthlyAverageValues.length
-                        : totalAllocationPercent;
-                    const loadMax =
-                      monthlyAverageValues.length > 0 ? Math.max(...monthlyAverageValues) : peakAllocationPercent;
-                    const miniChartScaleMax = Math.max(100, loadMax, 1);
+                        : 0;
+                    const loadMax = Number.isFinite(peakAllocationPercent)
+                      ? peakAllocationPercent
+                      : monthlyAverageValues.length > 0
+                        ? Math.max(...monthlyAverageValues)
+                        : loadAvg;
+                    const miniChartScaleMax = Math.max(100, loadMax, ...monthlyAverageValues, 1);
 
                     return (
                       <>
