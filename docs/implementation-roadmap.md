@@ -71,8 +71,8 @@
    - [x] access/error logs,
    - [x] uptime/5xx/latency метрики,
    - [x] алерты на деградацию health-check.
-4. [ ] Провести нагрузочное тестирование (конкурентное редактирование планов):
-   - план: `docs/performance/load-testing-plan.md`
+4. [x] Провести нагрузочное тестирование (конкурентное редактирование планов):
+   - выполнено и зафиксировано: `docs/performance/load-testing-plan.md` (раздел `9.1`, прогоны `test` и практический baseline по VU/p95/error-rate).
 
 ### P3.5 — Post-cutover hardening (tech audit 2026-02-24)
 Источник: `docs/audits/technical-audit-2026-02-24.md`.
