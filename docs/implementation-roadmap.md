@@ -92,6 +92,7 @@
 2. [~] Усилить тестовое покрытие критических сценариев (assignment/member, shift/resize, auth-flow).
    - [x] Добавлен e2e smoke сценарий `project copy preserves members and assignments` (`scripts/e2e-api-smoke.test.mjs`).
    - [x] Добавлен e2e smoke сценарий `assignment update restores membership after member removal` (проверка инварианта member/assignment lifecycle).
+   - [x] Добавлен e2e smoke сценарий `assignment outside project range is allowed and visible in timeline` (регресс на policy fact-range без блокировки CRUD).
 3. [ ] Добавить страницу статистики для владельца/админа:
    - [ ] общее количество пользователей,
    - [ ] общее количество проектов,

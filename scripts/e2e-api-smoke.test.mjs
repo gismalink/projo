@@ -442,6 +442,93 @@ test('API e2e smoke: assignment update restores membership after member removal'
   }
 });
 
+test('API e2e smoke: assignment outside project range is allowed and visible in timeline', async (t) => {
+  const authHeaders = await getAuthHeaders(t, { json: true });
+  if (!authHeaders) return;
+
+  const employee = await ensureEmployee(authHeaders);
+  assert.equal(typeof employee?.id, 'string', 'employee id should be available');
+
+  const projectCode = `E2E-FACT-RANGE-${Date.now()}`;
+  const projectStart = `${year}-08-10T00:00:00.000Z`;
+  const projectEnd = `${year}-08-20T00:00:00.000Z`;
+  const assignmentStartDate = `${year}-08-01T00:00:00.000Z`;
+  const assignmentEndDate = `${year}-08-31T00:00:00.000Z`;
+
+  let createdProjectId = null;
+  let createdAssignmentId = null;
+
+  try {
+    const createdProject = await request('/projects', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        code: projectCode,
+        name: `Fact Range ${projectCode}`,
+        startDate: projectStart,
+        endDate: projectEnd,
+        status: 'planned',
+        priority: 2,
+        links: [],
+      }),
+    });
+    assert.equal(createdProject.response.status, 201, 'project create endpoint should return 201');
+    createdProjectId = createdProject.payload?.id;
+    assert.equal(typeof createdProjectId, 'string', 'created project should return id');
+
+    const createdAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate,
+        assignmentEndDate,
+        allocationPercent: 35,
+      }),
+    });
+    assert.equal(createdAssignment.response.status, 201, 'assignment outside project range should be allowed');
+    createdAssignmentId = createdAssignment.payload?.id;
+    assert.equal(typeof createdAssignmentId, 'string', 'assignment id should be returned');
+
+    const projectDetail = await request(`/projects/${createdProjectId}`, { headers: authHeaders });
+    assert.equal(projectDetail.response.status, 200, 'project detail endpoint should return 200');
+    const persistedAssignment = (projectDetail.payload?.assignments ?? []).find((assignment) => assignment.id === createdAssignmentId);
+    assert.ok(persistedAssignment, 'project details should include created assignment');
+    assert.equal(
+      new Date(persistedAssignment.assignmentStartDate).toISOString(),
+      new Date(assignmentStartDate).toISOString(),
+      'assignment start outside project range should persist',
+    );
+    assert.equal(
+      new Date(persistedAssignment.assignmentEndDate).toISOString(),
+      new Date(assignmentEndDate).toISOString(),
+      'assignment end outside project range should persist',
+    );
+
+    const timeline = await request(`/timeline/year?year=${year}`, { headers: authHeaders });
+    assert.equal(timeline.response.status, 200, 'timeline endpoint should return 200');
+    const timelineRow = timeline.payload.find((row) => row.id === createdProjectId);
+    assert.ok(timelineRow, 'timeline should include created project row');
+    assert.ok(Number(timelineRow.assignmentsCount) >= 1, 'timeline project row should include created assignment');
+    assert.ok(Number(timelineRow.totalAllocationPercent) > 0, 'timeline should reflect non-zero allocation from out-of-range assignment');
+  } finally {
+    if (createdAssignmentId) {
+      await request(`/assignments/${createdAssignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (createdProjectId) {
+      await request(`/projects/${createdProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+  }
+});
+
 test('API e2e smoke: project copy preserves members and assignments', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
