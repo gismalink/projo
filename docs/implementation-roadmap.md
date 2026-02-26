@@ -44,12 +44,13 @@
        - [x] `npm run check` и `SMOKE_API=1 npm run check` проходят.
 
 ##### P2 — Прозрачность списка компаний
-1. [~] В селекторе компаний показывать количество планов в формате `Название компании (N)`.
+1. [x] В селекторе компаний показывать количество планов в формате `Название компании (N)`.
    - [x] Добавлен API smoke-сценарий проверки счетчиков компаний для owner/non-owner (`company counters are correct for owner and non-owner`).
    - [x] Добавлено удаление компании (owner-only): backend endpoint `DELETE /auth/companies/:companyId`, ротация токена и UI-кнопка удаления в header с подтверждением.
+   - [x] Ручной smoke переключения/удаления компаний зафиксирован: `docs/audits/company-switch-delete-smoke-2026-02-27.md`.
     - **DoD:**
       - [x] Счетчик корректен для owner и non-owner сценариев.
-      - [ ] Ручной smoke сценария переключения компаний пройден.
+      - [x] Ручной smoke сценария переключения компаний пройден.
 
 #### Later (после стабилизации P1/P2)
 - [ ] Импорт XLSX новой компании (`docs/imports/xlsx-company-import-plan.md`).
