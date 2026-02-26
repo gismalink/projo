@@ -69,8 +69,8 @@
    - [x] Smoke-набор разделен на `core (7)` и `extended (6)` сценарии (`npm run test:e2e:api:core|extended` + `...:gate:core|extended`) для быстрого обязательного gate и полного расширенного прогона.
    - [x] `verify-all` переключен на core-gate по умолчанию при `SMOKE_API=1`; extended-gate включается отдельно (`SMOKE_API_EXTENDED=1`).
    - [x] В smoke добавлен авто-bootstrap `POST /roles/defaults`, что снимает skip employee-сценариев при пустом каталоге ролей.
-   - [~] В локальном/dev контуре достигнут стабильный non-skip прогон: `13/13 pass`, `0 skip`, `0 fail` (включая `E2E_MAX_SKIPPED=0`).
-   - [ ] Подтвердить тот же non-skip результат в test token-run контуре (`E2E_AUTH_MODE=sso` + `E2E_ACCESS_TOKEN`) и зафиксировать baseline pass-rate.
+   - [x] В локальном/dev контуре достигнут стабильный non-skip прогон: `13/13 pass`, `0 skip`, `0 fail` (включая `E2E_MAX_SKIPPED=0`).
+   - [x] Подтвержден non-skip baseline в test token-run контуре (`E2E_AUTH_MODE=sso` + `E2E_ACCESS_TOKEN`): `core gate = 7/7 pass, 0 skip, 0 fail`.
 3. [ ] Добавить страницу статистики для владельца/админа:
    - [ ] общее количество пользователей,
    - [ ] общее количество проектов,
