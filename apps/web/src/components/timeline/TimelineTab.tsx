@@ -163,6 +163,7 @@ export function TimelineTab(props: TimelineTabProps) {
   const filterBenchEmployeeId = selectedBenchEmployeeId;
   const filterBenchDepartmentName = filterBenchEmployeeId ? '' : selectedBenchDepartmentName;
   const highlightedBenchEmployeeId = hoveredBenchEmployeeId || selectedBenchEmployeeId;
+  const shouldCollapseProjectsForBenchDrag = Boolean(draggedBenchEmployeeId);
 
   const expandedSet = new Set(expandedProjectIds);
   const yearStart = new Date(Date.UTC(selectedYear, 0, 1));
@@ -1171,7 +1172,8 @@ export function TimelineTab(props: TimelineTabProps) {
                             endDate: pendingPreview.nextEnd.toISOString(),
                           })
                         : timelineStyle(row);
-                  const isExpanded = expandedSet.has(row.id) || forcedExpandedProjectIdSet.has(row.id);
+                  const isExpanded =
+                    !shouldCollapseProjectsForBenchDrag && (expandedSet.has(row.id) || forcedExpandedProjectIdSet.has(row.id));
                   const detail = projectDetails[row.id];
                   const tooltipMode =
                     dragState && dragState.projectId === row.id
