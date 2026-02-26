@@ -20,6 +20,7 @@
     "audit": "npm run audit:api",
     "seed:salaries": "node ./scripts/seed-employee-salaries.mjs",
     "test:e2e:api": "node --test ./scripts/e2e-api-smoke.test.mjs",
+    "test:e2e:api:gate": "node ./scripts/e2e-api-smoke-gate.mjs",
     "deploy:test": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$HOME/projo}\"",
     "deploy:prod": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-projo/main}\" \"${REPO_DIR:-$HOME/projo}\"",
     "check": "bash ./scripts/verify-all.sh",

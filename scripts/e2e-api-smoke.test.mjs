@@ -95,6 +95,32 @@ async function getAuthHeaders(t, options = {}) {
   return headers;
 }
 
+async function findReusableEmployeeFromWorkspace(authHeaders) {
+  const projects = await request('/projects', { headers: authHeaders });
+  if (projects.response.status !== 200 || !Array.isArray(projects.payload)) return null;
+
+  for (const project of projects.payload) {
+    if (typeof project?.id !== 'string' || !project.id) continue;
+
+    const detail = await request(`/projects/${project.id}`, { headers: authHeaders });
+    if (detail.response.status !== 200) continue;
+
+    if (Array.isArray(detail.payload?.members)) {
+      const member = detail.payload.members.find((item) => typeof item?.employeeId === 'string' && item.employeeId.length > 0);
+      if (member) return { id: member.employeeId };
+    }
+
+    if (Array.isArray(detail.payload?.assignments)) {
+      const assignment = detail.payload.assignments.find(
+        (item) => typeof item?.employeeId === 'string' && item.employeeId.length > 0,
+      );
+      if (assignment) return { id: assignment.employeeId };
+    }
+  }
+
+  return null;
+}
+
 async function ensureEmployee(authHeaders, t) {
   const employees = await request('/employees', { headers: authHeaders });
   assert.equal(employees.response.status, 200, 'employees endpoint should return 200');
@@ -103,6 +129,17 @@ async function ensureEmployee(authHeaders, t) {
   if (employees.payload.length > 0) {
     return employees.payload[0];
   }
+
+  const assignments = await request('/assignments', { headers: authHeaders });
+  if (assignments.response.status === 200 && Array.isArray(assignments.payload)) {
+    const assignmentEmployee = assignments.payload.find(
+      (item) => typeof item?.employeeId === 'string' && item.employeeId.length > 0,
+    );
+    if (assignmentEmployee) return { id: assignmentEmployee.employeeId };
+  }
+
+  const reusableEmployee = await findReusableEmployeeFromWorkspace(authHeaders);
+  if (reusableEmployee) return reusableEmployee;
 
   const roles = await request('/roles', { headers: authHeaders });
   assert.equal(roles.response.status, 200, 'roles endpoint should return 200');
