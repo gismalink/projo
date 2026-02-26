@@ -333,6 +333,127 @@ test('API e2e smoke: project member + assignment consistency', async (t) => {
   }
 });
 
+test('API e2e smoke: project copy preserves members and assignments', async (t) => {
+  const authHeaders = await getAuthHeaders(t, { json: true });
+  if (!authHeaders) return;
+
+  const employee = await ensureEmployee(authHeaders);
+  const originalCode = `E2E-COPY-${Date.now()}`;
+  const projectStart = `${year}-03-01T00:00:00.000Z`;
+  const projectEnd = `${year}-03-31T00:00:00.000Z`;
+  const assignmentStart = `${year}-03-05T00:00:00.000Z`;
+  const assignmentEnd = `${year}-03-20T00:00:00.000Z`;
+
+  let originalProjectId = null;
+  let originalAssignmentId = null;
+  let copiedProjectId = null;
+  let copiedAssignmentIds = [];
+
+  try {
+    const createdProject = await request('/projects', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        code: originalCode,
+        name: `Copy Source ${originalCode}`,
+        startDate: projectStart,
+        endDate: projectEnd,
+        status: 'planned',
+        priority: 2,
+        links: [],
+      }),
+    });
+
+    assert.equal(createdProject.response.status, 201, 'source project create should return 201');
+    originalProjectId = createdProject.payload.id;
+
+    const addMember = await request(`/projects/${originalProjectId}/members`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ employeeId: employee.id }),
+    });
+    assert.equal(addMember.response.status, 201, 'source add member should return 201');
+
+    const createdAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: originalProjectId,
+        employeeId: employee.id,
+        assignmentStartDate: assignmentStart,
+        assignmentEndDate: assignmentEnd,
+        allocationPercent: 45,
+      }),
+    });
+    assert.equal(createdAssignment.response.status, 201, 'source assignment create should return 201');
+    originalAssignmentId = createdAssignment.payload.id;
+
+    const copiedProject = await request(`/projects/${originalProjectId}/copy`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(copiedProject.response.status, 201, 'project copy endpoint should return 201');
+    copiedProjectId = copiedProject.payload?.id;
+    assert.equal(typeof copiedProjectId, 'string', 'copied project should return id');
+    assert.notEqual(copiedProject.payload?.code, originalCode, 'copied project code should differ from source');
+
+    const copiedProjectDetail = await request(`/projects/${copiedProjectId}`, { headers: authHeaders });
+    assert.equal(copiedProjectDetail.response.status, 200, 'copied project detail should return 200');
+    assert.ok(Array.isArray(copiedProjectDetail.payload?.members), 'copied project members should be an array');
+    assert.ok(Array.isArray(copiedProjectDetail.payload?.assignments), 'copied project assignments should be an array');
+
+    assert.ok(
+      copiedProjectDetail.payload.members.some((member) => member.employeeId === employee.id),
+      'copied project should preserve selected member',
+    );
+
+    const copiedAssignment = copiedProjectDetail.payload.assignments.find((assignment) => assignment.employeeId === employee.id);
+    assert.ok(copiedAssignment, 'copied project should preserve assignment for selected employee');
+    assert.equal(Number(copiedAssignment.allocationPercent), 45, 'copied assignment allocation should match source');
+    assert.equal(
+      new Date(copiedAssignment.assignmentStartDate).toISOString(),
+      new Date(assignmentStart).toISOString(),
+      'copied assignment start should match source',
+    );
+    assert.equal(
+      new Date(copiedAssignment.assignmentEndDate).toISOString(),
+      new Date(assignmentEnd).toISOString(),
+      'copied assignment end should match source',
+    );
+
+    copiedAssignmentIds = copiedProjectDetail.payload.assignments.map((assignment) => assignment.id);
+  } finally {
+    for (const assignmentId of copiedAssignmentIds) {
+      await request(`/assignments/${assignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (originalAssignmentId) {
+      await request(`/assignments/${originalAssignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (copiedProjectId) {
+      await request(`/projects/${copiedProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (originalProjectId) {
+      await request(`/projects/${originalProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+  }
+});
+
 test('API e2e smoke: project shift/resize keeps assignment flow consistent', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
