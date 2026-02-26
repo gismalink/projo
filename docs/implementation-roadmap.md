@@ -88,8 +88,10 @@
 
 ### P4 — Функциональные улучшения после стабилизации
 1. [ ] Довести стабильность UX/метрик timeline на краевых сценариях.
+   - [ ] Во время драга со скамейки сворачивать проекты, чтобы не тащить карточку через весь экран и не скроллить вручную.
 2. [~] Усилить тестовое покрытие критических сценариев (assignment/member, shift/resize, auth-flow).
    - [x] Добавлен e2e smoke сценарий `project copy preserves members and assignments` (`scripts/e2e-api-smoke.test.mjs`).
+   - [x] Добавлен e2e smoke сценарий `assignment update restores membership after member removal` (проверка инварианта member/assignment lifecycle).
 3. [ ] Добавить страницу статистики для владельца/админа:
    - [ ] общее количество пользователей,
    - [ ] общее количество проектов,

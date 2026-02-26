@@ -333,6 +333,115 @@ test('API e2e smoke: project member + assignment consistency', async (t) => {
   }
 });
 
+test('API e2e smoke: assignment update restores membership after member removal', async (t) => {
+  const authHeaders = await getAuthHeaders(t, { json: true });
+  if (!authHeaders) return;
+
+  const employee = await ensureEmployee(authHeaders);
+  assert.equal(typeof employee?.id, 'string', 'employee id should be available');
+
+  const projectCode = `E2E-MEMBER-RECOVERY-${Date.now()}`;
+  const projectStart = `${year}-07-01T00:00:00.000Z`;
+  const projectEnd = `${year}-07-31T00:00:00.000Z`;
+  const assignmentStartDate = `${year}-07-03T00:00:00.000Z`;
+  const assignmentEndDate = `${year}-07-24T00:00:00.000Z`;
+
+  let createdProjectId = null;
+  let createdAssignmentId = null;
+
+  try {
+    const createdProject = await request('/projects', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        code: projectCode,
+        name: `Member Recovery ${projectCode}`,
+        startDate: projectStart,
+        endDate: projectEnd,
+        status: 'planned',
+        priority: 2,
+        links: [],
+      }),
+    });
+    assert.equal(createdProject.response.status, 201, 'project create endpoint should return 201');
+    createdProjectId = createdProject.payload?.id;
+    assert.equal(typeof createdProjectId, 'string', 'project id should be returned');
+
+    const addMember = await request(`/projects/${createdProjectId}/members`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ employeeId: employee.id }),
+    });
+    assert.equal(addMember.response.status, 201, 'add member endpoint should return 201');
+
+    const createAssignment = await request('/assignments', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: createdProjectId,
+        employeeId: employee.id,
+        assignmentStartDate,
+        assignmentEndDate,
+        allocationPercent: 40,
+      }),
+    });
+    assert.equal(createAssignment.response.status, 201, 'assignment create endpoint should return 201');
+    createdAssignmentId = createAssignment.payload?.id;
+    assert.equal(typeof createdAssignmentId, 'string', 'assignment id should be returned');
+
+    const removeMember = await request(`/projects/${createdProjectId}/members/${employee.id}`, {
+      method: 'DELETE',
+      headers: authHeaders,
+    });
+    assert.equal(removeMember.response.status, 200, 'remove member endpoint should return 200');
+
+    const membersAfterRemoval = await request(`/projects/${createdProjectId}/members`, { headers: authHeaders });
+    assert.equal(membersAfterRemoval.response.status, 200, 'project members endpoint should return 200 after removal');
+    assert.ok(Array.isArray(membersAfterRemoval.payload), 'project members payload should be array after removal');
+    assert.equal(
+      membersAfterRemoval.payload.some((member) => member.employeeId === employee.id),
+      false,
+      'employee should be absent from members after explicit member removal',
+    );
+
+    const updateAssignment = await request(`/assignments/${createdAssignmentId}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({ allocationPercent: 55 }),
+    });
+    assert.equal(updateAssignment.response.status, 200, 'assignment update should return 200');
+
+    const projectMembersAfterAssignmentUpdate = await request(`/projects/${createdProjectId}/members`, { headers: authHeaders });
+    assert.equal(projectMembersAfterAssignmentUpdate.response.status, 200, 'project members endpoint should return 200 after assignment update');
+    assert.ok(Array.isArray(projectMembersAfterAssignmentUpdate.payload), 'project members payload should be array after assignment update');
+    assert.equal(
+      projectMembersAfterAssignmentUpdate.payload.some((member) => member.employeeId === employee.id),
+      true,
+      'assignment update should restore membership for assignment employee',
+    );
+
+    const projectDetail = await request(`/projects/${createdProjectId}`, { headers: authHeaders });
+    assert.equal(projectDetail.response.status, 200, 'project details endpoint should return 200');
+    const updatedAssignment = (projectDetail.payload?.assignments ?? []).find((assignment) => assignment.id === createdAssignmentId);
+    assert.ok(updatedAssignment, 'project detail should include updated assignment');
+    assert.equal(Number(updatedAssignment.allocationPercent), 55, 'assignment allocation should be updated after membership recovery flow');
+  } finally {
+    if (createdAssignmentId) {
+      await request(`/assignments/${createdAssignmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+
+    if (createdProjectId) {
+      await request(`/projects/${createdProjectId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+    }
+  }
+});
+
 test('API e2e smoke: project copy preserves members and assignments', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
