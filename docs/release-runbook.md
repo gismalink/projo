@@ -150,3 +150,27 @@
 - `test` и `prod` используют разные БД, секреты и env-файлы.
 - Прямые изменения в `prod` без прохождения `test` не допускаются.
 - `prod` выкатывается только тем же SHA, который успешно прошёл `test`.
+
+## 6) Базовая наблюдаемость (операционный baseline)
+
+### 6.1 Access/Error logs
+- Быстрый снимок логов API/Web:
+   - `ssh mac-mini 'docker logs --tail=200 projo-api-prod | tail -n 120'`
+   - `ssh mac-mini 'docker logs --tail=200 projo-web-prod | tail -n 120'`
+
+### 6.2 Uptime / 5xx / latency snapshot
+- На сервере:
+   - `cd ~/srv/projo && ./scripts/examples/observability-snapshot.sh prod`
+- Для test:
+   - `cd ~/srv/projo && ./scripts/examples/observability-snapshot.sh test`
+
+Скрипт проверяет:
+- 5 health probe (`/api/health`) и долю успешных ответов,
+- p95 latency для health,
+- ответ web (`HEAD`),
+- статус контейнеров и хвост логов.
+
+### 6.3 Alert criteria (операционные)
+- ALERT, если не все health-probe успешны.
+- ALERT, если p95 latency health > `1.50s` (не-load baseline).
+- ALERT, если контейнеры не в `Up` или видны повторяющиеся критичные ошибки в tail логов.

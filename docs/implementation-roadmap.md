@@ -67,10 +67,10 @@
    - [x] green test-smoke,
    - [x] подтвержденный changelog (`docs/releases/RELEASE_NOTES_2026-02-26_RC1.md`),
    - [x] мониторинг после выката (процедура и команды зафиксированы в `docs/release-runbook.md`, раздел `Шаг D.1`).
-3. [ ] Добавить базовую наблюдаемость:
-   - [ ] access/error logs,
-   - [ ] uptime/5xx/latency метрики,
-   - [ ] алерты на деградацию health-check.
+3. [x] Добавить базовую наблюдаемость:
+   - [x] access/error logs,
+   - [x] uptime/5xx/latency метрики,
+   - [x] алерты на деградацию health-check.
 4. [ ] Провести нагрузочное тестирование (конкурентное редактирование планов):
    - план: `docs/performance/load-testing-plan.md`
 
