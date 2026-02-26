@@ -66,7 +66,7 @@
    - [x] Во время драга со скамейки сворачивать проекты, чтобы не тащить карточку через весь экран и не скроллить вручную.
 2. [~] Усилить тестовое покрытие критических сценариев (assignment/member, shift/resize, auth-flow).
    - [x] Добавлен формальный smoke-gate: `npm run test:e2e:api:gate` (пороги `E2E_MIN_TESTS` / `E2E_MAX_SKIPPED`) для фиксации pass-rate/skip-rate token-run.
-   - [x] Smoke-набор разделен на `core (8)` и `extended (5)` сценарии (`npm run test:e2e:api:core|extended` + `...:gate:core|extended`) для быстрого обязательного gate и полного расширенного прогона.
+   - [x] Smoke-набор разделен на `core (7)` и `extended (6)` сценарии (`npm run test:e2e:api:core|extended` + `...:gate:core|extended`) для быстрого обязательного gate и полного расширенного прогона.
    - [x] `verify-all` переключен на core-gate по умолчанию при `SMOKE_API=1`; extended-gate включается отдельно (`SMOKE_API_EXTENDED=1`).
    - [x] В smoke добавлен авто-bootstrap `POST /roles/defaults`, что снимает skip employee-сценариев при пустом каталоге ролей.
    - [~] В локальном/dev контуре достигнут стабильный non-skip прогон: `13/13 pass`, `0 skip`, `0 fail` (включая `E2E_MAX_SKIPPED=0`).

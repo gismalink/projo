@@ -1059,7 +1059,7 @@ smokeTest('API e2e smoke: assignment load profile flat-curve-flat transition rec
   }
 });
 
-smokeTest('API e2e smoke: auth project member role update and removal', 'core', async (t) => {
+smokeTest('API e2e smoke: auth project member role update and removal', 'extended', async (t) => {
   if (authMode === 'sso' || accessTokenOverride) {
     t.skip('This scenario relies on local auth (register + invite).');
     return;
