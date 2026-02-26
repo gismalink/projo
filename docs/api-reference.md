@@ -358,11 +358,11 @@
 
 ## Project member vs assignment lifecycle
 - `ProjectMember` и `ProjectAssignment` ведутся раздельно и имеют разные бизнес-цели.
-- При `POST /api/assignments` и `PATCH /api/assignments/:id` backend автоматически обеспечивает существование membership для пары `projectId + employeeId`.
+- `POST /api/assignments` и `PATCH /api/assignments/:id` не создают membership автоматически для пары `projectId + employeeId`.
 - Текущее ограничение модели: только один assignment на сотрудника в проекте (`projectId + employeeId` уникальны).
 - `DELETE /api/assignments/:id` не удаляет membership автоматически.
 - `DELETE /api/projects/:id/members/:employeeId` не удаляет assignment автоматически.
-- Если assignment существует без membership и выполняется update/create assignment — membership будет восстановлен автоматически.
+- Если assignment существует без membership, update/create assignment не восстанавливает membership автоматически.
 
 ### Ключевые error-коды модели
 - `ERR_PROJECT_MEMBER_ALREADY_EXISTS` — повторное добавление member в проект.
