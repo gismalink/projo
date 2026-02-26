@@ -1371,6 +1371,105 @@ smokeTest('API e2e smoke: project-space token rotation keeps auth context consis
   }
 });
 
+smokeTest('API e2e smoke: company counters are correct for owner and non-owner', 'extended', async (t) => {
+  if (!(await ensureApiAvailable(t))) return;
+
+  if (authMode === 'sso' || accessTokenOverride) {
+    t.skip('This scenario relies on local auth (register + invite + companies counters).');
+    return;
+  }
+
+  const ownerHeaders = await getAuthHeaders(t, { json: true });
+  if (!ownerHeaders) return;
+
+  const seed = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const invitedEmail = `e2e-company-member-${seed}@projo.local`;
+  const invitedPassword = `E2eCompany!${seed}`;
+
+  const invitedRegister = await request('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: invitedEmail,
+      fullName: `E2E Company Member ${seed}`,
+      password: invitedPassword,
+    }),
+  });
+  assert.equal(invitedRegister.response.status, 201, 'invited user register should return 201');
+
+  const createCompany = await request('/auth/companies', {
+    method: 'POST',
+    headers: ownerHeaders,
+    body: JSON.stringify({ name: `E2E Counter Company ${seed}` }),
+  });
+  assert.equal(createCompany.response.status, 201, 'create company should return 201');
+  assert.equal(typeof createCompany.payload?.accessToken, 'string', 'create company should return new access token');
+
+  let ownerCompanyHeaders = {
+    Authorization: `Bearer ${createCompany.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const ownerCompaniesBeforeProject = await request('/auth/companies', { headers: ownerCompanyHeaders });
+  assert.equal(ownerCompaniesBeforeProject.response.status, 200, 'owner companies endpoint should return 200');
+  const createdCompany = ownerCompaniesBeforeProject.payload?.companies?.find((item) => item.name === `E2E Counter Company ${seed}`);
+  assert.ok(createdCompany, 'created company should be present in owner companies list');
+  assert.equal(createdCompany.isOwner, true, 'owner should see isOwner=true for created company');
+
+  const createProject = await request('/auth/projects', {
+    method: 'POST',
+    headers: ownerCompanyHeaders,
+    body: JSON.stringify({ name: `E2E Counter Plan ${seed}` }),
+  });
+  assert.equal(createProject.response.status, 201, 'create project-space should return 201');
+  assert.equal(typeof createProject.payload?.accessToken, 'string', 'create project-space should return updated access token');
+  const createdProjectId = createProject.payload?.user?.workspaceId;
+  assert.equal(typeof createdProjectId, 'string', 'created project-space id should be present');
+
+  ownerCompanyHeaders = {
+    Authorization: `Bearer ${createProject.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const ownerCompaniesAfterProject = await request('/auth/companies', { headers: ownerCompanyHeaders });
+  assert.equal(ownerCompaniesAfterProject.response.status, 200, 'owner companies should return 200 after project create');
+  const ownerCompanyAfterProject = ownerCompaniesAfterProject.payload?.companies?.find((item) => item.id === createdCompany.id);
+  assert.ok(ownerCompanyAfterProject, 'created company should remain in owner list after project create');
+  assert.ok(Number(ownerCompanyAfterProject.projectsCount) >= 1, 'owner should see at least one plan in company counter');
+
+  const inviteMember = await request(`/auth/projects/${createdProjectId}/invite`, {
+    method: 'POST',
+    headers: ownerCompanyHeaders,
+    body: JSON.stringify({ email: invitedEmail, permission: 'viewer' }),
+  });
+  assert.equal(inviteMember.response.status, 201, 'invite member should return 201');
+
+  const invitedLogin = await request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: invitedEmail, password: invitedPassword }),
+  });
+  assert.equal(invitedLogin.response.status, 201, 'invited user login should return 201');
+  assert.equal(typeof invitedLogin.payload?.accessToken, 'string', 'invited user login should return access token');
+
+  const invitedHeaders = {
+    Authorization: `Bearer ${invitedLogin.payload.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const invitedCompanies = await request('/auth/companies', { headers: invitedHeaders });
+  assert.equal(invitedCompanies.response.status, 200, 'invited user companies endpoint should return 200');
+  const invitedCompany = invitedCompanies.payload?.companies?.find((item) => item.id === createdCompany.id);
+  assert.ok(invitedCompany, 'invited user should see shared company in companies list');
+  assert.equal(invitedCompany.isOwner, false, 'invited user should see isOwner=false for shared company');
+  assert.ok(Number(invitedCompany.projectsCount) >= 1, 'invited user should see non-zero plan counter for shared company');
+
+  await request(`/auth/projects/${createdProjectId}`, {
+    method: 'DELETE',
+    headers: ownerCompanyHeaders,
+  });
+});
+
 smokeTest('API e2e smoke: account register + me + password change', 'extended', async (t) => {
   if (!(await ensureApiAvailable(t))) return;
 
