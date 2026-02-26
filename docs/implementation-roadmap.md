@@ -1,13 +1,16 @@
 # План реализации (актуализация: 2026-02-26)
 
 ## 1) Назначение документа
-- Этот файл хранит только **план предстоящих работ** и приоритеты.
-- После закрытия блока задач, сделанный функционал фиксируется в документах и убирается отсюда.
+- Этот файл хранит только **актуальный план предстоящих работ** и приоритеты текущего блока.
+- Закрытые задачи и реализованное поведение сюда не дублируются: после закрытия блока они переносятся в профильные документы.
+- Исторический прогресс и факт поставки фиксируются в Git history и релизных документах.
 
 ## 2) Где фиксируется закрытое
-- Технические результаты и срезы качества: `docs/audits/*`.
-- Актуальная архитектура и инварианты: `docs/architecture-overview.md`.
-- Актуальное продуктовое поведение: `docs/product-spec.md`.
+- Технические результаты, риски и срезы качества: `docs/audits/*`.
+- Архитектурные изменения и инварианты: `docs/architecture-overview.md`.
+- Актуальное продуктовое поведение и правила: `docs/product-spec.md`.
+- Производительность и нагрузочные измерения: `docs/performance/*`.
+- Процедуры поставки и релизный контур: `docs/release-runbook.md`, `docs/releases/*`.
 - История изменений по коммитам/PR: git history.
 
 ## 3) Активные приоритеты
@@ -23,20 +26,16 @@
 - Из roadmap закрытый блок удаляется, чтобы не дублировать «источник правды».
 
 Временный прогресс текущего блока:
-- [x] Декомпозиция `App` на компоненты (`AppHeader`, `ProjectHomeSection`, `CompanyTabsContent`, `AdminUsersTable`).
-- [x] Ужесточение доступа к admin console (только superadmin).
-- [x] GitOps-поставка в `test` с feature-ветки и подтвержденные smoke health-check.
-- [x] Усилен pipeline верификации: добавлен `typecheck` для web.
 - [~] P1 started: унификация формулы KPI «Мои планы» под годовую утилизацию.
 - [~] P2 in progress: в селекторе компаний добавлены счетчики планов `Название (N)` + реактивное обновление после операций с планами (test).
+- [~] P4.2 in progress: доведение стабильного non-skip покрытия критических API smoke-сценариев.
+- [~] P4.10 started: фронтовый performance/responsiveness baseline и release-gate.
 
 #### Next (ближайший фокус)
 
 ##### P1 — Критичный баг расчета нагрузки
 1. [ ] Исправить расхождение процентов в «Мои планы» vs «Годовая нагрузка».
-   - [x] Использовать единую формулу агрегации в обоих виджетах.
    - [~] Убрать аномалии вида `>1000%` при реальном значении около `94%`.
-   - [x] Добавить regression-check для невалидного раздувания KPI (smoke guard на `/auth/projects`).
     - **DoD:**
        - [ ] На тестовых данных значения в обоих блоках совпадают (допуск: не более 0.1 п.п.).
        - [ ] Невозможно получить аномальный процент при валидных входных данных.
@@ -44,11 +43,8 @@
 
 ##### P2 — Прозрачность списка компаний
 1. [~] В селекторе компаний показывать количество планов в формате `Название компании (N)`.
-   - [x] `N` соответствует числу планов в текущем контексте пользователя.
-   - [x] Значение обновляется реактивно при смене компании/планов.
     - **DoD:**
       - [ ] Счетчик корректен для owner и non-owner сценариев.
-      - [x] После create/copy/delete/switch plans счетчик обновляется без перезагрузки страницы.
       - [ ] Ручной smoke сценария переключения компаний пройден.
 
 #### Later (после стабилизации P1/P2)
@@ -57,32 +53,6 @@
 - [ ] AI-помощник для интеллектуальной правки планов (discovery -> MVP).
 - [ ] Монетизация и killer-features (discovery).
 
-### P3 — Качество и проверка поставки
-1. [x] Закрепить минимальный набор post-deploy проверок для `test`:
-   - [x] `npm run check`,
-   - [x] `SMOKE_API=1 npm run check` (в e2e smoke добавлен preflight API availability + skip-safe поведение; подтверждено на `test` с `E2E_API_URL=https://test.projo.gismalink.art/api` после деплоя `c6e5a50`),
-   - [x] ручной smoke критического user-flow (подтверждено: login/logout в SSO режиме работает; авто-probe redirect/logout также пройден).
-2. [x] Добавить release checklist перед `prod`:
-   - [x] backup БД (процедура и команда зафиксированы в `docs/release-runbook.md`, раздел `Шаг C.1`),
-   - [x] green test-smoke,
-   - [x] подтвержденный changelog (`docs/releases/RELEASE_NOTES_2026-02-26_RC1.md`),
-   - [x] мониторинг после выката (процедура и команды зафиксированы в `docs/release-runbook.md`, раздел `Шаг D.1`).
-3. [x] Добавить базовую наблюдаемость:
-   - [x] access/error logs,
-   - [x] uptime/5xx/latency метрики,
-   - [x] алерты на деградацию health-check.
-4. [x] Провести нагрузочное тестирование (конкурентное редактирование планов):
-   - выполнено и зафиксировано: `docs/performance/load-testing-plan.md` (раздел `9.1`, прогоны `test` и практический baseline по VU/p95/error-rate).
-
-### P3.5 — Post-cutover hardening (tech audit 2026-02-24)
-Источник: `docs/audits/technical-audit-2026-02-24.md`.
-
-1. [x] CORS deny-path: вместо error -> `callback(null, false)` + безопасное логирование origin.
-2. [x] SSO proxy: добавить timeout на upstream fetch + контролируемую ошибку.
-3. [x] Web config safety: заменить fallback `VITE_API_URL` на `/api` (чтобы misconfig не вшивал `localhost:4000/api` в bundle).
-4. [x] Reduce config drift: `VITE_*` build args в `infra/docker-compose.host.yml` перевести на env-substitution (единый источник значений).
-5. [x] Deploy scripts: явный маркер deployed SHA (файл/лог) + предупреждение про detached HEAD.
-
 ### P4.5 — Импорт XLSX (новая компания)
 План: `docs/imports/xlsx-company-import-plan.md`.
 
@@ -90,11 +60,8 @@
 1. [ ] Довести стабильность UX/метрик timeline на краевых сценариях.
    - [ ] Во время драга со скамейки сворачивать проекты, чтобы не тащить карточку через весь экран и не скроллить вручную.
 2. [~] Усилить тестовое покрытие критических сценариев (assignment/member, shift/resize, auth-flow).
-   - [x] Добавлен e2e smoke сценарий `project copy preserves members and assignments` (`scripts/e2e-api-smoke.test.mjs`).
-   - [x] Добавлен e2e smoke сценарий `assignment update restores membership after member removal` (проверка инварианта member/assignment lifecycle).
-   - [x] Добавлен e2e smoke сценарий `assignment outside project range is allowed and visible in timeline` (регресс на policy fact-range без блокировки CRUD).
-   - [x] Выполнен SSO token-run (`E2E_ACCESS_TOKEN`) для non-skip smoke: `pass=3`, `fail=0`, `skip=9`; employee-зависимые сценарии skip-safe при пустом `roles` в текущем workspace scope.
-   - [x] Добавлен role-independent e2e smoke сценарий `project-space token rotation keeps auth context consistent` (create/switch/delete + `auth/me` context sync).
+   - [ ] Довести employee-зависимые сценарии до non-skip выполнения в тестовом контуре (или выделить отдельный стабильный workspace для них).
+   - [ ] Зафиксировать стабильный token-run с целевым pass-rate и минимальными skip (кроме осознанных local-auth-only кейсов).
 3. [ ] Добавить страницу статистики для владельца/админа:
    - [ ] общее количество пользователей,
    - [ ] общее количество проектов,
@@ -117,6 +84,21 @@
    - [ ] спроектировать безопасный API-контур (read/write scope, audit trail),
    - [ ] сделать MVP (чат + ограниченный набор команд изменения плана),
    - [ ] ввести режим «предложение -> подтверждение пользователем».
+10. [ ] Frontend performance & responsiveness plan (аудит -> стабилизация):
+   - План: `docs/performance/frontend-performance-plan.md`
+   - [ ] Зафиксировать baseline web bundle и сборки (`npm run build -w @projo/web`): размер `dist/assets/*.js`, gzip, время build.
+   - [ ] Снять runtime-профиль Timeline в Chrome DevTools Performance (open timeline, scroll, drag assignment/project, bench filter): long tasks, FPS, scripting/layout/paint.
+   - [ ] Снять React Profiler для `TimelineTab`/`ProjectAssignmentsCard`: commit duration, частота re-render, горячие ветки.
+   - [ ] Прогнать UX-профиль в throttling-режимах (CPU x4 + Fast 3G/Slow 4G): TTI, latency до визуального отклика на drag/drop.
+   - [ ] Ввести performance budgets и release-gate для фронта:
+      - [ ] JS bundle gzip budget,
+      - [ ] max long task budget,
+      - [ ] p95 отклика drag/drop budget.
+   - [ ] Добавить регулярный отчёт (1 markdown snapshot на итерацию: дата, SHA, метрики, выводы, action items).
+   - **DoD:**
+      - [ ] Есть актуальный baseline-док и повторяемый чеклист прогонов (local + test + throttling).
+      - [ ] Для Timeline подтверждено отсутствие критических UI-freeze (нет long task > 100ms в целевых сценариях).
+      - [ ] Для каждого релиз-кандидата есть измерение bundle/runtime и решение «go/no-go» по budget.
 
 ### P5 — Продукт и монетизация (discovery)
 1. [ ] Сформировать гипотезы монетизации:
@@ -135,3 +117,6 @@
 - `docs/workflow-checklist.md`
 - `docs/release-runbook.md`
 - `docs/server-deploy-mac.md`
+- `docs/performance-baseline-2026-02-15.md`
+- `docs/performance/load-testing-plan.md`
+- `docs/performance/frontend-performance-plan.md`
