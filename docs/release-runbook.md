@@ -74,6 +74,28 @@
    - `git tag -a rc-YYYYMMDD-HHMM <sha> -m "release candidate"`
    - `git push origin rc-YYYYMMDD-HHMM`
 
+### Шаг C.1. Pre-prod checklist (обязательный)
+Перед promote на `prod` должны быть выполнены и зафиксированы все пункты:
+
+1. **Backup БД (`prod`)**
+   - Снять backup (формат/команда согласно вашей инфраструктуре БД).
+   - Зафиксировать артефакт: timestamp + путь/имя файла backup.
+
+2. **Green test-smoke**
+   - Выполнить: `ssh mac-mini 'cd ~/srv/edge && ./scripts/test-smoke.sh --local test'`
+   - Результат должен завершиться `== smoke: OK ==`.
+   - Зафиксировать timestamp прогона и релизный SHA (например, из `~/srv/projo/.deploy/last-deploy-test.env`).
+
+3. **Подтвержденный changelog**
+   - Подготовить краткий список изменений релиза (что вошло, риски, rollback).
+   - Убедиться, что changelog согласован перед `prod`.
+
+4. **Мониторинг после выката (`prod`)**
+   - После promote проверить:
+     - `curl -fsS https://projo.gismalink.art/api/health`
+     - `curl -I https://projo.gismalink.art`
+   - Просмотреть логи целевых контейнеров и отсутствие критичных ошибок в первые минуты после выката.
+
 ### Упрощённый сценарий (одной SSH-командой)
 - Для обновления `test` конкретной feature-веткой:
    - `ssh mac-mini 'cd ~/srv/projo && ./scripts/examples/deploy-test-from-ref.sh origin/feature/<name> ~/srv/projo'`
