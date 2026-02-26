@@ -63,6 +63,10 @@ type ApplyResponse = {
   warnings: ImportIssue[];
 };
 
+type SheetsResponse = {
+  sheets: string[];
+};
+
 type HeaderDetection = {
   row: number;
   monthColumns: Array<{ col: number; monthStart: Date }>;
@@ -211,20 +215,31 @@ export class ImportsService {
       if (monthColumns.length < 2) continue;
       monthColumns.sort((left, right) => left.col - right.col);
 
-      const contiguous: Array<{ col: number; monthStart: Date }> = [monthColumns[0]];
+      let contiguous: Array<{ col: number; monthStart: Date }> = [monthColumns[0]];
+      let bestContiguous: Array<{ col: number; monthStart: Date }> = [...contiguous];
       for (let index = 1; index < monthColumns.length; index += 1) {
         const current = monthColumns[index];
         const previous = monthColumns[index - 1];
         if (current.col - previous.col <= 2) {
           contiguous.push(current);
+          continue;
         }
+
+        if (contiguous.length > bestContiguous.length) {
+          bestContiguous = [...contiguous];
+        }
+        contiguous = [current];
       }
 
-      if (contiguous.length < 2) continue;
-      if (!best || contiguous.length > best.monthColumns.length) {
+      if (contiguous.length > bestContiguous.length) {
+        bestContiguous = [...contiguous];
+      }
+
+      if (bestContiguous.length < 6) continue;
+      if (!best || bestContiguous.length > best.monthColumns.length) {
         best = {
           row: rowNumber,
-          monthColumns: contiguous,
+          monthColumns: bestContiguous,
         };
       }
     }
@@ -321,11 +336,22 @@ export class ImportsService {
     return normalized.slice(0, 18) || 'PRJ';
   }
 
-  private async parseCompanyWorkbook(fileBuffer: Buffer): Promise<ParsedImport> {
+  private resolveWorksheet(workbook: ExcelJS.Workbook, requestedSheetName?: string) {
+    const rawRequested = requestedSheetName?.trim() ?? '';
+    if (!rawRequested) {
+      return workbook.worksheets[0] ?? null;
+    }
+
+    const requestedNormalized = this.normalizeName(rawRequested);
+    const found = workbook.worksheets.find((worksheet) => this.normalizeName(worksheet.name) === requestedNormalized);
+    return found ?? null;
+  }
+
+  private async parseCompanyWorkbook(fileBuffer: Buffer, requestedSheetName?: string): Promise<ParsedImport> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer as any);
 
-    const worksheet = workbook.worksheets[0];
+    const worksheet = this.resolveWorksheet(workbook, requestedSheetName);
     if (!worksheet) {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
     }
@@ -500,13 +526,23 @@ export class ImportsService {
     return `${prefix} ${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
   }
 
-  async previewCompanyXlsx(_userId: string, fileBuffer: Buffer): Promise<PreviewResponse> {
-    const parsed = await this.parseCompanyWorkbook(fileBuffer);
+  async listCompanyXlsxSheets(fileBuffer: Buffer): Promise<SheetsResponse> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(fileBuffer as any);
+    const sheets = workbook.worksheets.map((worksheet) => worksheet.name).filter((name) => Boolean(name?.trim()));
+    if (sheets.length === 0) {
+      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
+    }
+    return { sheets };
+  }
+
+  async previewCompanyXlsx(_userId: string, fileBuffer: Buffer, requestedSheetName?: string): Promise<PreviewResponse> {
+    const parsed = await this.parseCompanyWorkbook(fileBuffer, requestedSheetName);
     return this.buildPreviewResponse(parsed);
   }
 
-  async applyCompanyXlsx(userId: string, fileBuffer: Buffer): Promise<ApplyResponse> {
-    const parsed = await this.parseCompanyWorkbook(fileBuffer);
+  async applyCompanyXlsx(userId: string, fileBuffer: Buffer, requestedSheetName?: string): Promise<ApplyResponse> {
+    const parsed = await this.parseCompanyWorkbook(fileBuffer, requestedSheetName);
     if (parsed.errors.length > 0) {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
     }

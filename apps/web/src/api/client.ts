@@ -94,6 +94,10 @@ export type CompanyXlsxImportIssue = {
   message: string;
 };
 
+export type CompanyXlsxImportSheetsResponse = {
+  sheets: string[];
+};
+
 export type CompanyXlsxImportPreviewResponse = {
   counts: {
     projects: number;
@@ -612,14 +616,25 @@ export const api = {
   ssoCurrentUser: () => request<Record<string, unknown>>('/sso/current-user', { credentials: 'include' }),
 
   getMyCompanies: (token: string) => request<MyCompaniesResponse>('/auth/companies', {}, token),
-  previewCompanyXlsxImport: (file: File, token: string) => {
+  listCompanyXlsxImportSheets: (file: File, token: string) => {
     const formData = new FormData();
     formData.append('file', file);
+    return requestFormData<CompanyXlsxImportSheetsResponse>('/imports/xlsx/company/sheets', formData, token);
+  },
+  previewCompanyXlsxImport: (file: File, token: string, sheetName?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (sheetName) {
+      formData.append('sheetName', sheetName);
+    }
     return requestFormData<CompanyXlsxImportPreviewResponse>('/imports/xlsx/company/preview', formData, token);
   },
-  applyCompanyXlsxImport: (file: File, token: string) => {
+  applyCompanyXlsxImport: (file: File, token: string, sheetName?: string) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (sheetName) {
+      formData.append('sheetName', sheetName);
+    }
     return requestFormData<CompanyXlsxImportApplyResponse>('/imports/xlsx/company/apply', formData, token);
   },
   getAdminOverview: (token: string) => request<AdminOverviewResponse>('/auth/admin/overview', {}, token),

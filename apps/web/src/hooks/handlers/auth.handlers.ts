@@ -282,9 +282,45 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
   async function handleImportCompanyXlsx(file: File) {
     if (!state.token) return false;
 
+    let applied = false;
+
     const imported = await runWithErrorToastVoid({
       operation: async () => {
-        const preview = await api.previewCompanyXlsxImport(file, state.token as string);
+        const sheetsResponse = await api.listCompanyXlsxImportSheets(file, state.token as string);
+        const sheets = sheetsResponse.sheets;
+        if (sheets.length === 0) {
+          pushToast(t.uiImportCompanyXlsxPreviewInvalid);
+          return;
+        }
+
+        let selectedSheetName = sheets[0];
+        if (sheets.length > 1) {
+          const preferredCandidateIndex = sheets.findIndex((sheet) => {
+            const normalized = sheet.trim().toLowerCase();
+            return normalized.includes('задейств') && !normalized.includes('old');
+          });
+          const preferredSheetIndex = preferredCandidateIndex >= 0 ? preferredCandidateIndex : 0;
+
+          const numberedSheets = sheets.map((sheet, index) => `${index + 1}. ${sheet}`).join('\n');
+          const selectedInput = window.prompt(
+            `${t.uiImportCompanyXlsxSelectSheet}\n\n${numberedSheets}\n\n${t.uiImportCompanyXlsxSelectSheetHint}`,
+            String(preferredSheetIndex + 1),
+          );
+
+          if (selectedInput === null) {
+            return;
+          }
+
+          const selectedIndex = Number(selectedInput.trim());
+          if (!Number.isInteger(selectedIndex) || selectedIndex < 1 || selectedIndex > sheets.length) {
+            pushToast(t.uiImportCompanyXlsxSelectSheetInvalid);
+            return;
+          }
+
+          selectedSheetName = sheets[selectedIndex - 1];
+        }
+
+        const preview = await api.previewCompanyXlsxImport(file, state.token as string, selectedSheetName);
 
         if (preview.errors.length > 0) {
           pushToast(
@@ -298,7 +334,8 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
         );
         if (!confirmed) return;
 
-        await api.applyCompanyXlsxImport(file, state.token as string);
+        await api.applyCompanyXlsxImport(file, state.token as string, selectedSheetName);
+        applied = true;
         await refreshData(state.token as string, state.selectedYear);
         await loadMyCompanies(state.token as string);
         await loadMyProjects(state.token as string);
@@ -308,7 +345,7 @@ export function createAuthHandlers({ state, t, errorText, pushToast, refreshData
       pushToast,
     });
 
-    if (imported) {
+    if (imported && applied) {
       pushToast(t.uiImportCompanyXlsxSuccess);
       return true;
     }
