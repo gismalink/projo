@@ -65,7 +65,7 @@
 2. [ ] Добавить release checklist перед `prod`:
    - [ ] backup БД,
    - [x] green test-smoke,
-   - [ ] подтвержденный changelog,
+   - [x] подтвержденный changelog (`docs/releases/RELEASE_NOTES_2026-02-26_RC1.md`),
    - [ ] мониторинг после выката.
 3. [ ] Добавить базовую наблюдаемость:
    - [ ] access/error logs,
