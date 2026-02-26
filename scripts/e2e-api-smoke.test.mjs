@@ -7,6 +7,17 @@ const password = process.env.E2E_USER_PASSWORD ?? 'ProjoAdmin!2026';
 const year = Number(process.env.E2E_YEAR ?? new Date().getUTCFullYear());
 const authMode = (process.env.E2E_AUTH_MODE ?? 'auto').trim().toLowerCase();
 const accessTokenOverride = (process.env.E2E_ACCESS_TOKEN ?? '').trim();
+const suiteMode = (process.env.E2E_SUITE ?? 'all').trim().toLowerCase();
+
+if (!new Set(['all', 'core', 'extended']).has(suiteMode)) {
+  throw new Error(`Invalid E2E_SUITE="${suiteMode}". Expected one of: all, core, extended.`);
+}
+
+function smokeTest(name, tier, fn) {
+  if (suiteMode !== 'all' && suiteMode !== tier) return;
+  test(name, fn);
+}
+
 let apiAvailabilityChecked = false;
 let apiAvailabilityError = '';
 
@@ -183,7 +194,7 @@ async function ensureEmployee(authHeaders, t) {
   return createdEmployee.payload;
 }
 
-test('API e2e smoke: auth + timeline + calendar', async (t) => {
+smokeTest('API e2e smoke: auth + timeline + calendar', 'core', async (t) => {
   if (!(await ensureApiAvailable(t))) return;
 
   const health = await request('/health');
@@ -206,7 +217,7 @@ test('API e2e smoke: auth + timeline + calendar', async (t) => {
   assert.equal(typeof calendarHealth.payload?.currentYear?.freshness, 'string', 'calendar health should include freshness');
 });
 
-test('API e2e smoke: project-space KPI utilization is normalized', async (t) => {
+smokeTest('API e2e smoke: project-space KPI utilization is normalized', 'core', async (t) => {
   const authHeaders = await getAuthHeaders(t);
   if (!authHeaders) return;
 
@@ -254,7 +265,7 @@ test('API e2e smoke: project-space KPI utilization is normalized', async (t) => 
   }
 });
 
-test('API e2e smoke: project member + assignment consistency', async (t) => {
+smokeTest('API e2e smoke: project member + assignment consistency', 'core', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -393,7 +404,7 @@ test('API e2e smoke: project member + assignment consistency', async (t) => {
   }
 });
 
-test('API e2e smoke: assignment update works after member removal (decoupled model)', async (t) => {
+smokeTest('API e2e smoke: assignment update works after member removal (decoupled model)', 'extended', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -503,7 +514,7 @@ test('API e2e smoke: assignment update works after member removal (decoupled mod
   }
 });
 
-test('API e2e smoke: assignment outside project range is allowed and visible in timeline', async (t) => {
+smokeTest('API e2e smoke: assignment outside project range is allowed and visible in timeline', 'extended', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -591,7 +602,7 @@ test('API e2e smoke: assignment outside project range is allowed and visible in 
   }
 });
 
-test('API e2e smoke: project copy preserves members and assignments', async (t) => {
+smokeTest('API e2e smoke: project copy preserves members and assignments', 'extended', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -713,7 +724,7 @@ test('API e2e smoke: project copy preserves members and assignments', async (t) 
   }
 });
 
-test('API e2e smoke: project shift/resize keeps assignment flow consistent', async (t) => {
+smokeTest('API e2e smoke: project shift/resize keeps assignment flow consistent', 'core', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -820,7 +831,7 @@ test('API e2e smoke: project shift/resize keeps assignment flow consistent', asy
   }
 });
 
-test('API e2e smoke: assignment curve persists and updates timeline aggregates', async (t) => {
+smokeTest('API e2e smoke: assignment curve persists and updates timeline aggregates', 'core', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -923,7 +934,7 @@ test('API e2e smoke: assignment curve persists and updates timeline aggregates',
   }
 });
 
-test('API e2e smoke: assignment load profile flat-curve-flat transition recalculates timeline', async (t) => {
+smokeTest('API e2e smoke: assignment load profile flat-curve-flat transition recalculates timeline', 'extended', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -1048,7 +1059,7 @@ test('API e2e smoke: assignment load profile flat-curve-flat transition recalcul
   }
 });
 
-test('API e2e smoke: auth project member role update and removal', async (t) => {
+smokeTest('API e2e smoke: auth project member role update and removal', 'core', async (t) => {
   if (authMode === 'sso' || accessTokenOverride) {
     t.skip('This scenario relies on local auth (register + invite).');
     return;
@@ -1134,7 +1145,7 @@ test('API e2e smoke: auth project member role update and removal', async (t) => 
   }
 });
 
-test('API e2e smoke: company list/create/rename/switch lifecycle', async (t) => {
+smokeTest('API e2e smoke: company list/create/rename/switch lifecycle', 'core', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -1241,7 +1252,7 @@ test('API e2e smoke: company list/create/rename/switch lifecycle', async (t) => 
   );
 });
 
-test('API e2e smoke: project-space token rotation keeps auth context consistent', async (t) => {
+smokeTest('API e2e smoke: project-space token rotation keeps auth context consistent', 'core', async (t) => {
   const authHeaders = await getAuthHeaders(t, { json: true });
   if (!authHeaders) return;
 
@@ -1360,7 +1371,7 @@ test('API e2e smoke: project-space token rotation keeps auth context consistent'
   }
 });
 
-test('API e2e smoke: account register + me + password change', async (t) => {
+smokeTest('API e2e smoke: account register + me + password change', 'extended', async (t) => {
   if (!(await ensureApiAvailable(t))) return;
 
   if (authMode === 'sso' || accessTokenOverride) {
