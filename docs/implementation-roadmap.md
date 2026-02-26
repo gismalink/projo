@@ -62,8 +62,8 @@
    - [x] `npm run check`,
    - [x] `SMOKE_API=1 npm run check` (в e2e smoke добавлен preflight API availability + skip-safe поведение; подтверждено на `test` с `E2E_API_URL=https://test.projo.gismalink.art/api` после деплоя `c6e5a50`),
    - [x] ручной smoke критического user-flow (подтверждено: login/logout в SSO режиме работает; авто-probe redirect/logout также пройден).
-2. [ ] Добавить release checklist перед `prod`:
-   - [ ] backup БД,
+2. [x] Добавить release checklist перед `prod`:
+   - [x] backup БД (процедура и команда зафиксированы в `docs/release-runbook.md`, раздел `Шаг C.1`),
    - [x] green test-smoke,
    - [x] подтвержденный changelog (`docs/releases/RELEASE_NOTES_2026-02-26_RC1.md`),
    - [x] мониторинг после выката (процедура и команды зафиксированы в `docs/release-runbook.md`, раздел `Шаг D.1`).

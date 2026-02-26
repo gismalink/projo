@@ -78,8 +78,10 @@
 Перед promote на `prod` должны быть выполнены и зафиксированы все пункты:
 
 1. **Backup БД (`prod`)**
-   - Снять backup (формат/команда согласно вашей инфраструктуре БД).
-   - Зафиксировать артефакт: timestamp + путь/имя файла backup.
+   - Рекомендованный формат: `sql.gz` (plain dump + gzip).
+   - Команда (на сервере):
+     - `ssh mac-mini 'cd ~/srv/projo && mkdir -p backups/prod && TS=$(date -u +%Y%m%dT%H%M%SZ) && OUT="backups/prod/projo_prod_${TS}.sql.gz" && docker exec projo-db-prod sh -lc '\''pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"'\'' | gzip -9 > "$OUT" && gzip -t "$OUT" && ls -lh "$OUT"'`
+   - Зафиксировать артефакт: timestamp + путь/имя файла backup + размер файла.
 
 2. **Green test-smoke**
    - Выполнить: `ssh mac-mini 'cd ~/srv/edge && ./scripts/test-smoke.sh --local test'`
