@@ -1189,6 +1189,125 @@ test('API e2e smoke: company list/create/rename/switch lifecycle', async (t) => 
   );
 });
 
+test('API e2e smoke: project-space token rotation keeps auth context consistent', async (t) => {
+  const authHeaders = await getAuthHeaders(t, { json: true });
+  if (!authHeaders) return;
+
+  const projectNameA = `E2E Context A ${Date.now()}`;
+  const projectNameB = `E2E Context B ${Date.now()}`;
+
+  let projectIdA = null;
+  let projectIdB = null;
+  let effectiveHeaders = authHeaders;
+
+  try {
+    const createProjectA = await request('/auth/projects', {
+      method: 'POST',
+      headers: effectiveHeaders,
+      body: JSON.stringify({ name: projectNameA }),
+    });
+    assert.equal(createProjectA.response.status, 201, 'create first project-space should return 201');
+    assert.equal(typeof createProjectA.payload?.accessToken, 'string', 'create first project-space should return accessToken');
+    projectIdA = createProjectA.payload?.user?.workspaceId ?? null;
+    assert.equal(typeof projectIdA, 'string', 'first created project-space id should be present in user context');
+
+    effectiveHeaders = {
+      Authorization: `Bearer ${createProjectA.payload.accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const createProjectB = await request('/auth/projects', {
+      method: 'POST',
+      headers: effectiveHeaders,
+      body: JSON.stringify({ name: projectNameB }),
+    });
+    assert.equal(createProjectB.response.status, 201, 'create second project-space should return 201');
+    assert.equal(typeof createProjectB.payload?.accessToken, 'string', 'create second project-space should return accessToken');
+    projectIdB = createProjectB.payload?.user?.workspaceId ?? null;
+    assert.equal(typeof projectIdB, 'string', 'second created project-space id should be present in user context');
+    assert.notEqual(projectIdA, projectIdB, 'created project-space ids should differ');
+
+    effectiveHeaders = {
+      Authorization: `Bearer ${createProjectB.payload.accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const projectsAfterCreate = await request('/auth/projects', { headers: effectiveHeaders });
+    assert.equal(projectsAfterCreate.response.status, 200, 'projects endpoint should return 200 after creating project-spaces');
+    const allProjectsAfterCreate = [...(projectsAfterCreate.payload?.myProjects ?? []), ...(projectsAfterCreate.payload?.sharedProjects ?? [])];
+    assert.ok(allProjectsAfterCreate.some((item) => item.id === projectIdA), 'projects list should include first created project-space');
+    assert.ok(allProjectsAfterCreate.some((item) => item.id === projectIdB), 'projects list should include second created project-space');
+
+    const switchToA = await request('/auth/projects/switch', {
+      method: 'POST',
+      headers: effectiveHeaders,
+      body: JSON.stringify({ projectId: projectIdA }),
+    });
+    assert.equal(switchToA.response.status, 201, 'switch project-space should return 201');
+    assert.equal(typeof switchToA.payload?.accessToken, 'string', 'switch project-space should return accessToken');
+    assert.equal(switchToA.payload?.user?.workspaceId, projectIdA, 'switched token should carry selected workspace context');
+
+    effectiveHeaders = {
+      Authorization: `Bearer ${switchToA.payload.accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const meAfterSwitch = await request('/auth/me', { headers: effectiveHeaders });
+    assert.equal(meAfterSwitch.response.status, 200, 'auth/me should return 200 after project switch');
+    assert.equal(meAfterSwitch.payload?.workspaceId, projectIdA, 'auth/me workspace context should match switched project-space');
+
+    const deleteProjectA = await request(`/auth/projects/${projectIdA}`, {
+      method: 'DELETE',
+      headers: effectiveHeaders,
+    });
+    assert.equal(deleteProjectA.response.status, 200, 'delete first created project-space should return 200');
+    assert.equal(typeof deleteProjectA.payload?.accessToken, 'string', 'delete first project-space should return updated accessToken');
+
+    effectiveHeaders = {
+      Authorization: `Bearer ${deleteProjectA.payload.accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    const projectsAfterDeleteA = await request('/auth/projects', { headers: effectiveHeaders });
+    assert.equal(projectsAfterDeleteA.response.status, 200, 'projects endpoint should return 200 after deleting first project-space');
+    const allProjectsAfterDeleteA = [...(projectsAfterDeleteA.payload?.myProjects ?? []), ...(projectsAfterDeleteA.payload?.sharedProjects ?? [])];
+    assert.equal(
+      allProjectsAfterDeleteA.some((item) => item.id === projectIdA),
+      false,
+      'deleted first project-space should not remain in projects list',
+    );
+    assert.equal(
+      allProjectsAfterDeleteA.some((item) => item.id === projectIdB),
+      true,
+      'second project-space should remain after deleting first one',
+    );
+
+    const deleteProjectB = await request(`/auth/projects/${projectIdB}`, {
+      method: 'DELETE',
+      headers: effectiveHeaders,
+    });
+    assert.equal(deleteProjectB.response.status, 200, 'delete second created project-space should return 200');
+    assert.equal(typeof deleteProjectB.payload?.accessToken, 'string', 'delete second project-space should return updated accessToken');
+
+    projectIdA = null;
+    projectIdB = null;
+  } finally {
+    if (projectIdA) {
+      await request(`/auth/projects/${projectIdA}`, {
+        method: 'DELETE',
+        headers: effectiveHeaders,
+      });
+    }
+
+    if (projectIdB) {
+      await request(`/auth/projects/${projectIdB}`, {
+        method: 'DELETE',
+        headers: effectiveHeaders,
+      });
+    }
+  }
+});
+
 test('API e2e smoke: account register + me + password change', async (t) => {
   if (!(await ensureApiAvailable(t))) return;
 

@@ -94,6 +94,7 @@
    - [x] Добавлен e2e smoke сценарий `assignment update restores membership after member removal` (проверка инварианта member/assignment lifecycle).
    - [x] Добавлен e2e smoke сценарий `assignment outside project range is allowed and visible in timeline` (регресс на policy fact-range без блокировки CRUD).
    - [x] Выполнен SSO token-run (`E2E_ACCESS_TOKEN`) для non-skip smoke: `pass=3`, `fail=0`, `skip=9`; employee-зависимые сценарии skip-safe при пустом `roles` в текущем workspace scope.
+   - [x] Добавлен role-independent e2e smoke сценарий `project-space token rotation keeps auth context consistent` (create/switch/delete + `auth/me` context sync).
 3. [ ] Добавить страницу статистики для владельца/админа:
    - [ ] общее количество пользователей,
    - [ ] общее количество проектов,
