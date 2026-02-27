@@ -602,6 +602,46 @@ export class ImportsService {
     }
   }
 
+  private isLikelyTruncatedJson(raw: string): boolean {
+    const trimmed = raw.trim();
+    if (!trimmed) return true;
+    if (!trimmed.endsWith('}')) return true;
+
+    let inString = false;
+    let escaped = false;
+    let balance = 0;
+
+    for (let index = 0; index < trimmed.length; index += 1) {
+      const char = trimmed[index];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '{') balance += 1;
+      if (char === '}') balance -= 1;
+      if (balance < 0) return true;
+    }
+
+    return balance !== 0;
+  }
+
   private normalizeAiAssignments(payload: unknown): AiNormalizedAssignment[] {
     if (!payload || typeof payload !== 'object') {
       throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
@@ -827,6 +867,8 @@ export class ImportsService {
     let usedAttempts = 0;
     let selectedModel = model;
     let assignments: AiNormalizedAssignment[] | null = null;
+    let bestAssignments: AiNormalizedAssignment[] | null = null;
+    let bestModel = model;
     const rawAttempts: Array<{ attempt: number; model: string; content: string }> = [];
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -870,15 +912,43 @@ export class ImportsService {
         });
 
         const parsedJson = this.extractJsonPayload(content);
-        assignments = this.normalizeAiAssignments(parsedJson);
+        const normalized = this.normalizeAiAssignments(parsedJson);
+        if (!bestAssignments || normalized.length > bestAssignments.length) {
+          bestAssignments = normalized;
+          bestModel = selectedModel;
+        }
+
+        const truncated = this.isLikelyTruncatedJson(content);
+        if (truncated && attempt < maxAttempts) {
+          continue;
+        }
+
+        assignments = normalized;
         break;
       } catch {
         if (attempt === maxAttempts) {
+          if (bestAssignments) {
+            assignments = bestAssignments;
+            selectedModel = bestModel;
+            break;
+          }
           throw new BadGatewayException({
             message: ErrorCode.LLM_REQUEST_FAILED,
             llmRaw: this.buildLlmRawDownload(rawAttempts),
           });
         }
+      }
+    }
+
+    if (!assignments) {
+      if (bestAssignments) {
+        assignments = bestAssignments;
+        selectedModel = bestModel;
+      } else {
+        throw new BadGatewayException({
+          message: ErrorCode.LLM_REQUEST_FAILED,
+          llmRaw: this.buildLlmRawDownload(rawAttempts),
+        });
       }
     }
 
