@@ -521,10 +521,84 @@ export class ImportsService {
         try {
           return JSON.parse(sliced);
         } catch {
+          const salvaged = this.salvageAssignmentsJson(candidate);
+          if (salvaged) {
+            return salvaged;
+          }
           throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
         }
       }
+      const salvaged = this.salvageAssignmentsJson(candidate);
+      if (salvaged) {
+        return salvaged;
+      }
       throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+  }
+
+  private salvageAssignmentsJson(raw: string): unknown | null {
+    const assignmentsKeyIndex = raw.indexOf('"assignments"');
+    if (assignmentsKeyIndex < 0) return null;
+
+    const arrayStart = raw.indexOf('[', assignmentsKeyIndex);
+    if (arrayStart < 0) return null;
+
+    const objects: string[] = [];
+    let inString = false;
+    let escaped = false;
+    let depth = 0;
+    let objectStart = -1;
+
+    for (let index = arrayStart + 1; index < raw.length; index += 1) {
+      const char = raw[index];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '{') {
+        if (depth === 0) {
+          objectStart = index;
+        }
+        depth += 1;
+        continue;
+      }
+
+      if (char === '}') {
+        if (depth > 0) {
+          depth -= 1;
+          if (depth === 0 && objectStart >= 0) {
+            objects.push(raw.slice(objectStart, index + 1));
+            objectStart = -1;
+          }
+        }
+        continue;
+      }
+    }
+
+    if (objects.length === 0) return null;
+
+    const reconstructed = `{"assignments":[${objects.join(',')}]} `;
+    try {
+      return JSON.parse(reconstructed);
+    } catch {
+      return null;
     }
   }
 
@@ -556,7 +630,8 @@ export class ImportsService {
 
         const parsed = Number(value);
         if (!Number.isFinite(parsed)) continue;
-        monthlyPercent[monthKey] = Math.max(0, Math.min(100, Number(parsed.toFixed(2))));
+        if (parsed < 0 || parsed > 100) continue;
+        monthlyPercent[monthKey] = Number(parsed.toFixed(2));
       }
 
       if (Object.keys(monthlyPercent).length === 0) continue;
