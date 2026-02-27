@@ -5,6 +5,7 @@ export class ApiError extends Error {
     public readonly code: string,
     public readonly status: number,
     message?: string,
+    public readonly details?: unknown,
   ) {
     super(message ?? code);
     this.name = 'ApiError';
@@ -583,11 +584,13 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   if (!response.ok) {
     let code = `HTTP_${response.status}`;
     let message = '';
+    let details: unknown;
 
     try {
       const payload = (await response.json()) as
         | { message?: string | string[]; error?: string; statusCode?: number }
         | undefined;
+      details = payload;
       if (payload) {
         if (Array.isArray(payload.message)) {
           message = payload.message.join(', ');
@@ -605,7 +608,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
     if (message && /^ERR_[A-Z0-9_]+$/.test(message)) {
       code = message;
     }
-    throw new ApiError(code, response.status, message || code);
+    throw new ApiError(code, response.status, message || code, details);
   }
 
   return (await response.json()) as T;
@@ -623,11 +626,13 @@ async function requestFormData<T>(path: string, formData: FormData, token: strin
   if (!response.ok) {
     let code = `HTTP_${response.status}`;
     let message = '';
+    let details: unknown;
 
     try {
       const payload = (await response.json()) as
         | { message?: string | string[]; error?: string; statusCode?: number }
         | undefined;
+      details = payload;
       if (payload) {
         if (Array.isArray(payload.message)) {
           message = payload.message.join(', ');
@@ -645,7 +650,7 @@ async function requestFormData<T>(path: string, formData: FormData, token: strin
     if (message && /^ERR_[A-Z0-9_]+$/.test(message)) {
       code = message;
     }
-    throw new ApiError(code, response.status, message || code);
+    throw new ApiError(code, response.status, message || code, details);
   }
 
   return (await response.json()) as T;

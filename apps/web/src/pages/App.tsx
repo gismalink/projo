@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
-import { AdminOverviewResponse, api, GradeItem, ProjectMemberItem } from '../api/client';
+import { AdminOverviewResponse, ApiError, api, GradeItem, ProjectMemberItem } from '../api/client';
 import { ToastStack } from '../components/ToastStack';
 import { AccountModal } from '../components/modals/AccountModal';
 import { AuthGate } from '../components/modals/AuthGate';
@@ -491,7 +491,13 @@ export function App() {
       setAiNormalizeStatus(
         `${t.aiAssistantStatusDone} (${attemptsText}) • ${result.apply.company.name} • P:${result.apply.counts.projects} E:${result.apply.counts.employees} A:${result.apply.counts.assignments}`,
       );
-    } catch {
+    } catch (unknownError) {
+      if (unknownError instanceof ApiError) {
+        const payload = (unknownError.details ?? null) as { llmRaw?: { fileName: string; mimeType: string; fileBase64: string } } | null;
+        if (payload?.llmRaw) {
+          setAiRawDownload(payload.llmRaw);
+        }
+      }
       setAiNormalizeStatus(`${t.aiAssistantStatusFailed} (2/2)`);
       app.pushToast(t.uiAiAssistantNormalizeFailed);
     } finally {

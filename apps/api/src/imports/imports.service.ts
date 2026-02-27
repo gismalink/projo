@@ -799,13 +799,19 @@ export class ImportsService {
         break;
       } catch {
         if (attempt === maxAttempts) {
-          throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+          throw new BadGatewayException({
+            message: ErrorCode.LLM_REQUEST_FAILED,
+            llmRaw: this.buildLlmRawDownload(rawAttempts),
+          });
         }
       }
     }
 
     if (!assignments) {
-      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+      throw new BadGatewayException({
+        message: ErrorCode.LLM_REQUEST_FAILED,
+        llmRaw: this.buildLlmRawDownload(rawAttempts),
+      });
     }
 
     return {
