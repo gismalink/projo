@@ -457,29 +457,16 @@ export function App() {
 
     setIsAiNormalizing(true);
     try {
-      const result = await api.normalizeImportWithAi(message, app.token, {
+      const result = await api.normalizeAndApplyImportWithAi(message, app.token, {
         file: aiSourceFile ?? undefined,
         sheetName: aiSelectedSheet || undefined,
       });
 
-      const bytes = atob(result.fileBase64);
-      const output = new Uint8Array(bytes.length);
-      for (let index = 0; index < bytes.length; index += 1) {
-        output[index] = bytes.charCodeAt(index);
-      }
-
-      const blob = new Blob([output], { type: result.mimeType });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = result.fileName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      await app.loadMyCompanies();
+      await app.loadMyProjects();
 
       setAiAnswer(
-        `${t.aiAssistantNormalizeSuccess}\nprojects: ${result.preview.counts.projects}\nemployees: ${result.preview.counts.employees}\nassignments: ${result.preview.counts.assignments}`,
+        `${t.aiAssistantNormalizeSuccess}\ncompany: ${result.apply.company.name}\nprojects: ${result.apply.counts.projects}\nemployees: ${result.apply.counts.employees}\nassignments: ${result.apply.counts.assignments}`,
       );
     } catch {
       app.pushToast(t.uiAiAssistantNormalizeFailed);

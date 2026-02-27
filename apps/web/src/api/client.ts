@@ -109,10 +109,32 @@ export type AiImportNormalizeResponse = {
   provider: string;
   model: string;
   sheetName: string | null;
+  normalized: {
+    assignments: Array<{
+      projectName: string;
+      employeeName: string;
+      monthlyPercent: Record<string, number>;
+    }>;
+  };
   fileName: string;
   mimeType: string;
   fileBase64: string;
   preview: CompanyXlsxImportPreviewResponse;
+};
+
+export type AiImportNormalizeApplyResponse = {
+  provider: string;
+  model: string;
+  sheetName: string | null;
+  normalized: {
+    assignments: Array<{
+      projectName: string;
+      employeeName: string;
+      monthlyPercent: Record<string, number>;
+    }>;
+  };
+  preview: CompanyXlsxImportPreviewResponse;
+  apply: CompanyXlsxImportApplyResponse;
 };
 
 export type CompanyXlsxImportPreviewResponse = {
@@ -659,6 +681,17 @@ export const api = {
       formData.append('file', options.file);
     }
     return requestFormData<AiImportNormalizeResponse>('/imports/xlsx/company/ai/normalize', formData, token);
+  },
+  normalizeAndApplyImportWithAi: (message: string, token: string, options?: { file?: File; sheetName?: string }) => {
+    const formData = new FormData();
+    formData.append('message', message);
+    if (options?.sheetName) {
+      formData.append('sheetName', options.sheetName);
+    }
+    if (options?.file) {
+      formData.append('file', options.file);
+    }
+    return requestFormData<AiImportNormalizeApplyResponse>('/imports/xlsx/company/ai/normalize-apply', formData, token);
   },
   previewCompanyXlsxImport: (file: File, token: string, sheetName?: string) => {
     const formData = new FormData();

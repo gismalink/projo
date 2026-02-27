@@ -84,10 +84,24 @@ type AiNormalizeResponse = {
   provider: string;
   model: string;
   sheetName: string | null;
+  normalized: {
+    assignments: AiNormalizedAssignment[];
+  };
   fileName: string;
   mimeType: string;
   fileBase64: string;
   preview: PreviewResponse;
+};
+
+type AiNormalizeApplyResponse = {
+  provider: string;
+  model: string;
+  sheetName: string | null;
+  normalized: {
+    assignments: AiNormalizedAssignment[];
+  };
+  preview: PreviewResponse;
+  apply: ApplyResponse;
 };
 
 type HeaderDetection = {
@@ -573,6 +587,300 @@ export class ImportsService {
     return workbook.xlsx.writeBuffer().then((buffer) => Buffer.from(buffer));
   }
 
+  private convertAiAssignmentsToParsedImport(assignments: AiNormalizedAssignment[]): ParsedImport {
+    const byPair = new Map<string, ParsedAssignment>();
+
+    for (const assignment of assignments) {
+      const monthValues = Object.entries(assignment.monthlyPercent)
+        .map(([monthKey, value]) => ({
+          monthStart: new Date(Date.UTC(Number(monthKey.slice(0, 4)), Number(monthKey.slice(5, 7)) - 1, 1)),
+          value: Number(value),
+        }))
+        .sort((left, right) => left.monthStart.getTime() - right.monthStart.getTime());
+
+      if (monthValues.length === 0) continue;
+
+      const pairKey = `${this.normalizeName(assignment.projectName)}::${this.normalizeName(assignment.employeeName)}`;
+      byPair.set(pairKey, {
+        projectName: assignment.projectName,
+        employeeName: assignment.employeeName,
+        monthValues,
+      });
+    }
+
+    const parsedAssignments = Array.from(byPair.values());
+    const projects = Array.from(new Set(parsedAssignments.map((item) => item.projectName)));
+    const employees = Array.from(new Set(parsedAssignments.map((item) => this.collapseWhitespace(item.employeeName))));
+    const monthStarts = parsedAssignments.flatMap((item) => item.monthValues.map((entry) => entry.monthStart.getTime()));
+
+    return {
+      monthRange: {
+        from: monthStarts.length > 0 ? new Date(Math.min(...monthStarts)).toISOString().slice(0, 10) : null,
+        to: monthStarts.length > 0 ? new Date(Math.max(...monthStarts)).toISOString().slice(0, 10) : null,
+      },
+      assignments: parsedAssignments,
+      projects,
+      employees,
+      errors: [],
+      warnings: [],
+    };
+  }
+
+  private async requestAiNormalizedAssignments(
+    message: string,
+    requestedSheetName?: string,
+    fileBuffer?: Buffer,
+  ): Promise<{ provider: string; model: string; sheetName: string | null; assignments: AiNormalizedAssignment[] }> {
+    const apiKey = process.env.LLM_API_KEY?.trim();
+    if (!apiKey) {
+      throw new BadRequestException(ErrorCode.LLM_NOT_CONFIGURED);
+    }
+
+    const provider = process.env.LLM_PROVIDER?.trim() || 'openrouter';
+    const apiUrl = process.env.LLM_API_URL?.trim() || 'https://openrouter.ai/api/v1/chat/completions';
+    const model = process.env.LLM_MODEL?.trim() || 'meta-llama/llama-3.1-8b-instruct:free';
+    const { sheetName, context } = await this.buildWorksheetContext(fileBuffer, requestedSheetName);
+
+    const promptParts = [
+      'Преобразуй входные данные в каноничный формат импорта Projo.',
+      'Верни ТОЛЬКО JSON-объект формата {"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
+      'Ограничения: percent 0..100, month key строго YYYY-MM, без комментариев и markdown.',
+      `Комментарий пользователя: ${message}`,
+    ];
+    if (sheetName && context) {
+      promptParts.push(`Лист: ${sheetName}`);
+      promptParts.push('Табличные данные:');
+      promptParts.push(context);
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.',
+            },
+            {
+              role: 'user',
+              content: promptParts.join('\n\n'),
+            },
+          ],
+        }),
+      });
+    } catch {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    if (!response.ok) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    const payload = (await response.json()) as {
+      choices?: Array<{
+        message?: {
+          content?: unknown;
+        };
+      }>;
+    };
+    const content = this.normalizeAiText(payload.choices?.[0]?.message?.content);
+    const parsedJson = this.extractJsonPayload(content);
+    const assignments = this.normalizeAiAssignments(parsedJson);
+
+    return {
+      provider,
+      model,
+      sheetName,
+      assignments,
+    };
+  }
+
+  private async applyParsedCompanyImport(userId: string, parsed: ParsedImport): Promise<ApplyResponse> {
+    if (parsed.errors.length > 0) {
+      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
+    }
+
+    const companyName = this.buildTimestampedName(COMPANY_IMPORT_PREFIX);
+    const workspaceName = this.buildTimestampedName(WORKSPACE_IMPORT_PREFIX);
+
+    const company = await this.usersService.createCompany(userId, companyName);
+    if (!company) {
+      throw new BadRequestException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
+    }
+
+    await this.usersService.createProjectSpace(userId, workspaceName);
+
+    const context = await this.usersService.resolveAuthContextByUserId(userId);
+    if (!context) {
+      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
+    }
+
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: context.workspaceId },
+      select: {
+        id: true,
+        name: true,
+        companyId: true,
+      },
+    });
+
+    if (!workspace || !workspace.companyId) {
+      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const companyId = workspace.companyId as string;
+
+      const role =
+        (await tx.role.findFirst({
+          where: {
+            companyId,
+            name: IMPORT_ROLE_NAME,
+          },
+          select: { id: true },
+        })) ??
+        (await tx.role.create({
+          data: {
+            companyId,
+            name: IMPORT_ROLE_NAME,
+            shortName: 'IMP',
+            description: 'Imported from XLSX',
+          },
+          select: { id: true },
+        }));
+
+      const employeeIdByName = new Map<string, string>();
+      for (const employeeName of parsed.employees) {
+        const createdEmployee = await tx.employee.create({
+          data: {
+            workspaceId: workspace.id,
+            fullName: employeeName,
+            roleId: role.id,
+          },
+          select: { id: true, fullName: true },
+        });
+        employeeIdByName.set(this.normalizeName(createdEmployee.fullName), createdEmployee.id);
+      }
+
+      const assignmentsByProject = new Map<string, ParsedAssignment[]>();
+      for (const assignment of parsed.assignments) {
+        const key = this.normalizeName(assignment.projectName);
+        const list = assignmentsByProject.get(key) ?? [];
+        list.push(assignment);
+        assignmentsByProject.set(key, list);
+      }
+
+      const projectIdByName = new Map<string, string>();
+      const usedCodes = new Set<string>();
+      for (const [projectNameKey, projectAssignments] of assignmentsByProject.entries()) {
+        const projectName = projectAssignments[0]?.projectName ?? 'Imported project';
+
+        const starts = projectAssignments.map((item) => item.monthValues[0]?.monthStart.getTime()).filter((value): value is number => Number.isFinite(value));
+        const ends = projectAssignments
+          .map((item) => item.monthValues[item.monthValues.length - 1]?.monthStart)
+          .filter((value): value is Date => Boolean(value))
+          .map((monthStart) => Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
+
+        const projectStart = starts.length > 0 ? startOfUtcDay(new Date(Math.min(...starts))) : startOfUtcDay(new Date());
+        const projectEnd = ends.length > 0 ? startOfUtcDay(new Date(Math.max(...ends))) : startOfUtcDay(new Date());
+
+        const baseCode = this.slugProjectCode(projectName);
+        let code = baseCode;
+        let suffix = 1;
+        while (usedCodes.has(code)) {
+          suffix += 1;
+          code = `${baseCode}-${suffix}`.slice(0, 24);
+        }
+        usedCodes.add(code);
+
+        const createdProject = await tx.project.create({
+          data: {
+            workspaceId: workspace.id,
+            code,
+            name: projectName,
+            startDate: projectStart,
+            endDate: projectEnd,
+            status: 'planned',
+            priority: 3,
+            links: Prisma.JsonNull,
+          },
+          select: { id: true },
+        });
+        projectIdByName.set(projectNameKey, createdProject.id);
+      }
+
+      let createdAssignments = 0;
+      for (const assignment of parsed.assignments) {
+        const projectId = projectIdByName.get(this.normalizeName(assignment.projectName));
+        const employeeId = employeeIdByName.get(this.normalizeName(assignment.employeeName));
+        if (!projectId || !employeeId) {
+          continue;
+        }
+
+        const curve = this.buildAssignmentCurve(assignment.monthValues);
+
+        await tx.projectMember.upsert({
+          where: {
+            projectId_employeeId: {
+              projectId,
+              employeeId,
+            },
+          },
+          update: {},
+          create: {
+            projectId,
+            employeeId,
+          },
+        });
+
+        await tx.projectAssignment.create({
+          data: {
+            projectId,
+            employeeId,
+            assignmentStartDate: curve.assignmentStartDate,
+            assignmentEndDate: curve.assignmentEndDate,
+            allocationPercent: curve.allocationPercent,
+            loadProfile: curve.loadProfile as unknown as Prisma.InputJsonValue,
+          },
+        });
+        createdAssignments += 1;
+      }
+
+      return {
+        projectsCount: projectIdByName.size,
+        employeesCount: employeeIdByName.size,
+        assignmentsCount: createdAssignments,
+      };
+    });
+
+    return {
+      company: {
+        id: company.id,
+        name: company.name,
+      },
+      workspace: {
+        id: workspace.id,
+        name: workspace.name,
+      },
+      counts: {
+        projects: created.projectsCount,
+        employees: created.employeesCount,
+        assignments: created.assignmentsCount,
+      },
+      monthRange: parsed.monthRange,
+      warnings: parsed.warnings,
+    };
+  }
+
   private async parseCompanyWorkbook(fileBuffer: Buffer, requestedSheetName?: string): Promise<ParsedImport> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer as any);
@@ -874,70 +1182,11 @@ export class ImportsService {
     requestedSheetName?: string,
     fileBuffer?: Buffer,
   ): Promise<AiNormalizeResponse> {
-    const apiKey = process.env.LLM_API_KEY?.trim();
-    if (!apiKey) {
-      throw new BadRequestException(ErrorCode.LLM_NOT_CONFIGURED);
-    }
-
-    const provider = process.env.LLM_PROVIDER?.trim() || 'openrouter';
-    const apiUrl = process.env.LLM_API_URL?.trim() || 'https://openrouter.ai/api/v1/chat/completions';
-    const model = process.env.LLM_MODEL?.trim() || 'meta-llama/llama-3.1-8b-instruct:free';
-    const { sheetName, context } = await this.buildWorksheetContext(fileBuffer, requestedSheetName);
-
-    const promptParts = [
-      'Преобразуй входные данные в каноничный формат импорта Projo.',
-      'Верни ТОЛЬКО JSON-объект формата {"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
-      'Ограничения: percent 0..100, month key строго YYYY-MM, без комментариев и markdown.',
-      `Комментарий пользователя: ${message}`,
-    ];
-    if (sheetName && context) {
-      promptParts.push(`Лист: ${sheetName}`);
-      promptParts.push('Табличные данные:');
-      promptParts.push(context);
-    }
-
-    let response: Response;
-    try {
-      response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0,
-          messages: [
-            {
-              role: 'system',
-              content:
-                'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.',
-            },
-            {
-              role: 'user',
-              content: promptParts.join('\n\n'),
-            },
-          ],
-        }),
-      });
-    } catch {
-      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
-    }
-
-    if (!response.ok) {
-      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
-    }
-
-    const payload = (await response.json()) as {
-      choices?: Array<{
-        message?: {
-          content?: unknown;
-        };
-      }>;
-    };
-    const content = this.normalizeAiText(payload.choices?.[0]?.message?.content);
-    const parsedJson = this.extractJsonPayload(content);
-    const assignments = this.normalizeAiAssignments(parsedJson);
+    const { provider, model, sheetName, assignments } = await this.requestAiNormalizedAssignments(
+      message,
+      requestedSheetName,
+      fileBuffer,
+    );
     const normalizedBuffer = await this.buildCanonicalWorkbook(assignments);
 
     const preview = await this.previewCompanyXlsx(_userId, normalizedBuffer, 'Задействования');
@@ -949,10 +1198,36 @@ export class ImportsService {
       provider,
       model,
       sheetName,
+      normalized: { assignments },
       fileName: `normalized-import-${Date.now()}.xlsx`,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       fileBase64: normalizedBuffer.toString('base64'),
       preview,
+    };
+  }
+
+  async normalizeAndApplyCompanyImportWithAi(
+    userId: string,
+    message: string,
+    requestedSheetName?: string,
+    fileBuffer?: Buffer,
+  ): Promise<AiNormalizeApplyResponse> {
+    const { provider, model, sheetName, assignments } = await this.requestAiNormalizedAssignments(
+      message,
+      requestedSheetName,
+      fileBuffer,
+    );
+
+    const parsed = this.convertAiAssignmentsToParsedImport(assignments);
+    const apply = await this.applyParsedCompanyImport(userId, parsed);
+
+    return {
+      provider,
+      model,
+      sheetName,
+      normalized: { assignments },
+      preview: this.buildPreviewResponse(parsed),
+      apply,
     };
   }
 
@@ -963,179 +1238,6 @@ export class ImportsService {
 
   async applyCompanyXlsx(userId: string, fileBuffer: Buffer, requestedSheetName?: string): Promise<ApplyResponse> {
     const parsed = await this.parseCompanyWorkbook(fileBuffer, requestedSheetName);
-    if (parsed.errors.length > 0) {
-      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
-    }
-
-    const companyName = this.buildTimestampedName(COMPANY_IMPORT_PREFIX);
-    const workspaceName = this.buildTimestampedName(WORKSPACE_IMPORT_PREFIX);
-
-    const company = await this.usersService.createCompany(userId, companyName);
-    if (!company) {
-      throw new BadRequestException(ErrorCode.AUTH_COMPANY_ACCESS_DENIED);
-    }
-
-    await this.usersService.createProjectSpace(userId, workspaceName);
-
-    const context = await this.usersService.resolveAuthContextByUserId(userId);
-    if (!context) {
-      throw new NotFoundException(ErrorCode.AUTH_USER_NOT_FOUND);
-    }
-
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: context.workspaceId },
-      select: {
-        id: true,
-        name: true,
-        companyId: true,
-      },
-    });
-
-    if (!workspace || !workspace.companyId) {
-      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
-    }
-
-    const created = await this.prisma.$transaction(async (tx) => {
-      const companyId = workspace.companyId as string;
-
-      const role =
-        (await tx.role.findFirst({
-          where: {
-            companyId,
-            name: IMPORT_ROLE_NAME,
-          },
-          select: { id: true },
-        })) ??
-        (await tx.role.create({
-          data: {
-            companyId,
-            name: IMPORT_ROLE_NAME,
-            shortName: 'IMP',
-            description: 'Imported from XLSX',
-          },
-          select: { id: true },
-        }));
-
-      const employeeIdByName = new Map<string, string>();
-      for (const employeeName of parsed.employees) {
-        const createdEmployee = await tx.employee.create({
-          data: {
-            workspaceId: workspace.id,
-            fullName: employeeName,
-            roleId: role.id,
-          },
-          select: { id: true, fullName: true },
-        });
-        employeeIdByName.set(this.normalizeName(createdEmployee.fullName), createdEmployee.id);
-      }
-
-      const assignmentsByProject = new Map<string, ParsedAssignment[]>();
-      for (const assignment of parsed.assignments) {
-        const key = this.normalizeName(assignment.projectName);
-        const list = assignmentsByProject.get(key) ?? [];
-        list.push(assignment);
-        assignmentsByProject.set(key, list);
-      }
-
-      const projectIdByName = new Map<string, string>();
-      const usedCodes = new Set<string>();
-      for (const [projectNameKey, projectAssignments] of assignmentsByProject.entries()) {
-        const projectName = projectAssignments[0]?.projectName ?? 'Imported project';
-
-        const starts = projectAssignments.map((item) => item.monthValues[0]?.monthStart.getTime()).filter((value): value is number => Number.isFinite(value));
-        const ends = projectAssignments
-          .map((item) => item.monthValues[item.monthValues.length - 1]?.monthStart)
-          .filter((value): value is Date => Boolean(value))
-          .map((monthStart) => Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
-
-        const projectStart = starts.length > 0 ? startOfUtcDay(new Date(Math.min(...starts))) : startOfUtcDay(new Date());
-        const projectEnd = ends.length > 0 ? startOfUtcDay(new Date(Math.max(...ends))) : startOfUtcDay(new Date());
-
-        const baseCode = this.slugProjectCode(projectName);
-        let code = baseCode;
-        let suffix = 1;
-        while (usedCodes.has(code)) {
-          suffix += 1;
-          code = `${baseCode}-${suffix}`.slice(0, 24);
-        }
-        usedCodes.add(code);
-
-        const createdProject = await tx.project.create({
-          data: {
-            workspaceId: workspace.id,
-            code,
-            name: projectName,
-            startDate: projectStart,
-            endDate: projectEnd,
-            status: 'planned',
-            priority: 3,
-            links: Prisma.JsonNull,
-          },
-          select: { id: true },
-        });
-        projectIdByName.set(projectNameKey, createdProject.id);
-      }
-
-      let createdAssignments = 0;
-      for (const assignment of parsed.assignments) {
-        const projectId = projectIdByName.get(this.normalizeName(assignment.projectName));
-        const employeeId = employeeIdByName.get(this.normalizeName(assignment.employeeName));
-        if (!projectId || !employeeId) {
-          continue;
-        }
-
-        const curve = this.buildAssignmentCurve(assignment.monthValues);
-
-        await tx.projectMember.upsert({
-          where: {
-            projectId_employeeId: {
-              projectId,
-              employeeId,
-            },
-          },
-          update: {},
-          create: {
-            projectId,
-            employeeId,
-          },
-        });
-
-        await tx.projectAssignment.create({
-          data: {
-            projectId,
-            employeeId,
-            assignmentStartDate: curve.assignmentStartDate,
-            assignmentEndDate: curve.assignmentEndDate,
-            allocationPercent: curve.allocationPercent,
-            loadProfile: curve.loadProfile as unknown as Prisma.InputJsonValue,
-          },
-        });
-        createdAssignments += 1;
-      }
-
-      return {
-        projectsCount: projectIdByName.size,
-        employeesCount: employeeIdByName.size,
-        assignmentsCount: createdAssignments,
-      };
-    });
-
-    return {
-      company: {
-        id: company.id,
-        name: company.name,
-      },
-      workspace: {
-        id: workspace.id,
-        name: workspace.name,
-      },
-      counts: {
-        projects: created.projectsCount,
-        employees: created.employeesCount,
-        assignments: created.assignmentsCount,
-      },
-      monthRange: parsed.monthRange,
-      warnings: parsed.warnings,
-    };
+    return this.applyParsedCompanyImport(userId, parsed);
   }
 }
