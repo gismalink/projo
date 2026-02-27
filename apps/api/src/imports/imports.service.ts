@@ -417,6 +417,18 @@ export class ImportsService {
     };
   }
 
+  private formatImportIssues(issues: ImportIssue[], limit = 6): string {
+    if (issues.length === 0) {
+      return 'нет';
+    }
+
+    const lines = issues.slice(0, limit).map((issue) => `${issue.sheet}!${issue.col}${issue.row}: ${issue.message}`);
+    if (issues.length > limit) {
+      lines.push(`... и ещё ${issues.length - limit}`);
+    }
+    return lines.join('\n');
+  }
+
   private async parseCompanyWorkbook(fileBuffer: Buffer, requestedSheetName?: string): Promise<ParsedImport> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer as any);
@@ -622,8 +634,34 @@ export class ImportsService {
     const model = process.env.LLM_MODEL?.trim() || 'meta-llama/llama-3.1-8b-instruct:free';
     const { sheetName, context } = await this.buildWorksheetContext(fileBuffer, requestedSheetName);
 
+    let validationSummary = 'Валидация не выполнялась: файл не передан.';
+    if (fileBuffer && fileBuffer.length > 0) {
+      try {
+        const parsed = await this.parseCompanyWorkbook(fileBuffer, requestedSheetName);
+        validationSummary = [
+          `Ошибок: ${parsed.errors.length}`,
+          `Предупреждений: ${parsed.warnings.length}`,
+          `Проектов: ${parsed.projects.length}`,
+          `Сотрудников: ${parsed.employees.length}`,
+          `Назначений: ${parsed.assignments.length}`,
+          `Период: ${parsed.monthRange.from ?? '-'} .. ${parsed.monthRange.to ?? '-'}`,
+          `Ошибки (топ):\n${this.formatImportIssues(parsed.errors)}`,
+          `Предупреждения (топ):\n${this.formatImportIssues(parsed.warnings)}`,
+        ].join('\n');
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          validationSummary = `Валидация завершилась ошибкой: ${String(error.message)}`;
+        } else {
+          validationSummary = 'Валидация завершилась ошибкой: неизвестная ошибка.';
+        }
+      }
+    }
+
     const promptParts = [
-      'Задача: помочь пользователю разобрать файл планирования и предложить действия для импорта.',
+      'Контекст: система Projo Planner, модуль импорта компании из XLSX.',
+      'Цель: дать конкретный ответ по этому листу, а не общие советы.',
+      'Правила импорта Projo: проценты по месяцам должны быть в диапазоне 0..100; сотрудник обязателен; проект должен быть указан до строк сотрудников.',
+      `Результат валидации Projo:\n${validationSummary}`,
       `Вопрос пользователя: ${message}`,
     ];
 
@@ -643,12 +681,12 @@ export class ImportsService {
         },
         body: JSON.stringify({
           model,
-          temperature: 0.2,
+          temperature: 0,
           messages: [
             {
               role: 'system',
               content:
-                'Ты помощник по импорту данных. Отвечай кратко и практично, на русском языке. Если данных недостаточно — укажи, что нужно уточнить.',
+                'Ты AI-ассистент импорта Projo. Отвечай только на русском, строго по данным листа и валидации. Не давай общих советов уровня "проверьте формат". Формат ответа: 1) Вердикт (можно/нельзя импортировать сейчас), 2) Конкретные причины (строка/колонка при наличии), 3) Что нажать в текущем UI следующим шагом.',
             },
             {
               role: 'user',
