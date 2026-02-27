@@ -508,7 +508,11 @@ export class ImportsService {
       const last = candidate.lastIndexOf('}');
       if (first >= 0 && last > first) {
         const sliced = candidate.slice(first, last + 1);
-        return JSON.parse(sliced);
+        try {
+          return JSON.parse(sliced);
+        } catch {
+          throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+        }
       }
       throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
     }
@@ -734,7 +738,7 @@ export class ImportsService {
       assignments = this.normalizeAiAssignments(parsedJson);
     } catch {
       usedAttempts = 2;
-      const repairContent = await requestContent([
+      const retryContent = await requestContent([
         {
           role: 'system',
           content: systemPrompt,
@@ -742,17 +746,18 @@ export class ImportsService {
         {
           role: 'user',
           content: [
-            'Исправь невалидный JSON и верни только валидный JSON строго по схеме:',
+            ...promptParts,
+            'Предыдущий ответ был невалидным JSON.',
+            'Сгенерируй заново компактный валидный JSON строго по схеме:',
             '{"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
-            'Никакого markdown, комментариев и лишнего текста.',
-            'Невалидный ответ модели:',
-            firstContent,
+            'Только JSON-объект, без markdown и без пояснений.',
+            'Сделай JSON компактным (minified), не добавляй лишние поля и текст.',
           ].join('\n\n'),
         },
-      ]);
+      ], 12_000);
 
-      const repairedJson = this.extractJsonPayload(repairContent);
-      assignments = this.normalizeAiAssignments(repairedJson);
+      const retriedJson = this.extractJsonPayload(retryContent);
+      assignments = this.normalizeAiAssignments(retriedJson);
     }
 
     return {
