@@ -95,6 +95,11 @@ type AiNormalizeResponse = {
     used: number;
     max: number;
   };
+  llmRaw: {
+    fileName: string;
+    mimeType: string;
+    fileBase64: string;
+  };
 };
 
 type AiNormalizeApplyResponse = {
@@ -109,6 +114,11 @@ type AiNormalizeApplyResponse = {
   attempts: {
     used: number;
     max: number;
+  };
+  llmRaw: {
+    fileName: string;
+    mimeType: string;
+    fileBase64: string;
   };
 };
 
@@ -651,6 +661,11 @@ export class ImportsService {
       used: number;
       max: number;
     };
+    rawAttempts: Array<{
+      attempt: number;
+      model: string;
+      content: string;
+    }>;
   }> {
     const apiKey = process.env.LLM_API_KEY?.trim();
     if (!apiKey) {
@@ -737,6 +752,7 @@ export class ImportsService {
     let usedAttempts = 0;
     let selectedModel = model;
     let assignments: AiNormalizedAssignment[] | null = null;
+    const rawAttempts: Array<{ attempt: number; model: string; content: string }> = [];
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const isRetry = attempt > 1;
@@ -772,6 +788,12 @@ export class ImportsService {
           },
         );
 
+        rawAttempts.push({
+          attempt,
+          model: selectedModel,
+          content,
+        });
+
         const parsedJson = this.extractJsonPayload(content);
         assignments = this.normalizeAiAssignments(parsedJson);
         break;
@@ -795,6 +817,19 @@ export class ImportsService {
         used: usedAttempts,
         max: maxAttempts,
       },
+      rawAttempts,
+    };
+  }
+
+  private buildLlmRawDownload(rawAttempts: Array<{ attempt: number; model: string; content: string }>) {
+    const body = rawAttempts
+      .map((item) => [`# Attempt ${item.attempt}`, `model: ${item.model}`, '', item.content].join('\n'))
+      .join('\n\n-----\n\n');
+
+    return {
+      fileName: `llm-raw-response-${Date.now()}.txt`,
+      mimeType: 'text/plain; charset=utf-8',
+      fileBase64: Buffer.from(body || 'No LLM response body', 'utf-8').toString('base64'),
     };
   }
 
@@ -1276,7 +1311,7 @@ export class ImportsService {
     requestedSheetName?: string,
     fileBuffer?: Buffer,
   ): Promise<AiNormalizeResponse> {
-    const { provider, model, sheetName, assignments, attempts } = await this.requestAiNormalizedAssignments(
+    const { provider, model, sheetName, assignments, attempts, rawAttempts } = await this.requestAiNormalizedAssignments(
       message,
       requestedSheetName,
       fileBuffer,
@@ -1298,6 +1333,7 @@ export class ImportsService {
       fileBase64: normalizedBuffer.toString('base64'),
       preview,
       attempts,
+      llmRaw: this.buildLlmRawDownload(rawAttempts),
     };
   }
 
@@ -1307,7 +1343,7 @@ export class ImportsService {
     requestedSheetName?: string,
     fileBuffer?: Buffer,
   ): Promise<AiNormalizeApplyResponse> {
-    const { provider, model, sheetName, assignments, attempts } = await this.requestAiNormalizedAssignments(
+    const { provider, model, sheetName, assignments, attempts, rawAttempts } = await this.requestAiNormalizedAssignments(
       message,
       requestedSheetName,
       fileBuffer,
@@ -1324,6 +1360,7 @@ export class ImportsService {
       preview: this.buildPreviewResponse(parsed),
       apply,
       attempts,
+      llmRaw: this.buildLlmRawDownload(rawAttempts),
     };
   }
 

@@ -124,6 +124,11 @@ export type AiImportNormalizeResponse = {
     used: number;
     max: number;
   };
+  llmRaw: {
+    fileName: string;
+    mimeType: string;
+    fileBase64: string;
+  };
 };
 
 export type AiImportNormalizeApplyResponse = {
@@ -142,6 +147,11 @@ export type AiImportNormalizeApplyResponse = {
   attempts: {
     used: number;
     max: number;
+  };
+  llmRaw: {
+    fileName: string;
+    mimeType: string;
+    fileBase64: string;
   };
 };
 

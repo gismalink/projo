@@ -63,6 +63,11 @@ export function App() {
   const [isAiAsking, setIsAiAsking] = useState(false);
   const [isAiNormalizing, setIsAiNormalizing] = useState(false);
   const [aiNormalizeStatus, setAiNormalizeStatus] = useState('');
+  const [aiRawDownload, setAiRawDownload] = useState<{
+    fileName: string;
+    mimeType: string;
+    fileBase64: string;
+  } | null>(null);
   const t = TEXT[lang];
   const locale = LOCALE_BY_LANG[lang];
 
@@ -405,6 +410,7 @@ export function App() {
     setAiSheetList([]);
     setAiSelectedSheet('');
     setAiNormalizeStatus('');
+    setAiRawDownload(null);
 
     if (!file || !app.token) {
       return;
@@ -460,6 +466,7 @@ export function App() {
 
     const message = aiQuestion.trim() || t.aiAssistantNormalizeAutoprompt;
 
+    setAiRawDownload(null);
     setAiNormalizeStatus(`${t.aiAssistantStatusUploading} (1/2)`);
     setIsAiNormalizing(true);
     const statusTimers: Array<ReturnType<typeof setTimeout>> = [];
@@ -475,6 +482,8 @@ export function App() {
         sheetName: aiSelectedSheet,
       });
 
+      setAiRawDownload(result.llmRaw);
+
       await app.loadMyCompanies();
       await app.loadMyProjects();
 
@@ -489,6 +498,24 @@ export function App() {
       statusTimers.forEach((timerId) => clearTimeout(timerId));
       setIsAiNormalizing(false);
     }
+  };
+
+  const handleDownloadAiRaw = () => {
+    if (!aiRawDownload) return;
+    const binary = atob(aiRawDownload.fileBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const blob = new Blob([bytes], { type: aiRawDownload.mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = aiRawDownload.fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleSubmitCompanyModal = async (event: FormEvent) => {
@@ -647,6 +674,11 @@ export function App() {
               <Icon name="wand" />
             </button>
             {aiNormalizeStatus ? <div className="ai-assistant-status">{aiNormalizeStatus}</div> : null}
+            {aiRawDownload ? (
+              <button type="button" className="btn ghost-btn ai-assistant-download-btn" onClick={handleDownloadAiRaw}>
+                {t.aiAssistantDownloadRaw}
+              </button>
+            ) : null}
           </div>
           <div className="ai-assistant-row">
             <input
