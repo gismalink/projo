@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AppRole, Prisma } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { ErrorCode } from '../common/error-codes';
@@ -65,6 +65,13 @@ type ApplyResponse = {
 
 type SheetsResponse = {
   sheets: string[];
+};
+
+type AiAssistantResponse = {
+  provider: string;
+  model: string;
+  sheetName: string | null;
+  answer: string;
 };
 
 type HeaderDetection = {
@@ -347,6 +354,69 @@ export class ImportsService {
     return found ?? null;
   }
 
+  private normalizeAiText(value: unknown): string {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object' && 'text' in item && typeof (item as { text?: unknown }).text === 'string') {
+            return (item as { text: string }).text;
+          }
+          return '';
+        })
+        .join('\n')
+        .trim();
+    }
+    return '';
+  }
+
+  private async buildWorksheetContext(fileBuffer?: Buffer, requestedSheetName?: string): Promise<{ sheetName: string | null; context: string | null }> {
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return { sheetName: null, context: null };
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(fileBuffer as any);
+    const worksheet = this.resolveWorksheet(workbook, requestedSheetName);
+    if (!worksheet) {
+      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
+    }
+
+    const maxRows = Math.min(worksheet.rowCount || 0, 160);
+    const lines: string[] = [];
+
+    for (let rowNumber = 1; rowNumber <= maxRows; rowNumber += 1) {
+      const row = worksheet.getRow(rowNumber);
+      const maxCols = Math.min(Math.max(row.cellCount, row.actualCellCount, 1), 28);
+      const cells: string[] = [];
+
+      for (let col = 1; col <= maxCols; col += 1) {
+        cells.push(this.cellToString(row.getCell(col).value));
+      }
+
+      while (cells.length > 0 && !cells[cells.length - 1]) {
+        cells.pop();
+      }
+
+      if (cells.length === 0) {
+        continue;
+      }
+
+      lines.push(`${rowNumber}: ${cells.join('\t')}`);
+      if (lines.join('\n').length > 24_000) {
+        break;
+      }
+    }
+
+    return {
+      sheetName: worksheet.name,
+      context: lines.length > 0 ? lines.join('\n') : null,
+    };
+  }
+
   private async parseCompanyWorkbook(fileBuffer: Buffer, requestedSheetName?: string): Promise<ParsedImport> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer as any);
@@ -534,6 +604,86 @@ export class ImportsService {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
     }
     return { sheets };
+  }
+
+  async askCompanyImportAssistant(
+    _userId: string,
+    message: string,
+    requestedSheetName?: string,
+    fileBuffer?: Buffer,
+  ): Promise<AiAssistantResponse> {
+    const apiKey = process.env.LLM_API_KEY?.trim();
+    if (!apiKey) {
+      throw new BadRequestException(ErrorCode.LLM_NOT_CONFIGURED);
+    }
+
+    const provider = process.env.LLM_PROVIDER?.trim() || 'openrouter';
+    const apiUrl = process.env.LLM_API_URL?.trim() || 'https://openrouter.ai/api/v1/chat/completions';
+    const model = process.env.LLM_MODEL?.trim() || 'meta-llama/llama-3.1-8b-instruct:free';
+    const { sheetName, context } = await this.buildWorksheetContext(fileBuffer, requestedSheetName);
+
+    const promptParts = [
+      'Задача: помочь пользователю разобрать файл планирования и предложить действия для импорта.',
+      `Вопрос пользователя: ${message}`,
+    ];
+
+    if (sheetName && context) {
+      promptParts.push(`Лист: ${sheetName}`);
+      promptParts.push('Данные листа (табличный текст):');
+      promptParts.push(context);
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Ты помощник по импорту данных. Отвечай кратко и практично, на русском языке. Если данных недостаточно — укажи, что нужно уточнить.',
+            },
+            {
+              role: 'user',
+              content: promptParts.join('\n\n'),
+            },
+          ],
+        }),
+      });
+    } catch {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    if (!response.ok) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    const payload = (await response.json()) as {
+      choices?: Array<{
+        message?: {
+          content?: unknown;
+        };
+      }>;
+    };
+
+    const answer = this.normalizeAiText(payload.choices?.[0]?.message?.content);
+    if (!answer) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    return {
+      provider,
+      model,
+      sheetName,
+      answer,
+    };
   }
 
   async previewCompanyXlsx(_userId: string, fileBuffer: Buffer, requestedSheetName?: string): Promise<PreviewResponse> {

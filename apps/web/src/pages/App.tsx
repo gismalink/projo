@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { AdminOverviewResponse, api, GradeItem, ProjectMemberItem } from '../api/client';
 import { ToastStack } from '../components/ToastStack';
 import { AccountModal } from '../components/modals/AccountModal';
@@ -55,6 +55,12 @@ export function App() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [adminOverview, setAdminOverview] = useState<AdminOverviewResponse | null>(null);
   const [isAdminOverviewLoading, setIsAdminOverviewLoading] = useState(false);
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiAnswer, setAiAnswer] = useState('');
+  const [aiSourceFile, setAiSourceFile] = useState<File | null>(null);
+  const [aiSheetList, setAiSheetList] = useState<string[]>([]);
+  const [aiSelectedSheet, setAiSelectedSheet] = useState('');
+  const [isAiAsking, setIsAiAsking] = useState(false);
   const t = TEXT[lang];
   const locale = LOCALE_BY_LANG[lang];
 
@@ -389,6 +395,56 @@ export function App() {
     await app.handleImportCompanyXlsx(file);
   };
 
+  const handleAiSourceFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.currentTarget.value = '';
+
+    setAiSourceFile(file);
+    setAiSheetList([]);
+    setAiSelectedSheet('');
+
+    if (!file || !app.token) {
+      return;
+    }
+
+    try {
+      const sheetsResponse = await api.listCompanyXlsxImportSheets(file, app.token);
+      const sheets = sheetsResponse.sheets;
+      setAiSheetList(sheets);
+
+      const preferredCandidate = sheets.find((sheet) => {
+        const normalized = sheet.trim().toLowerCase();
+        return normalized.includes('задейств') && !normalized.includes('old');
+      });
+      setAiSelectedSheet(preferredCandidate ?? sheets[0] ?? '');
+    } catch {
+      app.pushToast(t.uiAiAssistantFileReadFailed);
+    }
+  };
+
+  const handleAskAiAssistant = async () => {
+    if (!app.token) return;
+
+    const message = aiQuestion.trim();
+    if (!message) {
+      app.pushToast(t.uiAiAssistantQuestionRequired);
+      return;
+    }
+
+    setIsAiAsking(true);
+    try {
+      const result = await api.askImportAssistant(message, app.token, {
+        file: aiSourceFile ?? undefined,
+        sheetName: aiSelectedSheet || undefined,
+      });
+      setAiAnswer(result.answer);
+    } catch {
+      app.pushToast(t.uiAiAssistantAskFailed);
+    } finally {
+      setIsAiAsking(false);
+    }
+  };
+
   const handleSubmitCompanyModal = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -510,6 +566,45 @@ export function App() {
         onToggleAccountModal={() => setIsAccountModalOpen((prev) => !prev)}
         onChangeLang={setLang}
       />
+
+      {app.token ? (
+        <section className="ai-assistant-panel" aria-label={t.aiAssistantTitle}>
+          <div className="ai-assistant-header">{t.aiAssistantTitle}</div>
+          <div className="ai-assistant-controls">
+            <label className="icon-btn" aria-label={t.aiAssistantAttachFile} data-tooltip={t.aiAssistantAttachFile}>
+              <Icon name="upload" />
+              <input type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleAiSourceFileChange} />
+            </label>
+            <div className="ai-assistant-file">{aiSourceFile?.name || t.aiAssistantNoFile}</div>
+            {aiSheetList.length > 0 ? (
+              <select
+                className="lang-select"
+                aria-label={t.aiAssistantSheet}
+                value={aiSelectedSheet}
+                onChange={(event) => setAiSelectedSheet(event.target.value)}
+              >
+                {aiSheetList.map((sheet) => (
+                  <option key={sheet} value={sheet}>
+                    {sheet}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+          <div className="ai-assistant-row">
+            <input
+              className="text-input"
+              value={aiQuestion}
+              onChange={(event) => setAiQuestion(event.target.value)}
+              placeholder={t.aiAssistantPlaceholder}
+            />
+            <button type="button" className="btn" onClick={() => void handleAskAiAssistant()} disabled={isAiAsking}>
+              {isAiAsking ? t.aiAssistantAsking : t.aiAssistantAsk}
+            </button>
+          </div>
+          {aiAnswer ? <pre className="ai-assistant-answer">{aiAnswer}</pre> : null}
+        </section>
+      ) : null}
 
       {!app.token ? (
         <AuthGate

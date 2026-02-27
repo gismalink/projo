@@ -15,6 +15,20 @@ type AuthenticatedRequest = {
 export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}
 
+  @Post('ai/ask')
+  @UseInterceptors(FileInterceptor('file'))
+  askAi(
+    @Req() req: AuthenticatedRequest,
+    @Body() body?: { message?: string; sheetName?: string },
+    @UploadedFile() file?: { buffer?: Buffer },
+  ) {
+    const message = body?.message?.trim();
+    if (!message) {
+      throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
+    }
+    return this.importsService.askCompanyImportAssistant(req.user.userId, message, body?.sheetName, file?.buffer);
+  }
+
   @Post('sheets')
   @UseInterceptors(FileInterceptor('file'))
   listSheets(@UploadedFile() file?: { buffer?: Buffer }) {

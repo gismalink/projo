@@ -98,6 +98,13 @@ export type CompanyXlsxImportSheetsResponse = {
   sheets: string[];
 };
 
+export type AiImportAssistantResponse = {
+  provider: string;
+  model: string;
+  sheetName: string | null;
+  answer: string;
+};
+
 export type CompanyXlsxImportPreviewResponse = {
   counts: {
     projects: number;
@@ -620,6 +627,17 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     return requestFormData<CompanyXlsxImportSheetsResponse>('/imports/xlsx/company/sheets', formData, token);
+  },
+  askImportAssistant: (message: string, token: string, options?: { file?: File; sheetName?: string }) => {
+    const formData = new FormData();
+    formData.append('message', message);
+    if (options?.sheetName) {
+      formData.append('sheetName', options.sheetName);
+    }
+    if (options?.file) {
+      formData.append('file', options.file);
+    }
+    return requestFormData<AiImportAssistantResponse>('/imports/xlsx/company/ai/ask', formData, token);
   },
   previewCompanyXlsxImport: (file: File, token: string, sheetName?: string) => {
     const formData = new FormData();
