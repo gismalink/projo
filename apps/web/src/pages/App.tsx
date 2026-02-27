@@ -492,10 +492,48 @@ export function App() {
         `${t.aiAssistantStatusDone} (${attemptsText}) • ${result.apply.company.name} • P:${result.apply.counts.projects} E:${result.apply.counts.employees} A:${result.apply.counts.assignments}`,
       );
     } catch (unknownError) {
+      const encodeUtf8ToBase64 = (value: string) => {
+        const bytes = new TextEncoder().encode(value);
+        let binary = '';
+        for (const byte of bytes) {
+          binary += String.fromCharCode(byte);
+        }
+        return btoa(binary);
+      };
+
       if (unknownError instanceof ApiError) {
-        const payload = (unknownError.details ?? null) as { llmRaw?: { fileName: string; mimeType: string; fileBase64: string } } | null;
-        if (payload?.llmRaw) {
-          setAiRawDownload(payload.llmRaw);
+        const payload = unknownError.details as
+          | {
+              llmRaw?: { fileName: string; mimeType: string; fileBase64: string };
+              message?: unknown;
+              error?: unknown;
+              statusCode?: unknown;
+            }
+          | null
+          | undefined;
+
+        const nestedMessage = payload?.message as { llmRaw?: { fileName: string; mimeType: string; fileBase64: string } } | string[] | string | undefined;
+        const rawFromError = payload?.llmRaw ?? (nestedMessage && typeof nestedMessage === 'object' && 'llmRaw' in nestedMessage ? nestedMessage.llmRaw : undefined);
+
+        if (rawFromError?.fileBase64) {
+          setAiRawDownload(rawFromError);
+        } else {
+          const diagnostic = JSON.stringify(
+            {
+              code: unknownError.code,
+              status: unknownError.status,
+              message: unknownError.message,
+              payload: payload ?? null,
+            },
+            null,
+            2,
+          );
+
+          setAiRawDownload({
+            fileName: `llm-error-${Date.now()}.txt`,
+            mimeType: 'text/plain; charset=utf-8',
+            fileBase64: encodeUtf8ToBase64(diagnostic),
+          });
         }
       }
       setAiNormalizeStatus(`${t.aiAssistantStatusFailed} (2/2)`);
