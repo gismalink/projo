@@ -132,6 +132,29 @@ export class ImportsService {
       const raw = value.trim();
       if (!raw) return null;
 
+      const normalized = raw.toLowerCase();
+      const monthByText: Array<{ pattern: RegExp; month: number }> = [
+        { pattern: /(январ|january|\bjan\b)/u, month: 0 },
+        { pattern: /(феврал|february|\bfeb\b)/u, month: 1 },
+        { pattern: /(март|march|\bmar\b)/u, month: 2 },
+        { pattern: /(апрел|april|\bapr\b)/u, month: 3 },
+        { pattern: /(май|мая|may)/u, month: 4 },
+        { pattern: /(июн|june|\bjun\b)/u, month: 5 },
+        { pattern: /(июл|july|\bjul\b)/u, month: 6 },
+        { pattern: /(август|august|\baug\b)/u, month: 7 },
+        { pattern: /(сентябр|september|\bsep\b)/u, month: 8 },
+        { pattern: /(октябр|october|\boct\b)/u, month: 9 },
+        { pattern: /(ноябр|november|\bnov\b)/u, month: 10 },
+        { pattern: /(декабр|december|\bdec\b)/u, month: 11 },
+      ];
+
+      const monthEntry = monthByText.find((entry) => entry.pattern.test(normalized));
+      if (monthEntry) {
+        const yearMatch = normalized.match(/(20\d{2})/u);
+        const year = yearMatch ? Number(yearMatch[1]) : new Date().getUTCFullYear();
+        return new Date(Date.UTC(year, monthEntry.month, 1));
+      }
+
       const dotDate = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/u);
       if (dotDate) {
         const month = Number(dotDate[2]) - 1;
@@ -214,7 +237,11 @@ export class ImportsService {
       const monthColumns: Array<{ col: number; monthStart: Date }> = [];
 
       for (let col = 1; col <= Math.max(row.cellCount, row.actualCellCount, 80); col += 1) {
-        const monthStart = this.parseMonthCell(row.getCell(col).value);
+        const cellValue = row.getCell(col).value;
+        if (typeof cellValue === 'number') {
+          continue;
+        }
+        const monthStart = this.parseMonthCell(cellValue);
         if (!monthStart) continue;
         monthColumns.push({ col, monthStart });
       }
