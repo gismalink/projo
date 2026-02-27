@@ -625,11 +625,13 @@ export function App() {
             ) : null}
             <button
               type="button"
-              className="btn ghost-btn"
+              className={`icon-btn magic-wand-btn${isAiNormalizing ? ' is-loading' : ''}`}
+              aria-label={t.aiAssistantNormalize}
+              data-tooltip={t.aiAssistantNormalize}
               onClick={() => void handleNormalizeWithAi()}
               disabled={isAiAsking || isAiNormalizing || !aiSourceFile || !aiSelectedSheet}
             >
-              {isAiNormalizing ? t.aiAssistantNormalizing : t.aiAssistantNormalize}
+              <Icon name="wand" />
             </button>
           </div>
           <div className="ai-assistant-row">

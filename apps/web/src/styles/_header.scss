@@ -137,6 +137,29 @@
   flex-wrap: wrap;
 }
 
+.magic-wand-btn {
+  border: 1px solid var(--ios-border);
+  background: var(--ios-surface-strong);
+  color: var(--ios-text-secondary);
+}
+
+.magic-wand-btn:hover {
+  background: var(--ios-surface);
+}
+
+.magic-wand-btn.is-loading .ui-icon {
+  animation: ai-wand-spin 0.9s linear infinite;
+}
+
+@keyframes ai-wand-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .ai-assistant-file {
   font-size: 0.9rem;
   color: var(--ios-text-secondary);
