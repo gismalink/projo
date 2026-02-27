@@ -62,6 +62,7 @@ export function App() {
   const [aiSelectedSheet, setAiSelectedSheet] = useState('');
   const [isAiAsking, setIsAiAsking] = useState(false);
   const [isAiNormalizing, setIsAiNormalizing] = useState(false);
+  const [aiNormalizeStatus, setAiNormalizeStatus] = useState('');
   const t = TEXT[lang];
   const locale = LOCALE_BY_LANG[lang];
 
@@ -403,6 +404,7 @@ export function App() {
     setAiSourceFile(file);
     setAiSheetList([]);
     setAiSelectedSheet('');
+    setAiNormalizeStatus('');
 
     if (!file || !app.token) {
       return;
@@ -458,7 +460,15 @@ export function App() {
 
     const message = aiQuestion.trim() || t.aiAssistantNormalizeAutoprompt;
 
+    setAiNormalizeStatus(`${t.aiAssistantStatusUploading} (1/2)`);
     setIsAiNormalizing(true);
+    const statusTimers: Array<ReturnType<typeof setTimeout>> = [];
+    statusTimers.push(
+      setTimeout(() => setAiNormalizeStatus(`${t.aiAssistantStatusProcessing} (1/2)`), 350),
+      setTimeout(() => setAiNormalizeStatus(`${t.aiAssistantStatusParsing} (1/2)`), 1200),
+      setTimeout(() => setAiNormalizeStatus(`${t.aiAssistantStatusRetrying} (2/2)`), 4500),
+    );
+
     try {
       const result = await api.normalizeAndApplyImportWithAi(message, app.token, {
         file: aiSourceFile,
@@ -468,12 +478,15 @@ export function App() {
       await app.loadMyCompanies();
       await app.loadMyProjects();
 
-      setAiAnswer(
-        `${t.aiAssistantNormalizeSuccess}\ncompany: ${result.apply.company.name}\nprojects: ${result.apply.counts.projects}\nemployees: ${result.apply.counts.employees}\nassignments: ${result.apply.counts.assignments}`,
+      const attemptsText = `${result.attempts.used}/${result.attempts.max}`;
+      setAiNormalizeStatus(
+        `${t.aiAssistantStatusDone} (${attemptsText}) • ${result.apply.company.name} • P:${result.apply.counts.projects} E:${result.apply.counts.employees} A:${result.apply.counts.assignments}`,
       );
     } catch {
+      setAiNormalizeStatus(`${t.aiAssistantStatusFailed} (2/2)`);
       app.pushToast(t.uiAiAssistantNormalizeFailed);
     } finally {
+      statusTimers.forEach((timerId) => clearTimeout(timerId));
       setIsAiNormalizing(false);
     }
   };
@@ -633,6 +646,7 @@ export function App() {
             >
               <Icon name="wand" />
             </button>
+            {aiNormalizeStatus ? <div className="ai-assistant-status">{aiNormalizeStatus}</div> : null}
           </div>
           <div className="ai-assistant-row">
             <input

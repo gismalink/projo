@@ -91,6 +91,10 @@ type AiNormalizeResponse = {
   mimeType: string;
   fileBase64: string;
   preview: PreviewResponse;
+  attempts: {
+    used: number;
+    max: number;
+  };
 };
 
 type AiNormalizeApplyResponse = {
@@ -102,6 +106,10 @@ type AiNormalizeApplyResponse = {
   };
   preview: PreviewResponse;
   apply: ApplyResponse;
+  attempts: {
+    used: number;
+    max: number;
+  };
 };
 
 type HeaderDetection = {
@@ -630,7 +638,16 @@ export class ImportsService {
     message: string,
     requestedSheetName?: string,
     fileBuffer?: Buffer,
-  ): Promise<{ provider: string; model: string; sheetName: string | null; assignments: AiNormalizedAssignment[] }> {
+  ): Promise<{
+    provider: string;
+    model: string;
+    sheetName: string | null;
+    assignments: AiNormalizedAssignment[];
+    attempts: {
+      used: number;
+      max: number;
+    };
+  }> {
     const apiKey = process.env.LLM_API_KEY?.trim();
     if (!apiKey) {
       throw new BadRequestException(ErrorCode.LLM_NOT_CONFIGURED);
@@ -697,6 +714,8 @@ export class ImportsService {
 
     const systemPrompt =
       'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.';
+    const maxAttempts = 2;
+    let usedAttempts = 1;
 
     const firstContent = await requestContent([
       {
@@ -714,6 +733,7 @@ export class ImportsService {
       const parsedJson = this.extractJsonPayload(firstContent);
       assignments = this.normalizeAiAssignments(parsedJson);
     } catch {
+      usedAttempts = 2;
       const repairContent = await requestContent([
         {
           role: 'system',
@@ -740,6 +760,10 @@ export class ImportsService {
       model,
       sheetName,
       assignments,
+      attempts: {
+        used: usedAttempts,
+        max: maxAttempts,
+      },
     };
   }
 
@@ -1221,7 +1245,7 @@ export class ImportsService {
     requestedSheetName?: string,
     fileBuffer?: Buffer,
   ): Promise<AiNormalizeResponse> {
-    const { provider, model, sheetName, assignments } = await this.requestAiNormalizedAssignments(
+    const { provider, model, sheetName, assignments, attempts } = await this.requestAiNormalizedAssignments(
       message,
       requestedSheetName,
       fileBuffer,
@@ -1242,6 +1266,7 @@ export class ImportsService {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       fileBase64: normalizedBuffer.toString('base64'),
       preview,
+      attempts,
     };
   }
 
@@ -1251,7 +1276,7 @@ export class ImportsService {
     requestedSheetName?: string,
     fileBuffer?: Buffer,
   ): Promise<AiNormalizeApplyResponse> {
-    const { provider, model, sheetName, assignments } = await this.requestAiNormalizedAssignments(
+    const { provider, model, sheetName, assignments, attempts } = await this.requestAiNormalizedAssignments(
       message,
       requestedSheetName,
       fileBuffer,
@@ -1267,6 +1292,7 @@ export class ImportsService {
       normalized: { assignments },
       preview: this.buildPreviewResponse(parsed),
       apply,
+      attempts,
     };
   }
 

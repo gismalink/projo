@@ -120,6 +120,10 @@ export type AiImportNormalizeResponse = {
   mimeType: string;
   fileBase64: string;
   preview: CompanyXlsxImportPreviewResponse;
+  attempts: {
+    used: number;
+    max: number;
+  };
 };
 
 export type AiImportNormalizeApplyResponse = {
@@ -135,6 +139,10 @@ export type AiImportNormalizeApplyResponse = {
   };
   preview: CompanyXlsxImportPreviewResponse;
   apply: CompanyXlsxImportApplyResponse;
+  attempts: {
+    used: number;
+    max: number;
+  };
 };
 
 export type CompanyXlsxImportPreviewResponse = {

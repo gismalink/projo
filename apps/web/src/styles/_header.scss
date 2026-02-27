@@ -165,6 +165,15 @@
   color: var(--ios-text-secondary);
 }
 
+.ai-assistant-status {
+  font-size: 0.86rem;
+  color: var(--ios-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(60vw, 560px);
+}
+
 .ai-assistant-row {
   display: grid;
   grid-template-columns: 1fr auto;
