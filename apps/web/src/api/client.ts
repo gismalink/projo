@@ -105,6 +105,16 @@ export type AiImportAssistantResponse = {
   answer: string;
 };
 
+export type AiImportNormalizeResponse = {
+  provider: string;
+  model: string;
+  sheetName: string | null;
+  fileName: string;
+  mimeType: string;
+  fileBase64: string;
+  preview: CompanyXlsxImportPreviewResponse;
+};
+
 export type CompanyXlsxImportPreviewResponse = {
   counts: {
     projects: number;
@@ -638,6 +648,17 @@ export const api = {
       formData.append('file', options.file);
     }
     return requestFormData<AiImportAssistantResponse>('/imports/xlsx/company/ai/ask', formData, token);
+  },
+  normalizeImportWithAi: (message: string, token: string, options?: { file?: File; sheetName?: string }) => {
+    const formData = new FormData();
+    formData.append('message', message);
+    if (options?.sheetName) {
+      formData.append('sheetName', options.sheetName);
+    }
+    if (options?.file) {
+      formData.append('file', options.file);
+    }
+    return requestFormData<AiImportNormalizeResponse>('/imports/xlsx/company/ai/normalize', formData, token);
   },
   previewCompanyXlsxImport: (file: File, token: string, sheetName?: string) => {
     const formData = new FormData();

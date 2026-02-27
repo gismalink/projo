@@ -74,6 +74,22 @@ type AiAssistantResponse = {
   answer: string;
 };
 
+type AiNormalizedAssignment = {
+  projectName: string;
+  employeeName: string;
+  monthlyPercent: Record<string, number>;
+};
+
+type AiNormalizeResponse = {
+  provider: string;
+  model: string;
+  sheetName: string | null;
+  fileName: string;
+  mimeType: string;
+  fileBase64: string;
+  preview: PreviewResponse;
+};
+
 type HeaderDetection = {
   row: number;
   monthColumns: Array<{ col: number; monthStart: Date }>;
@@ -456,6 +472,107 @@ export class ImportsService {
     return lines.join('\n');
   }
 
+  private extractJsonPayload(raw: string): unknown {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/iu);
+    const candidate = fenceMatch ? fenceMatch[1].trim() : trimmed;
+
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      const first = candidate.indexOf('{');
+      const last = candidate.lastIndexOf('}');
+      if (first >= 0 && last > first) {
+        const sliced = candidate.slice(first, last + 1);
+        return JSON.parse(sliced);
+      }
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+  }
+
+  private normalizeAiAssignments(payload: unknown): AiNormalizedAssignment[] {
+    if (!payload || typeof payload !== 'object') {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    const rawAssignments = (payload as { assignments?: unknown }).assignments;
+    if (!Array.isArray(rawAssignments)) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    const assignments: AiNormalizedAssignment[] = [];
+
+    for (const row of rawAssignments) {
+      if (!row || typeof row !== 'object') continue;
+
+      const projectName = this.collapseWhitespace(String((row as { projectName?: unknown }).projectName ?? ''));
+      const employeeName = this.collapseWhitespace(String((row as { employeeName?: unknown }).employeeName ?? ''));
+      const monthlyPercentRaw = (row as { monthlyPercent?: unknown }).monthlyPercent;
+
+      if (!projectName || !employeeName || !monthlyPercentRaw || typeof monthlyPercentRaw !== 'object') continue;
+
+      const monthlyPercent: Record<string, number> = {};
+      for (const [monthKey, value] of Object.entries(monthlyPercentRaw as Record<string, unknown>)) {
+        const monthMatch = monthKey.match(/^(20\d{2})-(0[1-9]|1[0-2])$/u);
+        if (!monthMatch) continue;
+
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) continue;
+        monthlyPercent[monthKey] = Math.max(0, Math.min(100, Number(parsed.toFixed(2))));
+      }
+
+      if (Object.keys(monthlyPercent).length === 0) continue;
+      assignments.push({ projectName, employeeName, monthlyPercent });
+    }
+
+    if (assignments.length === 0) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    return assignments;
+  }
+
+  private buildCanonicalWorkbook(assignments: AiNormalizedAssignment[]): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Задействования');
+
+    const allMonths = new Set<string>();
+    for (const assignment of assignments) {
+      for (const monthKey of Object.keys(assignment.monthlyPercent)) {
+        allMonths.add(monthKey);
+      }
+    }
+
+    const sortedMonths = Array.from(allMonths).sort();
+    const year = sortedMonths.length > 0 ? Number(sortedMonths[0].slice(0, 4)) : new Date().getUTCFullYear();
+    const months = sortedMonths.length >= 6
+      ? sortedMonths
+      : Array.from({ length: 12 }, (_, month) => `${year}-${String(month + 1).padStart(2, '0')}`);
+
+    const ruMonths = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+
+    const header = ['Проект', 'Сотрудник', ...months.map((monthKey) => {
+      const monthIndex = Number(monthKey.slice(5, 7)) - 1;
+      const monthName = ruMonths[monthIndex] ?? monthKey;
+      return `${monthName} ${monthKey.slice(0, 4)}`;
+    })];
+
+    worksheet.addRow(header);
+
+    for (const assignment of assignments) {
+      const row = [
+        assignment.projectName,
+        assignment.employeeName,
+        ...months.map((monthKey) => assignment.monthlyPercent[monthKey] ?? 0),
+      ];
+      worksheet.addRow(row);
+    }
+
+    return workbook.xlsx.writeBuffer().then((buffer) => Buffer.from(buffer));
+  }
+
   private async parseCompanyWorkbook(fileBuffer: Buffer, requestedSheetName?: string): Promise<ParsedImport> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer as any);
@@ -748,6 +865,94 @@ export class ImportsService {
       model,
       sheetName,
       answer,
+    };
+  }
+
+  async normalizeCompanyImportWithAi(
+    _userId: string,
+    message: string,
+    requestedSheetName?: string,
+    fileBuffer?: Buffer,
+  ): Promise<AiNormalizeResponse> {
+    const apiKey = process.env.LLM_API_KEY?.trim();
+    if (!apiKey) {
+      throw new BadRequestException(ErrorCode.LLM_NOT_CONFIGURED);
+    }
+
+    const provider = process.env.LLM_PROVIDER?.trim() || 'openrouter';
+    const apiUrl = process.env.LLM_API_URL?.trim() || 'https://openrouter.ai/api/v1/chat/completions';
+    const model = process.env.LLM_MODEL?.trim() || 'meta-llama/llama-3.1-8b-instruct:free';
+    const { sheetName, context } = await this.buildWorksheetContext(fileBuffer, requestedSheetName);
+
+    const promptParts = [
+      'Преобразуй входные данные в каноничный формат импорта Projo.',
+      'Верни ТОЛЬКО JSON-объект формата {"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
+      'Ограничения: percent 0..100, month key строго YYYY-MM, без комментариев и markdown.',
+      `Комментарий пользователя: ${message}`,
+    ];
+    if (sheetName && context) {
+      promptParts.push(`Лист: ${sheetName}`);
+      promptParts.push('Табличные данные:');
+      promptParts.push(context);
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.',
+            },
+            {
+              role: 'user',
+              content: promptParts.join('\n\n'),
+            },
+          ],
+        }),
+      });
+    } catch {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    if (!response.ok) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    const payload = (await response.json()) as {
+      choices?: Array<{
+        message?: {
+          content?: unknown;
+        };
+      }>;
+    };
+    const content = this.normalizeAiText(payload.choices?.[0]?.message?.content);
+    const parsedJson = this.extractJsonPayload(content);
+    const assignments = this.normalizeAiAssignments(parsedJson);
+    const normalizedBuffer = await this.buildCanonicalWorkbook(assignments);
+
+    const preview = await this.previewCompanyXlsx(_userId, normalizedBuffer, 'Задействования');
+    if (preview.errors.length > 0) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+    }
+
+    return {
+      provider,
+      model,
+      sheetName,
+      fileName: `normalized-import-${Date.now()}.xlsx`,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      fileBase64: normalizedBuffer.toString('base64'),
+      preview,
     };
   }
 

@@ -61,6 +61,7 @@ export function App() {
   const [aiSheetList, setAiSheetList] = useState<string[]>([]);
   const [aiSelectedSheet, setAiSelectedSheet] = useState('');
   const [isAiAsking, setIsAiAsking] = useState(false);
+  const [isAiNormalizing, setIsAiNormalizing] = useState(false);
   const t = TEXT[lang];
   const locale = LOCALE_BY_LANG[lang];
 
@@ -445,6 +446,48 @@ export function App() {
     }
   };
 
+  const handleNormalizeWithAi = async () => {
+    if (!app.token) return;
+
+    const message = aiQuestion.trim();
+    if (!message) {
+      app.pushToast(t.uiAiAssistantQuestionRequired);
+      return;
+    }
+
+    setIsAiNormalizing(true);
+    try {
+      const result = await api.normalizeImportWithAi(message, app.token, {
+        file: aiSourceFile ?? undefined,
+        sheetName: aiSelectedSheet || undefined,
+      });
+
+      const bytes = atob(result.fileBase64);
+      const output = new Uint8Array(bytes.length);
+      for (let index = 0; index < bytes.length; index += 1) {
+        output[index] = bytes.charCodeAt(index);
+      }
+
+      const blob = new Blob([output], { type: result.mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      setAiAnswer(
+        `${t.aiAssistantNormalizeSuccess}\nprojects: ${result.preview.counts.projects}\nemployees: ${result.preview.counts.employees}\nassignments: ${result.preview.counts.assignments}`,
+      );
+    } catch {
+      app.pushToast(t.uiAiAssistantNormalizeFailed);
+    } finally {
+      setIsAiNormalizing(false);
+    }
+  };
+
   const handleSubmitCompanyModal = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -598,8 +641,11 @@ export function App() {
               onChange={(event) => setAiQuestion(event.target.value)}
               placeholder={t.aiAssistantPlaceholder}
             />
-            <button type="button" className="btn" onClick={() => void handleAskAiAssistant()} disabled={isAiAsking}>
+            <button type="button" className="btn" onClick={() => void handleAskAiAssistant()} disabled={isAiAsking || isAiNormalizing}>
               {isAiAsking ? t.aiAssistantAsking : t.aiAssistantAsk}
+            </button>
+            <button type="button" className="btn ghost-btn" onClick={() => void handleNormalizeWithAi()} disabled={isAiAsking || isAiNormalizing}>
+              {isAiNormalizing ? t.aiAssistantNormalizing : t.aiAssistantNormalize}
             </button>
           </div>
           {aiAnswer ? <pre className="ai-assistant-answer">{aiAnswer}</pre> : null}
