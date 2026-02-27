@@ -653,48 +653,87 @@ export class ImportsService {
       promptParts.push(context);
     }
 
-    let response: Response;
-    try {
-      response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0,
-          messages: [
-            {
-              role: 'system',
-              content:
-                'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.',
-            },
-            {
-              role: 'user',
-              content: promptParts.join('\n\n'),
-            },
-          ],
-        }),
-      });
-    } catch {
-      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
-    }
+    const requestContent = async (
+      messages: Array<{ role: 'system' | 'user'; content: string }>,
+      maxTokens = 4096,
+    ): Promise<string> => {
+      let response: Response;
+      try {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0,
+            max_tokens: maxTokens,
+            response_format: { type: 'json_object' },
+            messages,
+          }),
+        });
+      } catch {
+        throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+      }
 
-    if (!response.ok) {
-      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
-    }
+      if (!response.ok) {
+        throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+      }
 
-    const payload = (await response.json()) as {
-      choices?: Array<{
-        message?: {
-          content?: unknown;
-        };
-      }>;
+      const payload = (await response.json()) as {
+        choices?: Array<{
+          message?: {
+            content?: unknown;
+          };
+        }>;
+      };
+      const content = this.normalizeAiText(payload.choices?.[0]?.message?.content);
+      if (!content) {
+        throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+      }
+      return content;
     };
-    const content = this.normalizeAiText(payload.choices?.[0]?.message?.content);
-    const parsedJson = this.extractJsonPayload(content);
-    const assignments = this.normalizeAiAssignments(parsedJson);
+
+    const systemPrompt =
+      'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.';
+
+    const firstContent = await requestContent([
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      {
+        role: 'user',
+        content: promptParts.join('\n\n'),
+      },
+    ]);
+
+    let assignments: AiNormalizedAssignment[];
+    try {
+      const parsedJson = this.extractJsonPayload(firstContent);
+      assignments = this.normalizeAiAssignments(parsedJson);
+    } catch {
+      const repairContent = await requestContent([
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: [
+            'Исправь невалидный JSON и верни только валидный JSON строго по схеме:',
+            '{"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
+            'Никакого markdown, комментариев и лишнего текста.',
+            'Невалидный ответ модели:',
+            firstContent,
+          ].join('\n\n'),
+        },
+      ]);
+
+      const repairedJson = this.extractJsonPayload(repairContent);
+      assignments = this.normalizeAiAssignments(repairedJson);
+    }
 
     return {
       provider,
