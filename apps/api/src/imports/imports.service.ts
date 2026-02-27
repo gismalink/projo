@@ -450,7 +450,7 @@ export class ImportsService {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
     }
 
-    const maxRows = Math.min(worksheet.rowCount || 0, 160);
+    const maxRows = Math.min(worksheet.rowCount || 0, 120);
     const lines: string[] = [];
 
     for (let rowNumber = 1; rowNumber <= maxRows; rowNumber += 1) {
@@ -471,7 +471,7 @@ export class ImportsService {
       }
 
       lines.push(`${rowNumber}: ${cells.join('\t')}`);
-      if (lines.join('\n').length > 24_000) {
+      if (lines.join('\n').length > 12_000) {
         break;
       }
     }
@@ -666,6 +666,8 @@ export class ImportsService {
       'Преобразуй входные данные в каноничный формат импорта Projo.',
       'Верни ТОЛЬКО JSON-объект формата {"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
       'Ограничения: percent 0..100, month key строго YYYY-MM, без комментариев и markdown.',
+      'Пример валидного ответа:',
+      '{"assignments":[{"projectName":"Template Project","employeeName":"Template Employee","monthlyPercent":{"2026-01":50,"2026-02":75}}]}',
       `Комментарий пользователя: ${message}`,
     ];
     if (sheetName && context) {
