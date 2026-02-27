@@ -678,8 +678,26 @@ export class ImportsService {
 
     const requestContent = async (
       messages: Array<{ role: 'system' | 'user'; content: string }>,
-      maxTokens = 4096,
+      options?: {
+        maxTokens?: number;
+        modelName?: string;
+        useJsonObjectFormat?: boolean;
+      },
     ): Promise<string> => {
+      const maxTokens = options?.maxTokens ?? 4096;
+      const modelName = options?.modelName ?? model;
+      const useJsonObjectFormat = options?.useJsonObjectFormat ?? true;
+
+      const body: Record<string, unknown> = {
+        model: modelName,
+        temperature: 0,
+        max_tokens: maxTokens,
+        messages,
+      };
+      if (useJsonObjectFormat) {
+        body.response_format = { type: 'json_object' };
+      }
+
       let response: Response;
       try {
         response = await fetch(apiUrl, {
@@ -688,13 +706,7 @@ export class ImportsService {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model,
-            temperature: 0,
-            max_tokens: maxTokens,
-            response_format: { type: 'json_object' },
-            messages,
-          }),
+          body: JSON.stringify(body),
         });
       } catch {
         throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
@@ -721,50 +733,62 @@ export class ImportsService {
     const systemPrompt =
       'Ты конвертер форматов для импорта. Возвращай только JSON без пояснений и только в заданной схеме.';
     const maxAttempts = 2;
-    let usedAttempts = 1;
+    const fallbackModel = process.env.LLM_FALLBACK_MODEL?.trim() || model;
+    let usedAttempts = 0;
+    let selectedModel = model;
+    let assignments: AiNormalizedAssignment[] | null = null;
 
-    const firstContent = await requestContent([
-      {
-        role: 'system',
-        content: systemPrompt,
-      },
-      {
-        role: 'user',
-        content: promptParts.join('\n\n'),
-      },
-    ]);
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const isRetry = attempt > 1;
+      usedAttempts = attempt;
+      selectedModel = isRetry ? fallbackModel : model;
 
-    let assignments: AiNormalizedAssignment[];
-    try {
-      const parsedJson = this.extractJsonPayload(firstContent);
-      assignments = this.normalizeAiAssignments(parsedJson);
-    } catch {
-      usedAttempts = 2;
-      const retryContent = await requestContent([
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: [
+      const retryPrompt = isRetry
+        ? [
             ...promptParts,
-            'Предыдущий ответ был невалидным JSON.',
+            'Предыдущая попытка не удалась.',
             'Сгенерируй заново компактный валидный JSON строго по схеме:',
             '{"assignments":[{"projectName":"...","employeeName":"...","monthlyPercent":{"YYYY-MM":number}}]}',
             'Только JSON-объект, без markdown и без пояснений.',
-            'Сделай JSON компактным (minified), не добавляй лишние поля и текст.',
-          ].join('\n\n'),
-        },
-      ], 12_000);
+          ].join('\n\n')
+        : promptParts.join('\n\n');
 
-      const retriedJson = this.extractJsonPayload(retryContent);
-      assignments = this.normalizeAiAssignments(retriedJson);
+      try {
+        const content = await requestContent(
+          [
+            {
+              role: 'system',
+              content: systemPrompt,
+            },
+            {
+              role: 'user',
+              content: retryPrompt,
+            },
+          ],
+          {
+            maxTokens: isRetry ? 12_000 : 4096,
+            modelName: selectedModel,
+            useJsonObjectFormat: !isRetry,
+          },
+        );
+
+        const parsedJson = this.extractJsonPayload(content);
+        assignments = this.normalizeAiAssignments(parsedJson);
+        break;
+      } catch {
+        if (attempt === maxAttempts) {
+          throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
+        }
+      }
+    }
+
+    if (!assignments) {
+      throw new BadGatewayException(ErrorCode.LLM_REQUEST_FAILED);
     }
 
     return {
       provider,
-      model,
+      model: selectedModel,
       sheetName,
       assignments,
       attempts: {
