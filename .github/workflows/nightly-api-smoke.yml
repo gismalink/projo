@@ -1,8 +1,6 @@
 name: Nightly API Smoke
 
 on:
-  schedule:
-    - cron: '25 3 * * *'
   workflow_dispatch:
 
 jobs:
