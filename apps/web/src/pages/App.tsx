@@ -28,6 +28,7 @@ function buildTimestampedName(prefix: string) {
 
 export function App() {
   const SUPER_ADMIN_EMAIL = 'gismalink@gmail.com';
+  const isAiImportEnabled = (import.meta.env.VITE_IMPORT_AI_ENABLED ?? 'true').toLowerCase() === 'true';
 
   const [lang, setLang] = useState<Lang>('ru');
   const [grades, setGrades] = useState<GradeItem[]>([]);
@@ -684,7 +685,7 @@ export function App() {
         onChangeLang={setLang}
       />
 
-      {app.token ? (
+      {app.token && isAiImportEnabled ? (
         <section className="ai-assistant-panel" aria-label={t.aiAssistantTitle}>
           <div className="ai-assistant-header">{t.aiAssistantTitle}</div>
           <div className="ai-assistant-controls">

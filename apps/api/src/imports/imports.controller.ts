@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ErrorCode } from '../common/error-codes';
@@ -15,6 +15,14 @@ type AuthenticatedRequest = {
 export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}
 
+  private ensureAiImportEnabled() {
+    const raw = process.env.IMPORT_AI_ENABLED?.trim().toLowerCase();
+    const enabled = raw === undefined || raw === '' ? true : !['0', 'false', 'no', 'off'].includes(raw);
+    if (!enabled) {
+      throw new ForbiddenException(ErrorCode.IMPORT_AI_DISABLED);
+    }
+  }
+
   @Post('ai/ask')
   @UseInterceptors(FileInterceptor('file'))
   askAi(
@@ -22,6 +30,7 @@ export class ImportsController {
     @Body() body?: { message?: string; sheetName?: string },
     @UploadedFile() file?: { buffer?: Buffer },
   ) {
+    this.ensureAiImportEnabled();
     const message = body?.message?.trim();
     if (!message) {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
@@ -36,6 +45,7 @@ export class ImportsController {
     @Body() body?: { message?: string; sheetName?: string },
     @UploadedFile() file?: { buffer?: Buffer },
   ) {
+    this.ensureAiImportEnabled();
     const message = body?.message?.trim();
     if (!message) {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
@@ -50,6 +60,7 @@ export class ImportsController {
     @Body() body?: { message?: string; sheetName?: string },
     @UploadedFile() file?: { buffer?: Buffer },
   ) {
+    this.ensureAiImportEnabled();
     const message = body?.message?.trim();
     if (!message) {
       throw new BadRequestException(ErrorCode.IMPORT_XLSX_INVALID);
