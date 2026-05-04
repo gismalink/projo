@@ -55,7 +55,7 @@ services:
     networks:
       - data_test
     volumes:
-      - postgres_test_data:/var/lib/postgresql/data
+      - ${POSTGRES_TEST_DATA_DIR:-/Volumes/datas3/srv/projo/postgres-db/test}:/var/lib/postgresql/data
 
   projo-api-prod:
     build:
@@ -111,7 +111,7 @@ services:
     networks:
       - data_prod
     volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
+      - ${POSTGRES_PROD_DATA_DIR:-/Volumes/datas3/srv/projo/postgres-db/prod}:/var/lib/postgresql/data
 
 networks:
   public:
@@ -120,10 +120,4 @@ networks:
   data_test:
   data_prod:
 
-volumes:
-  postgres_test_data:
-    external: true
-    name: infra_postgres_test_data
-  postgres_prod_data:
-    external: true
-    name: infra_postgres_prod_data
+volumes: {}
