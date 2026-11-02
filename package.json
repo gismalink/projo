@@ -28,6 +28,7 @@
     "deploy:test": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$HOME/projo}\"",
     "deploy:prod": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-projo/main}\" \"${REPO_DIR:-$HOME/projo}\"",
     "check": "bash ./scripts/verify-all.sh",
-    "ci": "npm run check"
+    "ci": "npm run check",
+    "test:sso-routing": "node --test scripts/sso-internal-routing.test.cjs"
   }
 }

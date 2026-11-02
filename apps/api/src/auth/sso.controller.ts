@@ -25,7 +25,10 @@ export class SsoController {
   }
 
   private async proxyGetJson(req: Request, path: string): Promise<{ status: number; json: JsonValue } | { status: number; text: string }> {
-    const base = this.resolveAuthBaseUrl().replace(/\/+$/, '');
+    const publicBase = this.resolveAuthBaseUrl().replace(/\/+$/, '');
+    const internalBase = this.configService.get<string>('AUTH_SSO_INTERNAL_BASE_URL')?.trim();
+    const base = (internalBase || publicBase).replace(/\/+$/, '');
+    const publicOrigin = new URL(publicBase);
     const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
 
     let response: globalThis.Response;
@@ -40,6 +43,7 @@ export class SsoController {
           cookie: req.headers.cookie || '',
           'user-agent': String(req.headers['user-agent'] || ''),
           accept: 'application/json',
+          ...(internalBase ? { host: publicOrigin.host, 'x-forwarded-proto': publicOrigin.protocol.slice(0, -1) } : {}),
         },
         redirect: 'manual',
         signal: controller.signal,
