@@ -43,7 +43,7 @@ export class SsoController {
           cookie: req.headers.cookie || '',
           'user-agent': String(req.headers['user-agent'] || ''),
           accept: 'application/json',
-          ...(internalBase ? { host: publicOrigin.host, 'x-forwarded-proto': publicOrigin.protocol.slice(0, -1) } : {}),
+          ...(internalBase ? { 'x-forwarded-host': publicOrigin.host, 'x-forwarded-proto': publicOrigin.protocol.slice(0, -1) } : {}),
         },
         redirect: 'manual',
         signal: controller.signal,
