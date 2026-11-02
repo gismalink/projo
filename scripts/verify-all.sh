@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "[verify] generate API Prisma client"
+npm run prisma:generate -w @projo/api
+
+echo "[verify] internal SSO routing"
+npm run test:sso-routing
+
 echo "[verify] lint"
 npm run lint
 

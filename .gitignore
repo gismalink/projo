@@ -15,3 +15,6 @@ coverage
 /apps/web/.vite
 /apps/web/dist
 /apps/api/dist
+
+# GitOps deployment markers are generated runtime state.
+.deploy/

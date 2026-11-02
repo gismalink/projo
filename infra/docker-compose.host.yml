@@ -18,6 +18,7 @@ services:
       - ../apps/api/.env.test
     environment:
       IMPORT_AI_ENABLED: ${TEST_IMPORT_AI_ENABLED:-true}
+      AUTH_SSO_INTERNAL_BASE_URL: ${TEST_AUTH_SSO_INTERNAL_BASE_URL:-http://auth-sso-api-test:3000}
     depends_on:
       - projo-db-test
     networks:
@@ -74,6 +75,7 @@ services:
       - ../apps/api/.env.prod
     environment:
       IMPORT_AI_ENABLED: ${PROD_IMPORT_AI_ENABLED:-false}
+      AUTH_SSO_INTERNAL_BASE_URL: ${PROD_AUTH_SSO_INTERNAL_BASE_URL:-http://auth-sso-api-prod:3000}
     depends_on:
       - projo-db-prod
     networks:
